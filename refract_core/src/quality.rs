@@ -8,6 +8,12 @@ use std::num::NonZeroU8;
 
 #[derive(Debug, Copy, Clone)]
 /// # Quality Range.
+///
+/// This is a very simple range struct that allows our encodable types to drill
+/// down to the perfect quality setting without having to test each and every
+/// one.
+///
+/// See [`Quality::next`] for more information.
 pub struct Quality {
 	min: NonZeroU8,
 	max: NonZeroU8,
@@ -25,7 +31,16 @@ impl Default for Quality {
 
 impl Quality {
 	#[must_use]
-	/// # Next.
+	/// # Next Value.
+	///
+	/// This will return a value that sits roughly in the middle of the current
+	/// min and max values, or `None` if we're out of options.
+	///
+	/// Combined with the mutable [`Quality::min`] and [`Quality::max`] capping
+	/// methods that shrink the range, this allows us to find the "best" value
+	/// in 5-10 steps instead of 100.
+	///
+	/// Think of it like a Bond villain room where the walls are closing in.
 	pub fn next(self) -> Option<NonZeroU8> {
 		if self.min == self.max { return None; }
 
@@ -43,6 +58,15 @@ impl Quality {
 	}
 
 	/// # Cap Max.
+	///
+	/// Shrink the upper limit of the range, either because a tested value was
+	/// fine or resulted in too big an image. In other words, use this when you
+	/// know there's no point going any bigger.
+	///
+	/// If for some reason the passed value is lower than the current minimum,
+	/// the floor will also be adjusted. In such cases, since floor and ceiling
+	/// would then be equal, the next call to [`Quality::next`] will return
+	/// `None`, ending the game.
 	pub fn max(&mut self, quality: NonZeroU8) {
 		self.max = quality;
 		if self.max < self.min {
@@ -51,6 +75,15 @@ impl Quality {
 	}
 
 	/// # Cap Min.
+	///
+	/// Shrink the lower limit of the range. This generally implies that a
+	/// tested value was not good enough, hence there is no point testing an
+	/// even lower value.
+	///
+	/// If for some reason the passed value is higher than the current maximum,
+	/// the ceiling will also be adjusted. In such cases, since floor and ceiling
+	/// would then be equal, the next call to [`Quality::next`] will return
+	/// `None`, ending the game.
 	pub fn min(&mut self, quality: NonZeroU8) {
 		self.min = quality;
 		if self.max < self.min {

@@ -1,24 +1,35 @@
 /*!
-# `Refract`: Image `AVIF`
+# `Refract`: `AVIF` Handling
+
+This program uses [`ravif`](https://crates.io/crates/ravif) for AVIF encoding.
+It works very similarly to [`cavif`](https://crates.io/crates/cavif), but does
+not support premultiplied/dirty alpha operations.
 */
 
-use crate::Image;
-use crate::Quality;
-use crate::RefractError;
-use crate::Refraction;
+use crate::{
+	Image,
+	Quality,
+	RefractError,
+	Refraction,
+};
 use fyi_msg::Msg;
-use imgref::ImgVec;
-use ravif::ColorSpace;
-use ravif::Config;
-use ravif::Img;
-use ravif::RGBA8;
-use std::convert::TryFrom;
-use std::ffi::OsStr;
-use std::io::Write;
-use std::num::NonZeroU64;
-use std::num::NonZeroU8;
-use std::os::unix::ffi::OsStrExt;
-use std::path::PathBuf;
+use ravif::{
+	ColorSpace,
+	Config,
+	Img,
+	RGBA8,
+};
+use std::{
+	convert::TryFrom,
+	ffi::OsStr,
+	io::Write,
+	num::{
+		NonZeroU64,
+		NonZeroU8,
+	},
+	os::unix::ffi::OsStrExt,
+	path::PathBuf,
+};
 
 
 
@@ -39,9 +50,9 @@ impl<'a> Avif<'a> {
 	#[must_use]
 	/// # New.
 	///
-	/// ## Errors
-	///
-	/// This returns an error if the image cannot be read.
+	/// This instantiates a new instance from an [`Image`] struct. As
+	/// [`Avif::find`] is the only other public-facing method, and as it is
+	/// consuming, this is generally done as a single chained operation.
 	pub fn new(src: &'a Image) -> Self {
 		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
 
@@ -57,6 +68,19 @@ impl<'a> Avif<'a> {
 	}
 
 	/// # Find the best!
+	///
+	/// This will generate lossy `AVIF` image copies in a loop with varying
+	/// qualities, asking at each step whether or not the image looks OK. In
+	/// most cases, an answer should be found in 5-10 steps.
+	///
+	/// If an acceptable `AVIF` candidate is found — based on user feedback and
+	/// file size comparisons — it will be saved as `/path/to/SOURCE.avif`. For
+	/// example, if the source lives at `/path/to/image.jpg`, the new version
+	/// will live at `/path/to/image.jpg.avif`. In cases where the `AVIF` would
+	/// be bigger than the source, no image is created.
+	///
+	/// Note: this method is consuming; the instance will not be usable
+	/// afterward.
 	///
 	/// ## Errors
 	///
@@ -76,7 +100,7 @@ impl<'a> Avif<'a> {
 		);
 
 		// Convert the image to a pixel buffer.
-		let mut img = load_rgba(self.src)?;
+		let mut img = crate::load_rgba(self.src)?;
 		img = ravif::cleared_alpha(img);
 
 		let mut quality = Quality::default();
@@ -129,6 +153,14 @@ impl<'a> Avif<'a> {
 	}
 
 	/// # Make Lossy.
+	///
+	/// Generate an `AVIF` image at a given quality size.
+	///
+	/// ## Errors
+	///
+	/// This returns an error in cases where the resulting file size is larger
+	/// than the source or previous best, or if there are any problems
+	/// encountered during encoding or saving.
 	fn make_lossy(&self, img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
 		// Calculate qualities.
 		let quality = quality.get();
@@ -169,47 +201,5 @@ impl<'a> Avif<'a> {
 			.map_err(|_| RefractError::NoAvif)?;
 
 		Ok(size)
-	}
-}
-
-/// # Load RGBA.
-///
-/// This is largely lifted from [`cavif`](https://crates.io/crates/cavif). It
-/// is simplified slightly as we don't support premultiplied/dirty alpha.
-fn load_rgba(mut data: &[u8]) -> Result<ImgVec<RGBA8>, RefractError> {
-	use rgb::FromSlice;
-
-	// PNG.
-	if data.get(0..4) == Some(&[0x89,b'P',b'N',b'G']) {
-		let img = lodepng::decode32(data)
-			.map_err(|_| RefractError::InvalidImage)?;
-
-		Ok(ImgVec::new(img.buffer, img.width, img.height))
-	}
-	// JPEG.
-	else {
-		use jpeg_decoder::PixelFormat::{CMYK32, L8, RGB24};
-
-		let mut jecoder = jpeg_decoder::Decoder::new(&mut data);
-		let pixels = jecoder.decode()
-			.map_err(|_| RefractError::InvalidImage)?;
-		let info = jecoder.info().ok_or(RefractError::InvalidImage)?;
-
-		// So many ways to be a JPEG...
-		let buf: Vec<_> = match info.pixel_format {
-			// Upscale greyscale to RGBA.
-			L8 => {
-				pixels.iter().copied().map(|g| RGBA8::new(g, g, g, 255)).collect()
-			},
-			// Upscale RGB to RGBA.
-			RGB24 => {
-				let rgb = pixels.as_rgb();
-				rgb.iter().map(|p| p.alpha(255)).collect()
-			},
-			// CMYK doesn't work.
-			CMYK32 => return Err(RefractError::InvalidImage),
-		};
-
-		Ok(ImgVec::new(buf, info.width.into(), info.height.into()))
 	}
 }

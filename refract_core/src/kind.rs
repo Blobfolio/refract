@@ -9,6 +9,9 @@ use std::convert::TryFrom;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// # (Source) Image Kind.
+///
+/// The kind is determined using the file's magic headers rather than relying
+/// on the file having the correct extension.
 pub enum ImageKind {
 	/// # JPEG.
 	Jpeg,
