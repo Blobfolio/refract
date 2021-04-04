@@ -1,0 +1,23 @@
+# Third Party Licenses
+
+License details for project dependencies are listed below.
+
+## Overview of Licenses:
+
+{{#each overview}}* {{name}} ({{count}})
+{{/each}}
+
+## Complete Licenses:
+
+{{#each licenses}}### {{name}}
+
+**Used By:**
+
+{{#each used_by}}* [{{crate.name}} {{crate.version}}]({{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}})
+{{/each}}
+
+```
+{{{text}}}
+```
+
+{{/each}}

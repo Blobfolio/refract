@@ -4,7 +4,7 @@ version = "0.0.1"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
-description = "Refract provides guided WebP/AVIF conversion (from PNG/JPEG) to find the smallest acceptable file."
+description = "Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources."
 repository = "https://github.com/Blobfolio/refract"
 publish = false
 
@@ -17,7 +17,7 @@ depends = "$auto"
 section = "utility"
 extended-description = """\
 .\n\
-TBD.\n \
+Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality.\n \
 """
 assets = [
     ["../target/x86_64-unknown-linux-gnu/release/refract", "usr/bin/", "755"],
@@ -36,12 +36,12 @@ long = "--help"
 description = "Print help information."
 
 [[package.metadata.bashman.switches]]
-long = "--skip-avif"
-description = "Do not generate AVIF images."
+long = "--no-avif"
+description = "Skip AVIF conversion."
 
 [[package.metadata.bashman.switches]]
-long = "--skip-webp"
-description = "Do not generate WebP images."
+long = "--no-webp"
+description = "Skip WebP conversion."
 
 [[package.metadata.bashman.switches]]
 short = "-V"
@@ -57,7 +57,7 @@ path = true
 
 [[package.metadata.bashman.arguments]]
 label = "<PATH(s)…>"
-description = "Any number of files and directories to crawl and crunch."
+description = "Any number of images and directories to crawl and crunch."
 
 [dependencies]
 argyle = "0.3.*"

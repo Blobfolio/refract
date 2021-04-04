@@ -219,7 +219,7 @@ OPTIONS:
     -l, --list <list> Read file paths from this list.
 
 ARGS:
-    <PATH(S)>...      One or more images or directories to re-encode.
+    <PATH(S)>...      One or more images or directories to crawl and crunch.
 "
 	));
 }
