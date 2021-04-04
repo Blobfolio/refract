@@ -6,23 +6,26 @@ use crate::Image;
 use crate::Quality;
 use crate::RefractError;
 use crate::Refraction;
-use dactyl::NiceU8;
 use fyi_msg::Msg;
+use imgref::ImgVec;
+use ravif::ColorSpace;
+use ravif::Config;
+use ravif::Img;
+use ravif::RGBA8;
+use std::convert::TryFrom;
 use std::ffi::OsStr;
+use std::io::Write;
 use std::num::NonZeroU64;
 use std::num::NonZeroU8;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
-use std::process::Command;
-use std::process::Stdio;
 
 
 
 #[derive(Debug, Clone)]
 /// # `AVIF`.
 pub struct Avif<'a> {
-	src: &'a PathBuf,
-	src_size: NonZeroU64,
+	src: &'a [u8],
 
 	dst: PathBuf,
 	dst_size: Option<NonZeroU64>,
@@ -35,12 +38,15 @@ impl<'a> Avif<'a> {
 	#[allow(trivial_casts)] // It is what it is.
 	#[must_use]
 	/// # New.
-	pub fn new(src: &'a Image<'a>) -> Self {
+	///
+	/// ## Errors
+	///
+	/// This returns an error if the image cannot be read.
+	pub fn new(src: &'a Image) -> Self {
 		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
 
 		Self {
-			src: src.path(),
-			src_size: src.size(),
+			src: src.raw(),
 
 			dst: PathBuf::from(OsStr::from_bytes(&[stub, b".avif"].concat())),
 			dst_size: None,
@@ -69,9 +75,13 @@ impl<'a> Avif<'a> {
 			)
 		);
 
+		// Convert the image to a pixel buffer.
+		let mut img = load_rgba(self.src)?;
+		img = ravif::cleared_alpha(img);
+
 		let mut quality = Quality::default();
 		while let Some(q) = quality.next() {
-			match self.make_lossy(q) {
+			match self.make_lossy(img.as_ref(), q) {
 				Ok(size) => {
 					if prompt.prompt() {
 						quality.max(q);
@@ -119,44 +129,87 @@ impl<'a> Avif<'a> {
 	}
 
 	/// # Make Lossy.
-	fn make_lossy(&self, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
-		// Clear the temporary file, if any.
-		if self.tmp.exists() {
-			std::fs::remove_file(&self.tmp).map_err(|_| RefractError::Write)?;
-		}
+	fn make_lossy(&self, img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
+		// Calculate qualities.
+		let quality = quality.get();
+		let alpha_quality = num_integer::div_floor(quality + 100, 2).min(
+			quality + num_integer::div_floor(quality, 4) + 2
+		);
 
-		let status = Command::new("cavif")
-			.args(&[
-				OsStr::new("-s"),
-				OsStr::new("1"),
-				OsStr::new("-Q"),
-				OsStr::new(NiceU8::from(quality).as_str()),
-				OsStr::new("-f"),
-				self.src.as_os_str(),
-				OsStr::new("-o"),
-				self.tmp.as_os_str(),
-			])
-			.stdout(Stdio::null())
-			.stderr(Stdio::null())
-			.status()
-			.map_err(|_| RefractError::Write)?;
+		// Encode it!
+		let (out, _, _) = ravif::encode_rgba(
+			img,
+			&Config {
+	            quality,
+	            speed: 1,
+	            alpha_quality,
+	            premultiplied_alpha: false,
+	            color_space: ColorSpace::YCbCr,
+	            threads: 0,
+	        }
+	    )
+	    	.map_err(|_| RefractError::Write)?;
 
-		// Did it not work?
-		if ! status.success() || ! self.tmp.exists() {
-			return Err(RefractError::Write);
-		}
-
-		// Find the file size.
-		let size = NonZeroU64::new(std::fs::metadata(&self.tmp).map_or(0, |m| m.len()))
+	    // What's the size?
+	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::Write)?)
 			.ok_or(RefractError::Write)?;
 
 		// It has to be smaller than what we've already chosen.
 		if let Some(dsize) = self.dst_size {
-			if size < dsize { Ok(size) }
-			else { Err(RefractError::TooBig) }
+			if size >= dsize { return Err(RefractError::TooBig); }
 		}
 		// It has to be smaller than the source.
-		else if size < self.src_size { Ok(size) }
-		else { Err(RefractError::TooBig) }
+		else if size.get() >= self.src.len() as u64 {
+			return Err(RefractError::TooBig);
+		}
+
+		// Write it to a file!
+		std::fs::File::create(&self.tmp)
+			.and_then(|mut file| file.write_all(&out).and_then(|_| file.flush()))
+			.map_err(|_| RefractError::NoAvif)?;
+
+		Ok(size)
+	}
+}
+
+/// # Load RGBA.
+///
+/// This is largely lifted from [`cavif`](https://crates.io/crates/cavif). It
+/// is simplified slightly as we don't support premultiplied/dirty alpha.
+fn load_rgba(mut data: &[u8]) -> Result<ImgVec<RGBA8>, RefractError> {
+	use rgb::FromSlice;
+
+	// PNG.
+	if data.get(0..4) == Some(&[0x89,b'P',b'N',b'G']) {
+		let img = lodepng::decode32(data)
+			.map_err(|_| RefractError::InvalidImage)?;
+
+		Ok(ImgVec::new(img.buffer, img.width, img.height))
+	}
+	// JPEG.
+	else {
+		use jpeg_decoder::PixelFormat::{CMYK32, L8, RGB24};
+
+		let mut jecoder = jpeg_decoder::Decoder::new(&mut data);
+		let pixels = jecoder.decode()
+			.map_err(|_| RefractError::InvalidImage)?;
+		let info = jecoder.info().ok_or(RefractError::InvalidImage)?;
+
+		// So many ways to be a JPEG...
+		let buf: Vec<_> = match info.pixel_format {
+			// Upscale greyscale to RGBA.
+			L8 => {
+				pixels.iter().copied().map(|g| RGBA8::new(g, g, g, 255)).collect()
+			},
+			// Upscale RGB to RGBA.
+			RGB24 => {
+				let rgb = pixels.as_rgb();
+				rgb.iter().map(|p| p.alpha(255)).collect()
+			},
+			// CMYK doesn't work.
+			CMYK32 => return Err(RefractError::InvalidImage),
+		};
+
+		Ok(ImgVec::new(buf, info.width.into(), info.height.into()))
 	}
 }

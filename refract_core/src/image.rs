@@ -17,6 +17,7 @@ use std::path::PathBuf;
 /// # Image.
 pub struct Image<'a> {
 	src: &'a PathBuf,
+	raw: Box<[u8]>,
 	kind: ImageKind,
 	size: NonZeroU64,
 }
@@ -25,9 +26,14 @@ impl<'a> TryFrom<&'a PathBuf> for Image<'a> {
 	type Error = RefractError;
 
 	fn try_from(file: &'a PathBuf) -> Result<Self, Self::Error> {
+		let raw = std::fs::read(file)
+			.map_err(|_| RefractError::InvalidImage)?
+			.into_boxed_slice();
+
 		Ok(Self {
 			src: file,
-			kind: ImageKind::try_from(file)?,
+			kind: ImageKind::try_from(raw.as_ref())?,
+			raw,
 			size: NonZeroU64::new(std::fs::metadata(file).map_or(0, |m| m.len()))
 				.ok_or(RefractError::InvalidImage)?,
 		})
@@ -64,6 +70,10 @@ impl<'a> Image<'a> {
 	#[must_use]
 	/// # Path.
 	pub const fn path(&self) -> &PathBuf { self.src }
+
+	#[must_use]
+	/// # Raw.
+	pub const fn raw(&self) -> &[u8] { &self.raw }
 
 	#[must_use]
 	/// # Kind.
