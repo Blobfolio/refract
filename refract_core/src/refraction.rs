@@ -2,15 +2,22 @@
 # `Refract`: Refracted Image
 */
 
-use std::num::NonZeroU8;
-use std::num::NonZeroU64;
-use std::path::PathBuf;
-use std::borrow::Cow;
+use std::{
+	borrow::Cow,
+	num::{
+		NonZeroU8,
+		NonZeroU64,
+	},
+	path::PathBuf,
+};
 
 
 
 #[derive(Debug)]
 /// # Image Result.
+///
+/// This holds the information for a generated `WebP` or `AVIF` image, namely
+/// its path, size, and the quality setting used.
 pub struct Refraction {
 	path: PathBuf,
 	size: NonZeroU64,
@@ -27,7 +34,6 @@ impl Refraction {
 	/// the methods in this crate it will, but if used externally, be careful!
 	pub fn new(path: PathBuf, size: NonZeroU64, quality: NonZeroU8) -> Self {
 		assert!(path.file_name().is_some());
-
 		Self { path, size, quality }
 	}
 
@@ -39,9 +45,9 @@ impl Refraction {
 	///
 	/// ## Panics
 	///
-	/// This will panic if the struct was instantiated with an invalid path.
-	/// This crate won't do that, so it should be fine, but if using this
-	/// externally, make sure there is a file name.
+	/// This will technically panic in cases where there is no file name
+	/// component to the path, however instantiation already checks that
+	/// assertion, so this shouldn't panic here.
 	#[must_use]
 	pub fn name(&self) -> Cow<str> {
 		self.path.file_name().unwrap().to_string_lossy()
@@ -49,6 +55,9 @@ impl Refraction {
 
 	#[must_use]
 	/// # Quality.
+	///
+	/// This returns the quality setting (1-100) used when creating the image.
+	/// A value of `100` indicates `lossless`, but only applies to `WebP`.
 	pub const fn quality(&self) -> NonZeroU8 { self.quality }
 
 	#[must_use]

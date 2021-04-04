@@ -1,0 +1,28 @@
+.TH "REFRACT" "1" "April 2021" "Refract v0.0.1" "User Commands"
+.SH NAME
+Refract \- Manual page for refract v0.0.1.
+.SH DESCRIPTION
+Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources.
+.SS USAGE:
+.TP
+refract [FLAGS] [OPTIONS] <PATH(s)…>
+.SS FLAGS:
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help information.
+.TP
+\fB\-\-no\-avif\fR
+Skip AVIF conversion.
+.TP
+\fB\-\-no\-webp\fR
+Skip WebP conversion.
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print program version.
+.SS OPTIONS:
+.TP
+\fB\-l\fR, \fB\-\-list\fR <FILE>
+Read file paths from this text file.
+.SS <PATH(S)…>:
+.TP
+Any number of images and directories to crawl and crunch.

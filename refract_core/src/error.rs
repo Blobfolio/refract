@@ -37,9 +37,9 @@ impl RefractError {
 	/// # As Str.
 	pub const fn as_str(self) -> &'static str {
 		match self {
-			Self::InvalidImage => "The image is not a valid JPEG or PNG.",
-			Self::NoAvif => "No acceptable AVIF was found.",
-			Self::NoWebp => "No acceptable WebP was found.",
+			Self::InvalidImage => "The image is invalid or unreadable.",
+			Self::NoAvif => "No acceptable AVIF candidate was found.",
+			Self::NoWebp => "No acceptable WebP candidate was found.",
 			Self::TooBig => "The converted image was larger than the source.",
 			Self::Write => "Unable to save the image.",
 		}

@@ -1,28 +1,42 @@
 /*!
-# `Refract`: Image `AVIF`
+# `Refract`: `AVIF` Handling
+
+This program uses [`ravif`](https://crates.io/crates/ravif) for AVIF encoding.
+It works very similarly to [`cavif`](https://crates.io/crates/cavif), but does
+not support premultiplied/dirty alpha operations.
 */
 
-use crate::Image;
-use crate::Quality;
-use crate::RefractError;
-use crate::Refraction;
-use dactyl::NiceU8;
+use crate::{
+	Image,
+	Quality,
+	RefractError,
+	Refraction,
+};
 use fyi_msg::Msg;
-use std::ffi::OsStr;
-use std::num::NonZeroU64;
-use std::num::NonZeroU8;
-use std::os::unix::ffi::OsStrExt;
-use std::path::PathBuf;
-use std::process::Command;
-use std::process::Stdio;
+use ravif::{
+	ColorSpace,
+	Config,
+	Img,
+	RGBA8,
+};
+use std::{
+	convert::TryFrom,
+	ffi::OsStr,
+	io::Write,
+	num::{
+		NonZeroU64,
+		NonZeroU8,
+	},
+	os::unix::ffi::OsStrExt,
+	path::PathBuf,
+};
 
 
 
 #[derive(Debug, Clone)]
 /// # `AVIF`.
 pub struct Avif<'a> {
-	src: &'a PathBuf,
-	src_size: NonZeroU64,
+	src: &'a [u8],
 
 	dst: PathBuf,
 	dst_size: Option<NonZeroU64>,
@@ -35,12 +49,15 @@ impl<'a> Avif<'a> {
 	#[allow(trivial_casts)] // It is what it is.
 	#[must_use]
 	/// # New.
-	pub fn new(src: &'a Image<'a>) -> Self {
+	///
+	/// This instantiates a new instance from an [`Image`] struct. As
+	/// [`Avif::find`] is the only other public-facing method, and as it is
+	/// consuming, this is generally done as a single chained operation.
+	pub fn new(src: &'a Image) -> Self {
 		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
 
 		Self {
-			src: src.path(),
-			src_size: src.size(),
+			src: src.raw(),
 
 			dst: PathBuf::from(OsStr::from_bytes(&[stub, b".avif"].concat())),
 			dst_size: None,
@@ -51,6 +68,19 @@ impl<'a> Avif<'a> {
 	}
 
 	/// # Find the best!
+	///
+	/// This will generate lossy `AVIF` image copies in a loop with varying
+	/// qualities, asking at each step whether or not the image looks OK. In
+	/// most cases, an answer should be found in 5-10 steps.
+	///
+	/// If an acceptable `AVIF` candidate is found — based on user feedback and
+	/// file size comparisons — it will be saved as `/path/to/SOURCE.avif`. For
+	/// example, if the source lives at `/path/to/image.jpg`, the new version
+	/// will live at `/path/to/image.jpg.avif`. In cases where the `AVIF` would
+	/// be bigger than the source, no image is created.
+	///
+	/// Note: this method is consuming; the instance will not be usable
+	/// afterward.
 	///
 	/// ## Errors
 	///
@@ -69,9 +99,13 @@ impl<'a> Avif<'a> {
 			)
 		);
 
+		// Convert the image to a pixel buffer.
+		let mut img = crate::load_rgba(self.src)?;
+		img = ravif::cleared_alpha(img);
+
 		let mut quality = Quality::default();
 		while let Some(q) = quality.next() {
-			match self.make_lossy(q) {
+			match self.make_lossy(img.as_ref(), q) {
 				Ok(size) => {
 					if prompt.prompt() {
 						quality.max(q);
@@ -119,44 +153,53 @@ impl<'a> Avif<'a> {
 	}
 
 	/// # Make Lossy.
-	fn make_lossy(&self, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
-		// Clear the temporary file, if any.
-		if self.tmp.exists() {
-			std::fs::remove_file(&self.tmp).map_err(|_| RefractError::Write)?;
-		}
+	///
+	/// Generate an `AVIF` image at a given quality size.
+	///
+	/// ## Errors
+	///
+	/// This returns an error in cases where the resulting file size is larger
+	/// than the source or previous best, or if there are any problems
+	/// encountered during encoding or saving.
+	fn make_lossy(&self, img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
+		// Calculate qualities.
+		let quality = quality.get();
+		let alpha_quality = num_integer::div_floor(quality + 100, 2).min(
+			quality + num_integer::div_floor(quality, 4) + 2
+		);
 
-		let status = Command::new("cavif")
-			.args(&[
-				OsStr::new("-s"),
-				OsStr::new("1"),
-				OsStr::new("-Q"),
-				OsStr::new(NiceU8::from(quality).as_str()),
-				OsStr::new("-f"),
-				self.src.as_os_str(),
-				OsStr::new("-o"),
-				self.tmp.as_os_str(),
-			])
-			.stdout(Stdio::null())
-			.stderr(Stdio::null())
-			.status()
-			.map_err(|_| RefractError::Write)?;
+		// Encode it!
+		let (out, _, _) = ravif::encode_rgba(
+			img,
+			&Config {
+	            quality,
+	            speed: 1,
+	            alpha_quality,
+	            premultiplied_alpha: false,
+	            color_space: ColorSpace::YCbCr,
+	            threads: 0,
+	        }
+	    )
+	    	.map_err(|_| RefractError::Write)?;
 
-		// Did it not work?
-		if ! status.success() || ! self.tmp.exists() {
-			return Err(RefractError::Write);
-		}
-
-		// Find the file size.
-		let size = NonZeroU64::new(std::fs::metadata(&self.tmp).map_or(0, |m| m.len()))
+	    // What's the size?
+	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::Write)?)
 			.ok_or(RefractError::Write)?;
 
 		// It has to be smaller than what we've already chosen.
 		if let Some(dsize) = self.dst_size {
-			if size < dsize { Ok(size) }
-			else { Err(RefractError::TooBig) }
+			if size >= dsize { return Err(RefractError::TooBig); }
 		}
 		// It has to be smaller than the source.
-		else if size < self.src_size { Ok(size) }
-		else { Err(RefractError::TooBig) }
+		else if size.get() >= self.src.len() as u64 {
+			return Err(RefractError::TooBig);
+		}
+
+		// Write it to a file!
+		std::fs::File::create(&self.tmp)
+			.and_then(|mut file| file.write_all(&out).and_then(|_| file.flush()))
+			.map_err(|_| RefractError::NoAvif)?;
+
+		Ok(size)
 	}
 }

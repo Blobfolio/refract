@@ -52,6 +52,7 @@ use refract_core::{
 use std::{
 	convert::TryFrom,
 	ffi::OsStr,
+	num::NonZeroU8,
 	os::unix::ffi::OsStrExt,
 	path::PathBuf,
 };
@@ -76,13 +77,23 @@ fn main() {
 
 #[inline]
 /// # Actual Main.
+///
+/// This just gives us an easy way to bubble errors up to the real entrypoint.
 fn _main() -> Result<(), ArgyleError> {
 	// Parse CLI arguments.
 	let args = Argue::new(FLAG_HELP | FLAG_REQUIRED | FLAG_VERSION)?
 		.with_list();
 
-	// Put it all together!
-	let paths = Vec::<PathBuf>::try_from(
+	// Figure out which types we're dealing with.
+	let webp: bool = ! args.switch(b"--no-webp");
+	let avif: bool = ! args.switch(b"--no-avif");
+
+	if ! webp && ! avif {
+		return Err(ArgyleError::Custom("With both WebP and AVIF disabled, there is nothing to do!"));
+	}
+
+	// Find the paths.
+	let mut paths = Vec::<PathBuf>::try_from(
 		Dowser::filtered(|p| p.extension()
 			.map_or(
 				false,
@@ -96,60 +107,73 @@ fn _main() -> Result<(), ArgyleError> {
 	)
 		.map_err(|_| ArgyleError::Custom("No images were found."))?;
 
-	let webp = ! args.switch(b"--no-webp");
-	let avif = ! args.switch(b"--no-avif");
+	// Sort the paths to make it easier for people to follow.
+	paths.sort();
 
-	// Process each.
-	paths.iter().for_each(|x| {
-		if let Ok(img) = Image::try_from(x) {
-			Msg::custom("Source", 199, x.to_string_lossy().as_ref())
-				.with_newline(true)
-				.print();
+	// Run through the set to see what gets created!
+	paths.iter()
+		.for_each(|x|
+			if let Ok(img) = Image::try_from(x) {
+				Msg::custom("Source", 199, x.to_string_lossy().as_ref())
+					.with_newline(true)
+					.print();
 
-			if webp {
-				print_result(img.size().get(), img.try_webp());
+				if webp {
+					print_result(img.size().get(), img.try_webp());
+				}
+				if avif {
+					print_result(img.size().get(), img.try_avif());
+				}
+
+				println!();
 			}
-			if avif {
-				print_result(img.size().get(), img.try_avif());
-			}
-
-			println!();
-		}
-	});
+		);
 
 	Ok(())
 }
 
 /// # Print Refraction Result.
 fn print_result(size: u64, result: Result<Refraction, RefractError>) {
-	if let Ok(res) = result {
-		let diff = size - res.size().get();
-		let per = dactyl::int_div_float(diff, size);
+	match result {
+		Ok(res) => {
+			let diff = size - res.size().get();
+			let per = dactyl::int_div_float(diff, size);
 
-		Msg::success(format!(
-			"Created {} with quality {}.",
-			res.name(),
-			res.quality()
-		))
-			.with_suffix(
-				if let Some(per) = per {
-					format!(
-						" \x1b[2m(Saved {} bytes, {}.)\x1b[0m",
-						NiceU64::from(diff).as_str(),
-						NicePercent::from(per).as_str(),
-					)
-				}
-				else {
-					format!(
-						" \x1b[2m(Saved {} bytes.)\x1b[0m",
-						NiceU64::from(diff).as_str(),
-					)
-				}
-			)
-			.print();
-	}
-	else {
-		Msg::warning("No acceptable WebP candidate was found.").print();
+			// Lossless.
+			if res.quality() == unsafe { NonZeroU8::new_unchecked(100) } {
+				Msg::success(format!(
+					"Created {} (lossless).",
+					res.name()
+				))
+			}
+			// Lossy.
+			else {
+				Msg::success(format!(
+					"Created {} with quality {}.",
+					res.name(),
+					res.quality()
+				))
+			}
+				.with_suffix(
+					if let Some(per) = per {
+						format!(
+							" \x1b[2m(Saved {} bytes, {}.)\x1b[0m",
+							NiceU64::from(diff).as_str(),
+							NicePercent::from(per).as_str(),
+						)
+					}
+					else {
+						format!(
+							" \x1b[2m(Saved {} bytes.)\x1b[0m",
+							NiceU64::from(diff).as_str(),
+						)
+					}
+				)
+				.print();
+		},
+		Err(e) => {
+			Msg::warning(e.as_str()).print();
+		},
 	}
 }
 
@@ -158,41 +182,44 @@ fn print_result(size: u64, result: Result<Refraction, RefractError>) {
 fn helper() {
 	println!(concat!(
 		r"
-                  ,.
-                 (\(\)
- ,_              ;  o >
-  (`-.          /  (_)
-  `=(\`-._____/`   |
-   `-( /    -=`\   |
- .==`=(  -= = _/   /`--.
-(M==M=M==M=M==M==M==M==M)
- \=N=N==N=N==N=N==N=NN=/   ", "\x1b[38;5;199mChannelZ\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r"
-  \M==M=M==M=M==M===M=/    Fast, recursive, multi-threaded
-   \N=N==N=N==N=NN=N=/     static Brotli and Gzip encoding.
-    \M==M==M=M==M==M/
-     `-------------'
+             ,,,,,,,,
+           ,|||````||||
+     ,,,,|||||       ||,
+  ,||||```````       `||
+,|||`                 |||,
+||`     ....,          `|||
+||     ::::::::          |||,
+||     :::::::'     ||    ``|||,
+||,     :::::'               `|||
+`||,                           |||
+ `|||,       ||          ||    ,||
+   `||                        |||`
+    ||                   ,,,||||
+    ||              ,||||||```
+   ,||         ,,|||||`
+  ,||`   ||   |||`
+ |||`         ||
+,||           ||  ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r"
+||`           ||  Guided WebP/AVIF image conversion
+|||,         |||  for JPEG and PNG sources.
+ `|||,,    ,|||
+   ``||||||||`
+
 
 USAGE:
-    channelz [FLAGS] [OPTIONS] <PATH(S)>...
+    refract [FLAGS] [OPTIONS] <PATH(S)>...
 
 FLAGS:
-        --clean       Remove all existing *.gz *.br files before starting.
     -h, --help        Prints help information.
-    -p, --progress    Show progress bar while minifying.
+        --no-avif     Skip AVIF conversion.
+        --no-webp     Skip WebP conversion.
     -V, --version     Prints version information.
 
 OPTIONS:
-    -l, --list <list>    Read file paths from this list.
+    -l, --list <list> Read file paths from this list.
 
 ARGS:
-    <PATH(S)>...    One or more files or directories to compress.
-
----
-
-Note: static copies will only be generated for files with these extensions:
-
-    atom; bmp; css; eot; (geo)json; htc; htm(l); ico; ics; js; manifest; md;
-    mjs; otf; rdf; rss; svg; ttf; txt; vcard; vcs; vtt; wasm; xhtm(l); xml; xsl
+    <PATH(S)>...      One or more images or directories to crawl and crunch.
 "
 	));
 }

@@ -2,21 +2,30 @@
 # `Refract`: Image
 */
 
-use crate::Avif;
-use crate::ImageKind;
-use crate::RefractError;
-use crate::Refraction;
-use crate::Webp;
-use std::convert::TryFrom;
-use std::num::NonZeroU64;
-use std::path::PathBuf;
+use crate::{
+	Avif,
+	ImageKind,
+	RefractError,
+	Refraction,
+	Webp,
+};
+use std::{
+	convert::TryFrom,
+	num::NonZeroU64,
+	path::PathBuf,
+};
 
 
 
 #[derive(Debug)]
 /// # Image.
+///
+/// This holds data for a source image — either a JPEG or PNG. It is
+/// instantiated with a reference to a `PathBuf`, and lives as long as that
+/// reference.
 pub struct Image<'a> {
 	src: &'a PathBuf,
+	raw: Box<[u8]>,
 	kind: ImageKind,
 	size: NonZeroU64,
 }
@@ -25,9 +34,14 @@ impl<'a> TryFrom<&'a PathBuf> for Image<'a> {
 	type Error = RefractError;
 
 	fn try_from(file: &'a PathBuf) -> Result<Self, Self::Error> {
+		let raw = std::fs::read(file)
+			.map_err(|_| RefractError::InvalidImage)?
+			.into_boxed_slice();
+
 		Ok(Self {
 			src: file,
-			kind: ImageKind::try_from(file)?,
+			kind: ImageKind::try_from(raw.as_ref())?,
+			raw,
 			size: NonZeroU64::new(std::fs::metadata(file).map_or(0, |m| m.len()))
 				.ok_or(RefractError::InvalidImage)?,
 		})
@@ -63,13 +77,25 @@ impl<'a> Image<'a> {
 
 	#[must_use]
 	/// # Path.
+	///
+	/// Returns a reference to the source's file system path.
 	pub const fn path(&self) -> &PathBuf { self.src }
 
 	#[must_use]
+	/// # Raw.
+	///
+	/// Returns the contents of the file as a byte slice.
+	pub const fn raw(&self) -> &[u8] { &self.raw }
+
+	#[must_use]
 	/// # Kind.
+	///
+	/// Returns the kind of image.
 	pub const fn kind(&self) -> ImageKind { self.kind }
 
 	#[must_use]
 	/// # Size.
+	///
+	/// Returns the disk size of the image (in bytes).
 	pub const fn size(&self) -> NonZeroU64 { self.size }
 }
