@@ -122,34 +122,36 @@ fn _main() -> Result<(), ArgyleError> {
 
 /// # Print Refraction Result.
 fn print_result(size: u64, result: Result<Refraction, RefractError>) {
-	if let Ok(res) = result {
-		let diff = size - res.size().get();
-		let per = dactyl::int_div_float(diff, size);
+	match result {
+		Ok(res) => {
+			let diff = size - res.size().get();
+			let per = dactyl::int_div_float(diff, size);
 
-		Msg::success(format!(
-			"Created {} with quality {}.",
-			res.name(),
-			res.quality()
-		))
-			.with_suffix(
-				if let Some(per) = per {
-					format!(
-						" \x1b[2m(Saved {} bytes, {}.)\x1b[0m",
-						NiceU64::from(diff).as_str(),
-						NicePercent::from(per).as_str(),
-					)
-				}
-				else {
-					format!(
-						" \x1b[2m(Saved {} bytes.)\x1b[0m",
-						NiceU64::from(diff).as_str(),
-					)
-				}
-			)
-			.print();
-	}
-	else {
-		Msg::warning("No acceptable WebP candidate was found.").print();
+			Msg::success(format!(
+				"Created {} with quality {}.",
+				res.name(),
+				res.quality()
+			))
+				.with_suffix(
+					if let Some(per) = per {
+						format!(
+							" \x1b[2m(Saved {} bytes, {}.)\x1b[0m",
+							NiceU64::from(diff).as_str(),
+							NicePercent::from(per).as_str(),
+						)
+					}
+					else {
+						format!(
+							" \x1b[2m(Saved {} bytes.)\x1b[0m",
+							NiceU64::from(diff).as_str(),
+						)
+					}
+				)
+				.print();
+		},
+		Err(e) => {
+			Msg::warning(e.as_str()).print();
+		},
 	}
 }
 
