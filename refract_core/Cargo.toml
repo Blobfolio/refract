@@ -1,0 +1,18 @@
+[package]
+name = "refract_core"
+version = "0.0.1"
+license = "WTFPL"
+authors = ["Josh Stoik <josh@blobfolio.com>"]
+edition = "2018"
+description = "Library for Refract."
+repository = "https://github.com/Blobfolio/refract"
+publish = false
+
+[dependencies]
+dactyl = "0.1.*"
+imghdr = "0.7.*"
+num-integer = "0.1.*"
+
+[dependencies.fyi_msg]
+git = "https://github.com/Blobfolio/fyi.git"
+tag = "v0.7.0"
