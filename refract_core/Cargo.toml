@@ -11,14 +11,14 @@ publish = false
 [dependencies]
 dactyl = "0.1.*"
 imghdr = "0.7.*"
-imgref = "1.7.1"
-jpeg-decoder = "0.1.22"
-lodepng = "3.4.5"
+imgref = "1.9.*"
+jpeg-decoder = "0.1.*"
+lodepng = "3.4.*"
 num-integer = "0.1.*"
-rgb = "0.8.25"
+rgb = "0.8.*"
 
 [dependencies.libwebp-sys2]
-version = "0.1.2"
+version = "0.1.*"
 features = [ "1_1", "static" ]
 
 [dependencies.ravif]
