@@ -9,6 +9,11 @@ use crate::{
 	Refraction,
 	Webp,
 };
+use imgref::ImgVec;
+use ravif::{
+	Img,
+	RGBA8,
+};
 use std::{
 	convert::TryFrom,
 	num::NonZeroU64,
@@ -17,7 +22,7 @@ use std::{
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// # Image.
 ///
 /// This holds data for a source image — either a JPEG or PNG. It is
@@ -25,7 +30,7 @@ use std::{
 /// reference.
 pub struct Image<'a> {
 	src: &'a PathBuf,
-	raw: Box<[u8]>,
+	img: ImgVec<RGBA8>,
 	kind: ImageKind,
 	size: NonZeroU64,
 }
@@ -35,14 +40,13 @@ impl<'a> TryFrom<&'a PathBuf> for Image<'a> {
 
 	fn try_from(file: &'a PathBuf) -> Result<Self, Self::Error> {
 		let raw = std::fs::read(file)
-			.map_err(|_| RefractError::InvalidImage)?
-			.into_boxed_slice();
+			.map_err(|_| RefractError::InvalidImage)?;
 
 		Ok(Self {
 			src: file,
-			kind: ImageKind::try_from(raw.as_ref())?,
-			raw,
-			size: NonZeroU64::new(std::fs::metadata(file).map_or(0, |m| m.len()))
+			img: crate::load_rgba(&raw)?,
+			kind: ImageKind::try_from(raw.as_slice())?,
+			size: NonZeroU64::new(u64::try_from(raw.len()).map_err(|_| RefractError::InvalidImage)?)
 				.ok_or(RefractError::InvalidImage)?,
 		})
 	}
@@ -58,7 +62,8 @@ impl<'a> Image<'a> {
 	///
 	/// This method returns an error if no acceptable image is found, either
 	/// because they all looked terrible or were larger than the source.
-	pub fn try_avif(&self) -> Result<Refraction, RefractError> {
+	pub fn try_avif(&mut self) -> Result<Refraction, RefractError> {
+		self.img = ravif::cleared_alpha(self.img.clone());
 		Avif::new(self).find()
 	}
 
@@ -82,10 +87,10 @@ impl<'a> Image<'a> {
 	pub const fn path(&self) -> &PathBuf { self.src }
 
 	#[must_use]
-	/// # Raw.
+	/// # Image.
 	///
-	/// Returns the contents of the file as a byte slice.
-	pub const fn raw(&self) -> &[u8] { &self.raw }
+	/// Returns a reference to the image.
+	pub fn img(&self) -> Img<&[RGBA8]> { self.img.as_ref() }
 
 	#[must_use]
 	/// # Kind.

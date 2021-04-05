@@ -50,7 +50,8 @@ use std::{
 #[derive(Debug, Clone)]
 /// # `WebP`.
 pub struct Webp<'a> {
-	src: &'a [u8],
+	src: Img<&'a [RGBA8]>,
+	src_size: NonZeroU64,
 
 	dst: PathBuf,
 	dst_size: Option<NonZeroU64>,
@@ -71,7 +72,8 @@ impl<'a> Webp<'a> {
 		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
 
 		let mut out = Self {
-			src: src.raw(),
+			src: src.img(),
+			src_size: src.size(),
 
 			dst: PathBuf::from(OsStr::from_bytes(&[stub, b".webp"].concat())),
 			dst_size: None,
@@ -120,10 +122,9 @@ impl<'a> Webp<'a> {
 			)
 		);
 
-		let img = crate::load_rgba(self.src)?;
 		let mut quality = Quality::default();
 		while let Some(q) = quality.next() {
-			match self.make_lossy(img.as_ref(), q) {
+			match self.make_lossy(q) {
 				Ok(size) => {
 					if prompt.prompt() {
 						quality.max(q);
@@ -182,15 +183,14 @@ impl<'a> Webp<'a> {
 	/// Afterwards, the program will continue trying lossy compression as
 	/// normal.
 	fn make_lossless(&mut self) -> Result<(), RefractError> {
-		let img = crate::load_rgba(self.src)?;
-		let out = encode(img.as_ref(), init_lossless_config())?;
+		let out = encode(self.src, init_lossless_config())?;
 
 		// What's the size?
 	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::Write)?)
 			.ok_or(RefractError::Write)?;
 
 		// It has to be smaller than the source.
-		if size.get() >= self.src.len() as u64 {
+		if size >= self.src_size {
 			return Err(RefractError::TooBig);
 		}
 
@@ -216,14 +216,14 @@ impl<'a> Webp<'a> {
 	/// This returns an error in cases where the resulting file size is larger
 	/// than the source or previous best, or if there are any problems
 	/// encountered during encoding or saving.
-	fn make_lossy(&self, img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
+	fn make_lossy(&self, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
 		// Clear the temporary file, if any.
 		if self.tmp.exists() {
 			std::fs::remove_file(&self.tmp).map_err(|_| RefractError::Write)?;
 		}
 
 		// How'd it go?
-		let out = encode(img, init_config(quality))?;
+		let out = encode(self.src, init_config(quality))?;
 
 		// What's the size?
 	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::Write)?)
@@ -234,7 +234,7 @@ impl<'a> Webp<'a> {
 			if size >= dsize { return Err(RefractError::TooBig); }
 		}
 		// It has to be smaller than the source.
-		else if size.get() >= self.src.len() as u64 {
+		else if size >= self.src_size {
 			return Err(RefractError::TooBig);
 		}
 

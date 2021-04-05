@@ -36,7 +36,8 @@ use std::{
 #[derive(Debug, Clone)]
 /// # `AVIF`.
 pub struct Avif<'a> {
-	src: &'a [u8],
+	src: Img<&'a [RGBA8]>,
+	src_size: NonZeroU64,
 
 	dst: PathBuf,
 	dst_size: Option<NonZeroU64>,
@@ -57,7 +58,8 @@ impl<'a> Avif<'a> {
 		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
 
 		Self {
-			src: src.raw(),
+			src: src.img(),
+			src_size: src.size(),
 
 			dst: PathBuf::from(OsStr::from_bytes(&[stub, b".avif"].concat())),
 			dst_size: None,
@@ -99,13 +101,9 @@ impl<'a> Avif<'a> {
 			)
 		);
 
-		// Convert the image to a pixel buffer.
-		let mut img = crate::load_rgba(self.src)?;
-		img = ravif::cleared_alpha(img);
-
 		let mut quality = Quality::default();
 		while let Some(q) = quality.next() {
-			match self.make_lossy(img.as_ref(), q) {
+			match self.make_lossy(q) {
 				Ok(size) => {
 					if prompt.prompt() {
 						quality.max(q);
@@ -161,7 +159,7 @@ impl<'a> Avif<'a> {
 	/// This returns an error in cases where the resulting file size is larger
 	/// than the source or previous best, or if there are any problems
 	/// encountered during encoding or saving.
-	fn make_lossy(&self, img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
+	fn make_lossy(&self, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
 		// Calculate qualities.
 		let quality = quality.get();
 		let alpha_quality = num_integer::div_floor(quality + 100, 2).min(
@@ -170,7 +168,7 @@ impl<'a> Avif<'a> {
 
 		// Encode it!
 		let (out, _, _) = ravif::encode_rgba(
-			img,
+			self.src,
 			&Config {
 	            quality,
 	            speed: 1,
@@ -191,7 +189,7 @@ impl<'a> Avif<'a> {
 			if size >= dsize { return Err(RefractError::TooBig); }
 		}
 		// It has to be smaller than the source.
-		else if size.get() >= self.src.len() as u64 {
+		else if size >= self.src_size {
 			return Err(RefractError::TooBig);
 		}
 
