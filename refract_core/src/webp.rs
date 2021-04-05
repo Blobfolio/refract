@@ -226,8 +226,8 @@ impl<'a> Webp<'a> {
 		let out = encode(self.src, init_config(quality))?;
 
 		// What's the size?
-	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::Write)?)
-			.ok_or(RefractError::Write)?;
+	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::TooBig)?)
+			.ok_or(RefractError::TooBig)?;
 
 		// It has to be smaller than what we've already chosen.
 		if let Some(dsize) = self.dst_size {
@@ -241,7 +241,7 @@ impl<'a> Webp<'a> {
 		// Write it to a file!
 		std::fs::File::create(&self.tmp)
 			.and_then(|mut file| file.write_all(&out).and_then(|_| file.flush()))
-			.map_err(|_| RefractError::NoAvif)?;
+			.map_err(|_| RefractError::Write)?;
 
 		Ok(size)
 	}
