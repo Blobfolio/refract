@@ -50,7 +50,8 @@ use std::{
 #[derive(Debug, Clone)]
 /// # `WebP`.
 pub struct Webp<'a> {
-	src: &'a [u8],
+	src: Img<&'a [RGBA8]>,
+	src_size: NonZeroU64,
 
 	dst: PathBuf,
 	dst_size: Option<NonZeroU64>,
@@ -71,7 +72,8 @@ impl<'a> Webp<'a> {
 		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
 
 		let mut out = Self {
-			src: src.raw(),
+			src: src.img(),
+			src_size: src.size(),
 
 			dst: PathBuf::from(OsStr::from_bytes(&[stub, b".webp"].concat())),
 			dst_size: None,
@@ -120,13 +122,12 @@ impl<'a> Webp<'a> {
 			)
 		);
 
-		let img = crate::load_rgba(self.src)?;
 		let mut quality = Quality::default();
 		while let Some(q) = quality.next() {
-			match self.make_lossy(img.as_ref(), q) {
+			match self.make_lossy(q) {
 				Ok(size) => {
 					if prompt.prompt() {
-						quality.max(q);
+						quality.set_max(q);
 
 						// Move it to the destination.
 						std::fs::rename(&self.tmp, &self.dst)
@@ -137,12 +138,12 @@ impl<'a> Webp<'a> {
 						self.dst_size = Some(size);
 					}
 					else {
-						quality.min(q);
+						quality.set_min(q);
 					}
 				},
 				Err(RefractError::TooBig) => {
 					if let Some(x) = NonZeroU8::new(q.get().saturating_sub(1)) {
-						quality.max(x);
+						quality.set_max(x);
 					}
 					else { return Err(RefractError::NoWebp); }
 				},
@@ -182,15 +183,14 @@ impl<'a> Webp<'a> {
 	/// Afterwards, the program will continue trying lossy compression as
 	/// normal.
 	fn make_lossless(&mut self) -> Result<(), RefractError> {
-		let img = crate::load_rgba(self.src)?;
-		let out = encode(img.as_ref(), init_lossless_config())?;
+		let out = encode(self.src, init_lossless_config())?;
 
 		// What's the size?
 	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::Write)?)
 			.ok_or(RefractError::Write)?;
 
 		// It has to be smaller than the source.
-		if size.get() >= self.src.len() as u64 {
+		if size >= self.src_size {
 			return Err(RefractError::TooBig);
 		}
 
@@ -216,32 +216,32 @@ impl<'a> Webp<'a> {
 	/// This returns an error in cases where the resulting file size is larger
 	/// than the source or previous best, or if there are any problems
 	/// encountered during encoding or saving.
-	fn make_lossy(&self, img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
+	fn make_lossy(&self, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
 		// Clear the temporary file, if any.
 		if self.tmp.exists() {
 			std::fs::remove_file(&self.tmp).map_err(|_| RefractError::Write)?;
 		}
 
 		// How'd it go?
-		let out = encode(img, init_config(quality))?;
+		let out = encode(self.src, init_config(quality))?;
 
 		// What's the size?
-	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::Write)?)
-			.ok_or(RefractError::Write)?;
+	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::TooBig)?)
+			.ok_or(RefractError::TooBig)?;
 
 		// It has to be smaller than what we've already chosen.
 		if let Some(dsize) = self.dst_size {
 			if size >= dsize { return Err(RefractError::TooBig); }
 		}
 		// It has to be smaller than the source.
-		else if size.get() >= self.src.len() as u64 {
+		else if size >= self.src_size {
 			return Err(RefractError::TooBig);
 		}
 
 		// Write it to a file!
 		std::fs::File::create(&self.tmp)
 			.and_then(|mut file| file.write_all(&out).and_then(|_| file.flush()))
-			.map_err(|_| RefractError::NoAvif)?;
+			.map_err(|_| RefractError::Write)?;
 
 		Ok(size)
 	}
@@ -326,10 +326,15 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 	// Fill the pixel buffers.
 	unsafe {
+		use dactyl::traits::SaturatingFrom;
+		use rgb::ComponentSlice;
+
 		let mut pixel_data = source
 			.pixels()
-			.flat_map(|px| vec![px.r, px.g, px.b, px.a])
-			.collect::<Vec<_>>();
+			.fold(Vec::with_capacity(usize::saturating_from(width * height * 4)), |mut acc, px| {
+				acc.extend_from_slice(px.as_slice());
+				acc
+			});
 
 		let full_stride = argb_stride * 4;
 

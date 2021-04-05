@@ -4,7 +4,7 @@ Refract is a guided [WebP](https://en.wikipedia.org/wiki/WebP)/[AVIF](https://en
 
 It works similarly to the vision tests your eye doctor performs. "How does this look?" Click. "How about now?" Click. "Here's your prescription."
 
-Like your eye doctor, exhaustive A/B comparisons are unnecessary. The quality stepping used by refract pulls the mid-point from moving min/max boundaries. Each answer shrinks the size of the range accordingly, allowing an answer to be discovered in 5-10 steps instead of 100.
+Like your eye doctor, exhaustive A/B comparisons are unnecessary. The quality stepping used by refract pulls the mid-point between moving min/max boundaries. Each answer shrinks the size of the range accordingly, allowing an answer to be discovered in just 5-10 steps instead of 100.
 
 
 

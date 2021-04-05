@@ -1943,8 +1943,8 @@ TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 **Used By:**
 
 * [fyi_msg 0.7.0](https://github.com/Blobfolio/fyi)
-* [refract 0.0.1](https://github.com/Blobfolio/refract)
-* [refract_core 0.0.1](https://github.com/Blobfolio/refract)
+* [refract 0.0.2](https://github.com/Blobfolio/refract)
+* [refract_core 0.0.2](https://github.com/Blobfolio/refract)
 
 
 ```
