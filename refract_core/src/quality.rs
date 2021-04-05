@@ -39,7 +39,7 @@ impl Quality {
 	/// This will return a value that sits roughly in the middle of the current
 	/// min and max values, or `None` if we're out of options.
 	///
-	/// Combined with the mutable [`Quality::min`] and [`Quality::max`] capping
+	/// Combined with the mutable [`Quality::set_min`] and [`Quality::set_max`] capping
 	/// methods that shrink the range, this allows us to find the "best" value
 	/// in 5-10 steps instead of 100.
 	///
@@ -75,7 +75,13 @@ impl Quality {
 	/// the floor will also be adjusted. In such cases, since floor and ceiling
 	/// would then be equal, the next call to [`Quality::next`] will return
 	/// `None`, ending the game.
-	pub fn max(&mut self, quality: NonZeroU8) {
+	///
+	/// ## Panics
+	///
+	/// This method will panic if the quality is greater than 100.
+	pub fn set_max(&mut self, quality: NonZeroU8) {
+		assert!(quality.get() <= 100);
+
 		self.max = quality;
 		if self.max < self.min {
 			self.min = self.max;
@@ -92,7 +98,13 @@ impl Quality {
 	/// the ceiling will also be adjusted. In such cases, since floor and ceiling
 	/// would then be equal, the next call to [`Quality::next`] will return
 	/// `None`, ending the game.
-	pub fn min(&mut self, quality: NonZeroU8) {
+	///
+	/// ## Panics
+	///
+	/// This method will panic if the quality is greater than 100.
+	pub fn set_min(&mut self, quality: NonZeroU8) {
+		assert!(quality.get() <= 100);
+
 		self.min = quality;
 		if self.max < self.min {
 			self.max = self.min;

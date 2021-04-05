@@ -106,7 +106,7 @@ impl Avif {
 			match self.make_lossy(q) {
 				Ok(size) => {
 					if prompt.prompt() {
-						quality.max(q);
+						quality.set_max(q);
 
 						// Move it to the destination.
 						std::fs::rename(&self.tmp, &self.dst)
@@ -117,12 +117,12 @@ impl Avif {
 						self.dst_size = Some(size);
 					}
 					else {
-						quality.min(q);
+						quality.set_min(q);
 					}
 				},
 				Err(RefractError::TooBig) => {
 					if let Some(x) = NonZeroU8::new(q.get().saturating_sub(1)) {
-						quality.max(x);
+						quality.set_max(x);
 					}
 					else { return Err(RefractError::NoAvif); }
 				},
