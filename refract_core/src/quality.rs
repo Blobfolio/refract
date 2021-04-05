@@ -17,6 +17,7 @@ use std::num::NonZeroU8;
 pub struct Quality {
 	min: NonZeroU8,
 	max: NonZeroU8,
+	last: Option<NonZeroU8>,
 }
 
 impl Default for Quality {
@@ -25,11 +26,13 @@ impl Default for Quality {
 		Self {
 			min: unsafe { NonZeroU8::new_unchecked(1) },
 			max: unsafe { NonZeroU8::new_unchecked(100) },
+			last: None,
 		}
 	}
 }
 
 impl Quality {
+	#[allow(clippy::should_implement_trait)] // It's fine.
 	#[must_use]
 	/// # Next Value.
 	///
@@ -41,7 +44,7 @@ impl Quality {
 	/// in 5-10 steps instead of 100.
 	///
 	/// Think of it like a Bond villain room where the walls are closing in.
-	pub fn next(self) -> Option<NonZeroU8> {
+	pub fn next(&mut self) -> Option<NonZeroU8> {
 		if self.min == self.max { return None; }
 
 		let max = self.max.get();
@@ -54,7 +57,12 @@ impl Quality {
 			diff = num_integer::div_floor(diff, 2);
 		}
 
-		Some(unsafe { NonZeroU8::new_unchecked(min + diff) })
+		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
+		if let Some(last) = self.last.replace(next) {
+			if next == last { return None; }
+		}
+
+		Some(next)
 	}
 
 	/// # Cap Max.
