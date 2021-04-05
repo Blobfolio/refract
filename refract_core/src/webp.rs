@@ -326,10 +326,15 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 	// Fill the pixel buffers.
 	unsafe {
+		use dactyl::traits::SaturatingFrom;
+		use rgb::ComponentSlice;
+
 		let mut pixel_data = source
 			.pixels()
-			.flat_map(|px| vec![px.r, px.g, px.b, px.a])
-			.collect::<Vec<_>>();
+			.fold(Vec::with_capacity(usize::saturating_from(width * height * 4)), |mut acc, px| {
+				acc.extend_from_slice(px.as_slice());
+				acc
+			});
 
 		let full_stride = argb_stride * 4;
 

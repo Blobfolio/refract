@@ -9,6 +9,7 @@ repository = "https://github.com/Blobfolio/refract"
 publish = false
 
 [dependencies]
+dactyl = "0.1.*"
 imghdr = "0.7.*"
 imgref = "1.7.1"
 jpeg-decoder = "0.1.22"
