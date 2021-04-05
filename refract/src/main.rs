@@ -113,7 +113,7 @@ fn _main() -> Result<(), ArgyleError> {
 	// Run through the set to see what gets created!
 	paths.iter()
 		.for_each(|x|
-			if let Ok(mut img) = Image::try_from(x) {
+			if let Ok(img) = Image::try_from(x) {
 				Msg::custom("Source", 199, x.to_string_lossy().as_ref())
 					.with_newline(true)
 					.print();

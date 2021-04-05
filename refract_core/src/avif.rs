@@ -13,10 +13,10 @@ use crate::{
 	Refraction,
 };
 use fyi_msg::Msg;
+use imgref::ImgVec;
 use ravif::{
 	ColorSpace,
 	Config,
-	Img,
 	RGBA8,
 };
 use std::{
@@ -35,8 +35,8 @@ use std::{
 
 #[derive(Debug, Clone)]
 /// # `AVIF`.
-pub struct Avif<'a> {
-	src: Img<&'a [RGBA8]>,
+pub struct Avif {
+	src: ImgVec<RGBA8>,
 	src_size: NonZeroU64,
 
 	dst: PathBuf,
@@ -46,7 +46,7 @@ pub struct Avif<'a> {
 	tmp: PathBuf,
 }
 
-impl<'a> Avif<'a> {
+impl Avif {
 	#[allow(trivial_casts)] // It is what it is.
 	#[must_use]
 	/// # New.
@@ -54,11 +54,11 @@ impl<'a> Avif<'a> {
 	/// This instantiates a new instance from an [`Image`] struct. As
 	/// [`Avif::find`] is the only other public-facing method, and as it is
 	/// consuming, this is generally done as a single chained operation.
-	pub fn new(src: &'a Image) -> Self {
+	pub fn new(src: &Image, img: ImgVec<RGBA8>) -> Self {
 		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
 
 		Self {
-			src: src.img(),
+			src: ravif::cleared_alpha(img),
 			src_size: src.size(),
 
 			dst: PathBuf::from(OsStr::from_bytes(&[stub, b".avif"].concat())),
@@ -168,7 +168,7 @@ impl<'a> Avif<'a> {
 
 		// Encode it!
 		let (out, _, _) = ravif::encode_rgba(
-			self.src,
+			self.src.as_ref(),
 			&Config {
 	            quality,
 	            speed: 1,

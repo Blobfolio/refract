@@ -62,9 +62,8 @@ impl<'a> Image<'a> {
 	///
 	/// This method returns an error if no acceptable image is found, either
 	/// because they all looked terrible or were larger than the source.
-	pub fn try_avif(&mut self) -> Result<Refraction, RefractError> {
-		self.img = ravif::cleared_alpha(self.img.clone());
-		Avif::new(self).find()
+	pub fn try_avif(&self) -> Result<Refraction, RefractError> {
+		Avif::new(self, self.img.clone()).find()
 	}
 
 	#[inline]
