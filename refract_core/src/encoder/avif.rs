@@ -8,11 +8,8 @@ not support premultiplied/dirty alpha operations.
 
 use crate::{
 	Image,
-	Quality,
 	RefractError,
-	Refraction,
 };
-use fyi_msg::Msg;
 use imgref::ImgVec;
 use ravif::{
 	ColorSpace,
@@ -69,86 +66,7 @@ impl Avif {
 		}
 	}
 
-	/// # Find the best!
-	///
-	/// This will generate lossy `AVIF` image copies in a loop with varying
-	/// qualities, asking at each step whether or not the image looks OK. In
-	/// most cases, an answer should be found in 5-10 steps.
-	///
-	/// If an acceptable `AVIF` candidate is found — based on user feedback and
-	/// file size comparisons — it will be saved as `/path/to/SOURCE.avif`. For
-	/// example, if the source lives at `/path/to/image.jpg`, the new version
-	/// will live at `/path/to/image.jpg.avif`. In cases where the `AVIF` would
-	/// be bigger than the source, no image is created.
-	///
-	/// Note: this method is consuming; the instance will not be usable
-	/// afterward.
-	///
-	/// ## Errors
-	///
-	/// Returns an error if no acceptable `AVIF` can be found or if there are
-	/// problems saving them.
-	pub fn find(mut self) -> Result<Refraction, RefractError> {
-		let prompt = Msg::custom(
-			"AVIF",
-			208,
-			&format!(
-				"Does \x1b[1;95m{}\x1b[0m look good?",
-				self.tmp
-					.file_name()
-					.ok_or(RefractError::InvalidImage)?
-					.to_string_lossy(),
-			)
-		);
-
-		let mut quality = Quality::default();
-		while let Some(q) = quality.next() {
-			match self.make_lossy(q) {
-				Ok(size) => {
-					if prompt.prompt() {
-						quality.set_max(q);
-
-						// Move it to the destination.
-						std::fs::rename(&self.tmp, &self.dst)
-							.map_err(|_| RefractError::Write)?;
-
-						// Update the details.
-						self.dst_quality = Some(q);
-						self.dst_size = Some(size);
-					}
-					else {
-						quality.set_min(q);
-					}
-				},
-				Err(RefractError::TooBig) => {
-					if let Some(x) = NonZeroU8::new(q.get().saturating_sub(1)) {
-						quality.set_max(x);
-					}
-					else { return Err(RefractError::NoAvif); }
-				},
-				Err(e) => {
-					return Err(e);
-				},
-			}
-		}
-
-		// Clean up.
-		if self.tmp.exists() {
-			let _res = std::fs::remove_file(&self.tmp);
-		}
-
-		if let Some((size, quality)) = self.dst_size.zip(self.dst_quality) {
-			Ok(Refraction::new(self.dst, size, quality))
-		}
-		else {
-			// Get rid of the distribution file if it exists.
-			if self.dst.exists() {
-				let _res = std::fs::remove_file(self.dst);
-			}
-
-			Err(RefractError::NoAvif)
-		}
-	}
+	crate::impl_find!("AVIF", RefractError::NoAvif);
 
 	/// # Make Lossy.
 	///
