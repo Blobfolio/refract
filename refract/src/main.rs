@@ -45,6 +45,7 @@ use dactyl::{
 use dowser::Dowser;
 use fyi_msg::Msg;
 use refract_core::{
+	MAX_QUALITY,
 	Image,
 	RefractError,
 	Refraction,
@@ -52,7 +53,6 @@ use refract_core::{
 use std::{
 	convert::TryFrom,
 	ffi::OsStr,
-	num::NonZeroU8,
 	os::unix::ffi::OsStrExt,
 	path::PathBuf,
 };
@@ -140,7 +140,7 @@ fn print_result(size: u64, result: Result<Refraction, RefractError>) {
 			let per = dactyl::int_div_float(diff, size);
 
 			// Lossless.
-			if res.quality() == unsafe { NonZeroU8::new_unchecked(100) } {
+			if res.quality() == MAX_QUALITY {
 				Msg::success(format!(
 					"Created {} (lossless).",
 					res.name()
