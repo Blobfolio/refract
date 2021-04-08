@@ -225,13 +225,14 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 		unsafe { WebPMemoryWrite(data, data_size, picture) }
 	}
 
+	// Check the source dimensions.
 	let width = i32::try_from(source.width()).map_err(|_| RefractError::InvalidImage)?;
 	let height = i32::try_from(source.height()).map_err(|_| RefractError::InvalidImage)?;
-
 	if width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION {
 		return Err(RefractError::InvalidImage);
 	}
 
+	// Set up the picture struct.
 	let mut picture: WebPPicture = unsafe { std::mem::zeroed() };
 	if unsafe { WebPPictureInit(&mut picture) } == 0 {
 		return Err(RefractError::InvalidImage);
@@ -248,6 +249,8 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 		use dactyl::traits::SaturatingFrom;
 		use rgb::ComponentSlice;
 
+		// TODO: This is decently fast, but is there a better way to collapse
+		// the individual pixel RGBA values into a contiguous buffer?
 		let mut pixel_data = source
 			.pixels()
 			.fold(Vec::with_capacity(usize::saturating_from(width * height * 4)), |mut acc, px| {
