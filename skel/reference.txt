@@ -1,0 +1,65 @@
+Source: /share/skel/assets/cats.jpg
+WEBP: Does cats.jpg.PROPOSED.webp look good? [y/N] y
+WEBP: Does cats.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does cats.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does cats.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does cats.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does cats.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does cats.jpg.PROPOSED.webp look good? [y/N] y
+Success: Created cats.jpg.webp with quality 49. (Saved 324,547 bytes, 73.09%.)
+AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N] 
+Success: Created cats.jpg.avif with quality 43. (Saved 354,371 bytes, 79.80%.)
+
+Source: /share/skel/assets/mountains-on-mars.png
+Success: Created mountains-on-mars.png.webp (lossless). (Saved 5,882 bytes, 31.56%.)
+AVIF: Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] 
+Success: Created mountains-on-mars.png.avif with quality 84. (Saved 9,957 bytes, 53.43%.)
+
+Source: /share/skel/assets/myrna.png
+WebP: Does myrna.png.PROPOSED.webp look good? [y/N]
+WebP: Does myrna.png.PROPOSED.webp look good? [y/N]
+WebP: Does myrna.png.PROPOSED.webp look good? [y/N] y
+WebP: Does myrna.png.PROPOSED.webp look good? [y/N]
+WebP: Does myrna.png.PROPOSED.webp look good? [y/N]
+WebP: Does myrna.png.PROPOSED.webp look good? [y/N] y
+Success: Created myrna.png.webp with quality 85. (Saved 368,748 bytes, 79.50%.)
+AVIF: Does myrna.png.PROPOSED.avif look good? [y/N]
+AVIF: Does myrna.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does myrna.png.PROPOSED.avif look good? [y/N]
+AVIF: Does myrna.png.PROPOSED.avif look good? [y/N]
+AVIF: Does myrna.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does myrna.png.PROPOSED.avif look good? [y/N] y
+Success: Created myrna.png.avif with quality 69. (Saved 377,560 bytes, 81.40%.)
+
+Source: /share/skel/assets/poe.png
+Warning: No acceptable WebP candidate was found.
+Warning: No acceptable AVIF candidate was found.
+
+Source: /share/skel/assets/statler_waldorf_cutout.png
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] 
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] 
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] 
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
+Success: Created statler_waldorf_cutout.png.webp with quality 82. (Saved 231,613 bytes, 90.37%.)
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
+Success: Created statler_waldorf_cutout.png.avif with quality 59. (Saved 237,741 bytes, 92.76%.)

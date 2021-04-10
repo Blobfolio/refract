@@ -26,21 +26,25 @@
 
 
 
-mod avif;
+mod candidate;
+mod encoder;
 mod error;
 mod image;
 mod kind;
 mod quality;
 mod refraction;
-mod webp;
 
-pub use avif::Avif;
+pub use candidate::Candidate;
+pub use encoder::Encoder;
 pub use error::RefractError;
 pub use image::Image;
 pub use kind::ImageKind;
-pub use quality::Quality;
+pub use quality::{
+	MAX_QUALITY,
+	MIN_QUALITY,
+	Quality,
+};
 pub use refraction::Refraction;
-pub use webp::Webp;
 
 use imgref::ImgVec;
 use ravif::RGBA8;

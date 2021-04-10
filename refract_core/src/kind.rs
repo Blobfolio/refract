@@ -12,6 +12,8 @@ use std::convert::TryFrom;
 ///
 /// The kind is determined using the file's magic headers rather than relying
 /// on the file having the correct extension.
+///
+/// The formats on the other end of conversion are defined by [`Encoder`].
 pub enum ImageKind {
 	/// # JPEG.
 	Jpeg,

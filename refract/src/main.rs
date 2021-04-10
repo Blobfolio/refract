@@ -45,14 +45,15 @@ use dactyl::{
 use dowser::Dowser;
 use fyi_msg::Msg;
 use refract_core::{
+	Encoder,
 	Image,
+	MAX_QUALITY,
 	RefractError,
 	Refraction,
 };
 use std::{
 	convert::TryFrom,
 	ffi::OsStr,
-	num::NonZeroU8,
 	os::unix::ffi::OsStrExt,
 	path::PathBuf,
 };
@@ -85,10 +86,15 @@ fn _main() -> Result<(), ArgyleError> {
 		.with_list();
 
 	// Figure out which types we're dealing with.
-	let webp: bool = ! args.switch(b"--no-webp");
-	let avif: bool = ! args.switch(b"--no-avif");
+	let mut encoders: Vec<Encoder> = Vec::with_capacity(2);
+	if ! args.switch(b"--no-webp") {
+		encoders.push(Encoder::Webp);
+	}
+	if ! args.switch(b"--no-avif") {
+		encoders.push(Encoder::Avif);
+	}
 
-	if ! webp && ! avif {
+	if encoders.is_empty() {
 		return Err(ArgyleError::Custom("With both WebP and AVIF disabled, there is nothing to do!"));
 	}
 
@@ -118,12 +124,11 @@ fn _main() -> Result<(), ArgyleError> {
 					.with_newline(true)
 					.print();
 
-				if webp {
-					print_result(img.size().get(), img.try_webp());
-				}
-				if avif {
-					print_result(img.size().get(), img.try_avif());
-				}
+				let size = img.size().get();
+				encoders.iter().for_each(|&e| {
+					let res = img.try_encode(e);
+					print_result(size, res);
+				});
 
 				println!();
 			}
@@ -140,7 +145,7 @@ fn print_result(size: u64, result: Result<Refraction, RefractError>) {
 			let per = dactyl::int_div_float(diff, size);
 
 			// Lossless.
-			if res.quality() == unsafe { NonZeroU8::new_unchecked(100) } {
+			if res.quality() == MAX_QUALITY {
 				Msg::success(format!(
 					"Created {} (lossless).",
 					res.name()
