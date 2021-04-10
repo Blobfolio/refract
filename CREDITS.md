@@ -247,7 +247,7 @@ limitations under the License.
 * [itertools 0.10.0](https://github.com/bluss/rust-itertools)
 * [jpeg-decoder 0.1.22](https://github.com/image-rs/jpeg-decoder)
 * [lazy_static 1.4.0](https://github.com/rust-lang-nursery/lazy-static.rs)
-* [libc 0.2.92](https://github.com/rust-lang/libc)
+* [libc 0.2.93](https://github.com/rust-lang/libc)
 * [num-derive 0.3.3](https://github.com/rust-num/num-derive)
 * [num-integer 0.1.44](https://github.com/rust-num/num-integer)
 * [num-traits 0.2.14](https://github.com/rust-num/num-traits)
@@ -259,7 +259,7 @@ limitations under the License.
 * [rayon 1.5.0](https://github.com/rayon-rs/rayon)
 * [rayon-core 1.9.0](https://github.com/rayon-rs/rayon)
 * [scopeguard 1.1.0](https://github.com/bluss/scopeguard)
-* [syn 1.0.68](https://github.com/dtolnay/syn)
+* [syn 1.0.69](https://github.com/dtolnay/syn)
 * [thiserror 1.0.24](https://github.com/dtolnay/thiserror)
 * [thiserror-impl 1.0.24](https://github.com/dtolnay/thiserror)
 * [unicode-xid 0.2.1](https://github.com/unicode-rs/unicode-xid)
@@ -1943,8 +1943,8 @@ TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 **Used By:**
 
 * [fyi_msg 0.7.0](https://github.com/Blobfolio/fyi)
-* [refract 0.0.2](https://github.com/Blobfolio/refract)
-* [refract_core 0.0.2](https://github.com/Blobfolio/refract)
+* [refract 0.1.0](https://github.com/Blobfolio/refract)
+* [refract_core 0.1.0](https://github.com/Blobfolio/refract)
 
 
 ```
