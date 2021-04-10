@@ -5,12 +5,7 @@ This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Go
 `libwebp`. Operations should be equivalent to the corresponding `cwebp` output.
 */
 
-use crate::{
-	Image,
-	ImageKind,
-	MAX_QUALITY,
-	RefractError,
-};
+use crate::RefractError;
 use libwebp_sys::{
 	WEBP_MAX_DIMENSION,
 	WebPConfig,
@@ -33,137 +28,37 @@ use ravif::{
 };
 use std::{
 	convert::TryFrom,
-	ffi::OsStr,
-	io::Write,
-	num::{
-		NonZeroU64,
-		NonZeroU8,
-	},
-	os::unix::ffi::OsStrExt,
-	path::PathBuf,
+	num::NonZeroU8,
 };
 
 
 
-#[derive(Debug, Clone)]
-/// # `WebP`.
-pub struct Webp<'a> {
-	src: Img<&'a [RGBA8]>,
-	src_size: NonZeroU64,
-
-	dst: PathBuf,
-	dst_size: Option<NonZeroU64>,
-	dst_quality: Option<NonZeroU8>,
-
-	tmp: PathBuf,
+#[inline]
+/// # Make Lossy.
+///
+/// Generate a lossy `WebP` image at a given quality size.
+///
+/// ## Errors
+///
+/// This returns an error in cases where the resulting file size is larger
+/// than the source or previous best, or if there are any problems
+/// encountered during encoding or saving.
+pub(super) fn make_lossy(img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
+	encode(img, init_config(quality))
 }
 
-impl<'a> Webp<'a> {
-	#[allow(trivial_casts)] // It is what it is.
-	#[must_use]
-	/// # New.
-	///
-	/// This instantiates a new instance from an [`Image`] struct. As
-	/// [`Webp::find`] is the only other public-facing method, and as it is
-	/// consuming, this is generally done as a single chained operation.
-	pub fn new(src: &'a Image<'a>) -> Self {
-		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
-
-		let mut out = Self {
-			src: src.img(),
-			src_size: src.size(),
-
-			dst: PathBuf::from(OsStr::from_bytes(&[stub, b".webp"].concat())),
-			dst_size: None,
-			dst_quality: None,
-
-			tmp: PathBuf::from(OsStr::from_bytes(&[stub, b".PROPOSED.webp"].concat())),
-		};
-
-		// Try lossless while we're here.
-		if src.kind() == ImageKind::Png {
-			let _res = out.make_lossless();
-		}
-
-		out
-	}
-
-	crate::impl_find!("WebP", RefractError::NoWebp);
-
-	/// # Make Lossless.
-	///
-	/// When the source is a PNG, lossless `WebP` compression will be tried
-	/// first.
-	///
-	/// As "lossless" is more or less lossless, there is no corresponding
-	/// prompt. If the resulting file size is smaller than the source, it is
-	/// kept.
-	///
-	/// Afterwards, the program will continue trying lossy compression as
-	/// normal.
-	fn make_lossless(&mut self) -> Result<(), RefractError> {
-		let out = encode(self.src, init_lossless_config())?;
-
-		// What's the size?
-	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::Write)?)
-			.ok_or(RefractError::Write)?;
-
-		// It has to be smaller than the source.
-		if size >= self.src_size {
-			return Err(RefractError::TooBig);
-		}
-
-		// Save it straight to the destination file; we don't need to preview
-		// it since "lossless" should always look right.
-		std::fs::File::create(&self.dst)
-			.and_then(|mut file| file.write_all(&out).and_then(|_| file.flush()))
-			.map_err(|_| RefractError::Write)?;
-
-		// Update the corresponding variables.
-		self.dst_size = Some(size);
-		self.dst_quality = Some(MAX_QUALITY);
-
-		Ok(())
-	}
-
-	/// # Make Lossy.
-	///
-	/// Generate a `WebP` image at a given quality size.
-	///
-	/// ## Errors
-	///
-	/// This returns an error in cases where the resulting file size is larger
-	/// than the source or previous best, or if there are any problems
-	/// encountered during encoding or saving.
-	fn make_lossy(&self, quality: NonZeroU8) -> Result<NonZeroU64, RefractError> {
-		// Clear the temporary file, if any.
-		if self.tmp.exists() {
-			std::fs::remove_file(&self.tmp).map_err(|_| RefractError::Write)?;
-		}
-
-		// How'd it go?
-		let out = encode(self.src, init_config(quality))?;
-
-		// What's the size?
-	    let size = NonZeroU64::new(u64::try_from(out.len()).map_err(|_| RefractError::TooBig)?)
-			.ok_or(RefractError::TooBig)?;
-
-		// It has to be smaller than what we've already chosen.
-		if let Some(dsize) = self.dst_size {
-			if size >= dsize { return Err(RefractError::TooBig); }
-		}
-		// It has to be smaller than the source.
-		else if size >= self.src_size {
-			return Err(RefractError::TooBig);
-		}
-
-		// Write it to a file!
-		std::fs::File::create(&self.tmp)
-			.and_then(|mut file| file.write_all(&out).and_then(|_| file.flush()))
-			.map_err(|_| RefractError::Write)?;
-
-		Ok(size)
-	}
+#[inline]
+/// # Make Lossy.
+///
+/// Generate a lossless `WebP`. This is only useful for PNG sources.
+///
+/// ## Errors
+///
+/// This returns an error in cases where the resulting file size is larger
+/// than the source or previous best, or if there are any problems
+/// encountered during encoding or saving.
+pub(super) fn make_lossless(img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
+	encode(img, init_lossless_config())
 }
 
 /// # Initialize `WebP` Lossy Configuration.
@@ -171,7 +66,7 @@ impl<'a> Webp<'a> {
 /// This generates an encoder configuration profile roughly equivalent to:
 ///
 /// ```bash
-/// cwebp -m 6 -pass 10 -q ##
+/// cwebp -m 6 -pass 10 -q {QUALITY}
 /// ```
 fn init_config(quality: NonZeroU8) -> WebPConfig {
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
@@ -206,8 +101,8 @@ fn init_lossless_config() -> WebPConfig {
 
 /// # Initialize `WebP` Picture.
 ///
-/// This converts the raw pixels into a `WebPPicture` object and writer for
-/// encoding.
+/// This converts the raw pixels into a `WebPPicture` object and writer,
+/// required for later encoding.
 ///
 /// ## Errors
 ///

@@ -18,6 +18,8 @@ use std::{
 ///
 /// This holds the information for a generated `WebP` or `AVIF` image, namely
 /// its path, size, and the quality setting used.
+///
+/// This struct is only instantiated if conversion is successful.
 pub struct Refraction {
 	path: PathBuf,
 	size: NonZeroU64,
@@ -39,6 +41,8 @@ impl Refraction {
 
 	#[must_use]
 	/// # Path.
+	///
+	/// The path to the converted image.
 	pub const fn path(&self) -> &PathBuf { &self.path }
 
 	/// # File name.
@@ -47,7 +51,7 @@ impl Refraction {
 	///
 	/// This will technically panic in cases where there is no file name
 	/// component to the path, however instantiation already checks that
-	/// assertion, so this shouldn't panic here.
+	/// assertion, so it shouldn't panic here.
 	#[must_use]
 	pub fn name(&self) -> Cow<str> {
 		self.path.file_name().unwrap().to_string_lossy()
@@ -56,11 +60,14 @@ impl Refraction {
 	#[must_use]
 	/// # Quality.
 	///
-	/// This returns the quality setting (1-100) used when creating the image.
-	/// A value of `100` indicates `lossless`, but only applies to `WebP`.
+	/// This returns the quality setting (`1..=100`) used when creating the
+	/// image. A value of `100` indicates `lossless`, but only applies to
+	/// `WebP`.
 	pub const fn quality(&self) -> NonZeroU8 { self.quality }
 
 	#[must_use]
 	/// # File Size.
+	///
+	/// Return the file size in bytes.
 	pub const fn size(&self) -> NonZeroU64 { self.size }
 }

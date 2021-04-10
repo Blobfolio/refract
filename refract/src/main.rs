@@ -45,8 +45,9 @@ use dactyl::{
 use dowser::Dowser;
 use fyi_msg::Msg;
 use refract_core::{
-	MAX_QUALITY,
+	Encoder,
 	Image,
+	MAX_QUALITY,
 	RefractError,
 	Refraction,
 };
@@ -85,10 +86,15 @@ fn _main() -> Result<(), ArgyleError> {
 		.with_list();
 
 	// Figure out which types we're dealing with.
-	let webp: bool = ! args.switch(b"--no-webp");
-	let avif: bool = ! args.switch(b"--no-avif");
+	let mut encoders: Vec<Encoder> = Vec::with_capacity(2);
+	if ! args.switch(b"--no-webp") {
+		encoders.push(Encoder::Webp);
+	}
+	if ! args.switch(b"--no-avif") {
+		encoders.push(Encoder::Avif);
+	}
 
-	if ! webp && ! avif {
+	if encoders.is_empty() {
 		return Err(ArgyleError::Custom("With both WebP and AVIF disabled, there is nothing to do!"));
 	}
 
@@ -118,12 +124,11 @@ fn _main() -> Result<(), ArgyleError> {
 					.with_newline(true)
 					.print();
 
-				if webp {
-					print_result(img.size().get(), img.try_webp());
-				}
-				if avif {
-					print_result(img.size().get(), img.try_avif());
-				}
+				let size = img.size().get();
+				encoders.iter().for_each(|&e| {
+					let res = img.try_encode(e);
+					print_result(size, res);
+				});
 
 				println!();
 			}

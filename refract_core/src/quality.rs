@@ -23,7 +23,7 @@ pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 ///
 /// This is a very simple range struct that allows our encodable types to drill
 /// down to the perfect quality setting without having to test each and every
-/// one.
+/// one individually.
 ///
 /// See [`Quality::next`] for more information.
 pub struct Quality {
@@ -80,7 +80,7 @@ impl Quality {
 	///
 	/// Shrink the upper limit of the range, either because a tested value was
 	/// fine or resulted in too big an image. In other words, use this when you
-	/// know there's no point going any bigger.
+	/// know there's no point going any higher.
 	///
 	/// If for some reason the passed value is lower than the current minimum,
 	/// the floor will also be adjusted. In such cases, since floor and ceiling
@@ -89,7 +89,9 @@ impl Quality {
 	///
 	/// ## Panics
 	///
-	/// This method will panic if the quality is greater than 100.
+	/// This method will panic if the quality is greater than 100. The minimum
+	/// value is 1, however this is self-enforced by using [`std::num::NonZeroU8`],
+	/// so no panics necessary on that side.
 	pub fn set_max(&mut self, quality: NonZeroU8) {
 		assert!(quality <= MAX_QUALITY);
 
@@ -114,7 +116,9 @@ impl Quality {
 	///
 	/// ## Panics
 	///
-	/// This method will panic if the quality is greater than 100.
+	/// This method will panic if the quality is greater than 100. The minimum
+	/// value is 1, however this is self-enforced by using [`std::num::NonZeroU8`],
+	/// so no panics necessary on that side.
 	pub fn set_min(&mut self, quality: NonZeroU8) {
 		assert!(quality <= MAX_QUALITY);
 

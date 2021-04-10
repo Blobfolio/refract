@@ -26,6 +26,7 @@
 
 
 
+mod candidate;
 mod encoder;
 mod error;
 mod image;
@@ -33,10 +34,8 @@ mod kind;
 mod quality;
 mod refraction;
 
-pub use encoder::{
-	avif::Avif,
-	webp::Webp,
-};
+pub use candidate::Candidate;
+pub use encoder::Encoder;
 pub use error::RefractError;
 pub use image::Image;
 pub use kind::ImageKind;
