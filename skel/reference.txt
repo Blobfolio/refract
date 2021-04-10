@@ -46,3 +46,20 @@ Success: Created myrna.png.avif with quality 69. (Saved 377,560 bytes, 81.40%.)
 Source: /share/skel/assets/poe.png
 Warning: No acceptable WebP candidate was found.
 Warning: No acceptable AVIF candidate was found.
+
+Source: /share/skel/assets/statler_waldorf_cutout.png
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] 
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] 
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] 
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
+WEBP: Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
+Success: Created statler_waldorf_cutout.png.webp with quality 82. (Saved 231,613 bytes, 90.37%.)
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
+AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
+Success: Created statler_waldorf_cutout.png.avif with quality 59. (Saved 237,741 bytes, 92.76%.)
