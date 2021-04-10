@@ -2,7 +2,10 @@
 # `Refract`: Quality Range
 */
 
-use std::num::NonZeroU8;
+use std::{
+	collections::HashSet,
+	num::NonZeroU8,
+};
 
 
 
@@ -18,7 +21,7 @@ pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 
 
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 /// # Quality Range.
 ///
 /// This is a very simple range struct that allows our encodable types to drill
@@ -29,7 +32,7 @@ pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 pub struct Quality {
 	min: NonZeroU8,
 	max: NonZeroU8,
-	last: Option<NonZeroU8>,
+	tested: HashSet<NonZeroU8>,
 }
 
 impl Default for Quality {
@@ -38,7 +41,7 @@ impl Default for Quality {
 		Self {
 			min: MIN_QUALITY,
 			max: MAX_QUALITY,
-			last: None,
+			tested: HashSet::new(),
 		}
 	}
 }
@@ -62,18 +65,29 @@ impl Quality {
 		let max = self.max.get();
 		let min = self.min.get();
 
-		// Split the difference.
+		// Split the difference, if possible. Regardless of the answer, this
+		// lets us cut the pool in half.
 		let mut diff = max - min;
 		if diff != 1 {
 			diff = num_integer::div_floor(diff, 2);
 		}
 
 		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
-		if let Some(last) = self.last.replace(next) {
-			if next == last { return None; }
+		if self.tested.insert(next) {
+			return Some(next);
 		}
 
-		Some(next)
+		// If the above didn't work, let's check to see if any values in the
+		// range are untested, returning the first found.
+		for i in min..=max {
+			let next = unsafe { NonZeroU8::new_unchecked(i) };
+			if self.tested.insert(next) {
+				return Some(next);
+			}
+		}
+
+		// We've done what we can do!
+		None
 	}
 
 	/// # Cap Max.
