@@ -2,9 +2,9 @@
 
 Refract is a guided [WebP](https://en.wikipedia.org/wiki/WebP)/[AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF)) CLI conversion tool for JPEG and PNG image sources. It generates images at various qualities, asking at each step if they look OK, arriving at the smallest acceptable candidate.
 
-It works similarly to the vision tests your eye doctor performs. "How does this look?" Click. "How about now?" Click. "Here's your prescription."
+It works similarly to the vision tests your eye doctor performs. "How does this look?" *Click.* "How about now?" *Click.* "Here's your prescription!"
 
-Like your eye doctor, exhaustive A/B comparisons are unnecessary. The quality stepping used by refract pulls the mid-point between moving min/max boundaries. Each answer shrinks the size of the range accordingly, allowing an answer to be discovered in just 5-10 steps instead of 100.
+And just like your eye doctor's tests, exhaustive A/B comparisons here are unnecessary. The quality stepping used by Refract pulls the mid-point between moving min/max boundaries. Each answer shrinks the size of the range accordingly, allowing the final result to be discovered in just 5-10 steps instead of 100.
 
 
 
@@ -16,9 +16,9 @@ You could automate crunching by using a constant quality or performing some form
 
 Obsessive hand-tuning is better, but incredibly tedious.
 
-Refract removes the guesswork and most of the tedium from manual tuning, providing a single command to work against as many files as you wish, with efficient quality iteration and file size tracking. It ensures whatever version is created is the smallest acceptable-looking candidate, and ensures the resulting files do not exceed the size of the original sources (which can happen!).
+Refract removes the guesswork and most of the tedium from manual tuning, providing a single command to work against as many files as you wish, with efficient quality iteration and file size tracking along the way. It ensures whatever version is created is the smallest acceptable-looking candidate, while also preventing instances where the "Next Generation" copy is larger than the original.
 
-Should you use this for every image ever? Probably not. But if you have a small web site or home page you're looking to optimize to hell and back, passing the assets through refract is a good idea.
+Should you use this for every image ever? Probably not. But if you have a small web site or home page you're looking to optimize to hell and back, passing the assets through Refract is a good idea.
 
 
 
@@ -26,9 +26,9 @@ Should you use this for every image ever? Probably not. But if you have a small 
 
 This application is written in [Rust](https://www.rust-lang.org/) and can be built using [Cargo](https://github.com/rust-lang/cargo) for Linux or Mac systems.
 
-Pre-built `.deb` packages are also added for each [release](https://github.com/Blobfolio/refract/releases/latest). They should always work for the latest stable Debian and Ubuntu.
+Pre-built `.deb` packages are also added for each [release](https://github.com/Blobfolio/refract/releases/latest), which should always work on the latest stable Debian and Ubuntu operating systems.
 
-Note: WebP and AVIF encoding are handled by the refract binary directly; systems running it do not need `libwebp`, etc., separately installed.
+Note: WebP and AVIF encoding are handled by the Refract binary directly; systems running it do not need `libwebp`, etc., separately installed.
 
 
 
@@ -49,9 +49,16 @@ The following flags are available:
 
 Paths can be any number of individual JPEG or PNG images, or directories containing such images. Paths can also (or additionally) be specified using the `-l`/`--list` option, specifying the path to a text file containing paths one-per-line.
 
+```bash
+# Example pulling paths from a text file.
+refract --list /path/to/list.txt /path/to/another/image.jpg
+```
+
 Refract will load each image one-at-a-time and try to generate proposed WebP and/or AVIF copies at varying quality levels. At each step, it will ask you whether or not the proposed image looks good.
 
-(You can view the image in any application of your choosing, though a web browser probably makes the most sense.)
+![Example CLI output.](https://github.com/Blobfolio/refract/raw/master/skel/prompt.png)
+
+(You can preview the proposed images in any application of your choosing. Web browsers are a nice, lightweight option.)
 
 If your answers and the file sizes work out right, a final best-case copy will be created in the source directory with `.webp` or `.avif` appended to the source path, e.g. `/path/to/image.jpg.webp`.
 
