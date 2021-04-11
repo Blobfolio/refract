@@ -92,6 +92,7 @@ impl<'a> Candidate<'a> {
 		Ok(())
 	}
 
+	#[inline]
 	/// # Set Output Size/Quality.
 	///
 	/// This is a shorthand method to update the distribution size and quality.
