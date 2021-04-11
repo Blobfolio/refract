@@ -44,6 +44,15 @@ pub struct Candidate<'a> {
 	img: Img<&'a [RGBA8]>,
 }
 
+impl<'a> Drop for Candidate<'a> {
+	fn drop(&mut self) {
+		// Remove the temporary file if it exists.
+		if self.tmp.exists() {
+			let _res = std::fs::remove_file(&self.tmp);
+		}
+	}
+}
+
 impl<'a> Candidate<'a> {
 	#[allow(trivial_casts)] // Triviality is necessary.
 	#[must_use]
@@ -63,28 +72,6 @@ impl<'a> Candidate<'a> {
 			tmp: PathBuf::from(OsStr::from_bytes(&[stub, b".PROPOSED", enc.ext()].concat())),
 			img
 		}
-	}
-
-	/// # Clean.
-	///
-	/// This will delete the temporary image, if it exists, and the
-	/// distribution image if its size and/or quality are missing.
-	///
-	/// ## Errors
-	///
-	/// This will return an error if the disk changes are unable to be written.
-	pub fn clean(&self) -> Result<(), RefractError> {
-		if self.tmp.exists() {
-			std::fs::remove_file(&self.tmp)
-				.map_err(|_| RefractError::Write)?;
-		}
-
-		if (self.dst_size.is_none() || self.dst_quality.is_none()) && self.dst.exists() {
-			std::fs::remove_file(&self.dst)
-				.map_err(|_| RefractError::Write)?;
-		}
-
-		Ok(())
 	}
 
 	/// # Keep Temporary Image.
@@ -127,8 +114,12 @@ impl<'a> Candidate<'a> {
 	pub fn take_or(self, err: RefractError) -> Result<Refraction, RefractError> {
 		if self.dst.exists() {
 			if let Some((size, quality)) = self.dst_size.zip(self.dst_quality) {
-				return Ok(Refraction::new(self.dst, size, quality));
+				return Ok(Refraction::new(self.dst.clone(), size, quality));
 			}
+
+			// If we don't have a size and/or quality set, remove the output
+			// file.
+			let _res = std::fs::remove_file(&self.dst);
 		}
 
 		Err(err)

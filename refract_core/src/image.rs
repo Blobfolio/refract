@@ -86,16 +86,7 @@ impl<'a> Image<'a> {
 				// reference.
 				let img = ravif::cleared_alpha(self.img.clone());
 				let mut candidate = Candidate::new(self.src, img.as_ref(), enc);
-
-				let res = self.guided_encode(enc, &mut candidate);
-
-				// Clean up if we can.
-				let _res = candidate.clean();
-
-				// If the guided encode failed, return that error.
-				if let Err(e) = res { return Err(e); }
-
-				// Return the answer!
+				self.guided_encode(enc, &mut candidate)?;
 				candidate.take_or(enc.error())
 			},
 			Encoder::Webp => {
@@ -114,15 +105,7 @@ impl<'a> Image<'a> {
 					}
 				}
 
-				let res = self.guided_encode(enc, &mut candidate);
-
-				// Clean up if we can.
-				let _res = candidate.clean();
-
-				// If the guided encode failed, return that error.
-				if let Err(e) = res { return Err(e); }
-
-				// Return the answer!
+				self.guided_encode(enc, &mut candidate)?;
 				candidate.take_or(enc.error())
 			},
 		}
