@@ -27,16 +27,21 @@ pub enum Encoder {
 }
 
 impl Encoder {
-	#[must_use]
-	/// # Name.
+	/// # Write Title.
 	///
-	/// Return the name of the encoder as a string slice, uppercased for
-	/// consistency.
-	pub const fn name(self) -> &'static str {
-		match self {
-			Self::Avif => "AVIF",
-			Self::Webp => "WEBP",
-		}
+	/// This prints an ANSI-formatted title for when we begin working on the
+	/// extension.
+	pub fn write_title(self) {
+		use std::io::Write;
+
+		let writer = std::io::stdout();
+		let mut handle = writer.lock();
+		let _res = handle.write_all(
+			match self {
+				Self::Avif => b"\x1b[34m[\x1b[1;96mAVIF\x1b[0;34m]\x1b[0m\n",
+				Self::Webp => b"\x1b[34m[\x1b[1;96mWebP\x1b[0;34m]\x1b[0m\n",
+			}
+		).and_then(|_| handle.flush());
 	}
 
 	#[must_use]

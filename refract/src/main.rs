@@ -120,9 +120,7 @@ fn _main() -> Result<(), ArgyleError> {
 	paths.iter()
 		.for_each(|x|
 			if let Ok(img) = Image::try_from(x) {
-				Msg::custom("Source", 199, x.to_string_lossy().as_ref())
-					.with_newline(true)
-					.print();
+				img.write_title();
 
 				let size = img.size().get();
 				encoders.iter().for_each(|&e| {
@@ -147,18 +145,19 @@ fn print_result(size: u64, result: Result<Refraction, RefractError>) {
 			// Lossless.
 			if res.quality() == MAX_QUALITY {
 				Msg::success(format!(
-					"Created {} (lossless).",
+					"Created \x1b[1m{}\x1b[0m (lossless).",
 					res.name()
 				))
 			}
 			// Lossy.
 			else {
 				Msg::success(format!(
-					"Created {} with quality {}.",
+					"Created \x1b[1m{}\x1b[0m with quality {}.",
 					res.name(),
 					res.quality()
 				))
 			}
+				.with_indent(1)
 				.with_suffix(
 					if let Some(per) = per {
 						format!(
@@ -177,7 +176,7 @@ fn print_result(size: u64, result: Result<Refraction, RefractError>) {
 				.print();
 		},
 		Err(e) => {
-			Msg::warning(e.as_str()).print();
+			Msg::warning(e.as_str()).with_indent(1).print();
 		},
 	}
 }
