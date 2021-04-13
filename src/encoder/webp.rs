@@ -133,7 +133,8 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 		return Err(RefractError::InvalidImage);
 	}
 
-	let argb_stride = i32::try_from(source.stride()).map_err(|_| RefractError::InvalidImage)?;
+	let argb_stride = i32::try_from(source.stride())
+		.map_err(|_| RefractError::InvalidImage)?;
 	picture.use_argb = 1;
 	picture.width = width;
 	picture.height = height;
@@ -154,7 +155,11 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 		// A few additional sanity checks.
 		let expected_size = argb_stride * height * 4;
-		if status == 0 || expected_size == 0 || i32::try_from(pixel_data.len()).unwrap_or(0) != expected_size {
+		if
+			status == 0 ||
+			expected_size == 0 ||
+			i32::try_from(pixel_data.len()).unwrap_or(0) != expected_size
+		{
 			return Err(RefractError::InvalidImage);
 		}
 
