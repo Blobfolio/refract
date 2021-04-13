@@ -236,7 +236,7 @@ limitations under the License.
 * [bitstream-io 1.0.0](https://github.com/tuffy/bitstream-io)
 * [cfg-if 0.1.10](https://github.com/alexcrichton/cfg-if)
 * [cfg-if 1.0.0](https://github.com/alexcrichton/cfg-if)
-* [crossbeam-channel 0.5.0](https://github.com/crossbeam-rs/crossbeam)
+* [crossbeam-channel 0.5.1](https://github.com/crossbeam-rs/crossbeam)
 * [crossbeam-deque 0.8.0](https://github.com/crossbeam-rs/crossbeam)
 * [crossbeam-epoch 0.9.3](https://github.com/crossbeam-rs/crossbeam)
 * [crossbeam-utils 0.8.3](https://github.com/crossbeam-rs/crossbeam)
@@ -1943,8 +1943,8 @@ TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 **Used By:**
 
 * [fyi_msg 0.7.0](https://github.com/Blobfolio/fyi)
-* [refract 0.1.0](https://github.com/Blobfolio/refract)
-* [refract_core 0.1.0](https://github.com/Blobfolio/refract)
+* [refract 0.1.1](https://github.com/Blobfolio/refract)
+* [refract_core 0.1.1](https://github.com/Blobfolio/refract)
 
 
 ```

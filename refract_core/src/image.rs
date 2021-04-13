@@ -20,10 +20,7 @@ use std::{
 		NonZeroU8,
 		NonZeroU64,
 	},
-	path::{
-		Path,
-		PathBuf,
-	},
+	path::PathBuf,
 };
 
 
@@ -51,7 +48,7 @@ impl<'a> TryFrom<&'a PathBuf> for Image<'a> {
 
 		Ok(Self {
 			src: file,
-			img: crate::load_rgba(&raw)?,
+			img: load_rgba(&raw)?,
 			kind: ImageKind::try_from(raw.as_slice())?,
 			size: NonZeroU64::new(u64::try_from(raw.len()).map_err(|_| RefractError::InvalidImage)?)
 				.ok_or(RefractError::InvalidImage)?,
@@ -79,6 +76,8 @@ impl<'a> Image<'a> {
 	/// This method returns an error if no acceptable image is found, either
 	/// because they all looked terrible or were larger than the source.
 	pub fn try_encode(&self, enc: Encoder) -> Result<Refraction, RefractError> {
+		enc.write_title();
+
 		match enc {
 			Encoder::Avif => {
 				// We need to clean up the alpha data before processing AVIF.
@@ -86,16 +85,7 @@ impl<'a> Image<'a> {
 				// reference.
 				let img = ravif::cleared_alpha(self.img.clone());
 				let mut candidate = Candidate::new(self.src, img.as_ref(), enc);
-
-				let res = self.guided_encode(enc, &mut candidate);
-
-				// Clean up if we can.
-				let _res = candidate.clean();
-
-				// If the guided encode failed, return that error.
-				if let Err(e) = res { return Err(e); }
-
-				// Return the answer!
+				self.guided_encode(enc, &mut candidate)?;
 				candidate.take_or(enc.error())
 			},
 			Encoder::Webp => {
@@ -114,15 +104,7 @@ impl<'a> Image<'a> {
 					}
 				}
 
-				let res = self.guided_encode(enc, &mut candidate);
-
-				// Clean up if we can.
-				let _res = candidate.clean();
-
-				// If the guided encode failed, return that error.
-				if let Err(e) = res { return Err(e); }
-
-				// Return the answer!
+				self.guided_encode(enc, &mut candidate)?;
 				candidate.take_or(enc.error())
 			},
 		}
@@ -141,7 +123,16 @@ impl<'a> Image<'a> {
 		candidate: &mut Candidate
 	) -> Result<(), RefractError> {
 		// The confirmation message we'll be presenting at each step.
-		let prompt = make_prompt(enc.name(), candidate.tmp_path())?;
+		let prompt = Msg::plain(
+			format!(
+				"Does \x1b[1;95m{}\x1b[0m look good?",
+				candidate.tmp_path()
+					.file_name()
+					.ok_or(RefractError::InvalidImage)?
+					.to_string_lossy(),
+			)
+		)
+			.with_indent(1);
 
 		// The quality helper. Not an iterator, but almost.
 		let mut quality = Quality::default();
@@ -196,6 +187,31 @@ impl<'a> Image<'a> {
 		let size = u64::try_from(size).ok()?;
 		NonZeroU64::new(size).filter(|s| s < &self.size)
 	}
+
+	/// # Write Title.
+	///
+	/// This prints an ANSI-formatted title for when we begin working on the
+	/// image.
+	pub fn write_title(&self) {
+		use std::io::Write;
+
+		let path = self.src.to_string_lossy();
+		let border = "-".repeat(path.len() + 2);
+
+		let writer = std::io::stdout();
+		let mut handle = writer.lock();
+		let _res = handle.write_all(
+			&[
+				b"\x1b[38;5;199m+",
+				border.as_bytes(),
+				b"+\x1b[0m\n\x1b[38;5;199m| \x1b[0m",
+				path.as_ref().as_bytes(),
+				b"\x1b[38;5;199m |\n\x1b[38;5;199m+",
+				border.as_bytes(),
+				b"+\x1b[0m\n",
+			].concat()
+		).and_then(|_| handle.flush());
+	}
 }
 
 impl<'a> Image<'a> {
@@ -208,23 +224,44 @@ impl<'a> Image<'a> {
 
 
 
-/// # Get Prompt.
+/// # Load RGBA.
 ///
-/// This returns a [`Msg`] that is will be printed to the screen, asking if the
-/// proposed image looks good.
-///
-/// ## Errors
-///
-/// This returns an error if the filename cannot be represented as a string.
-fn make_prompt(name: &str, path: &Path) -> Result<Msg, RefractError> {
-	Ok(Msg::custom(
-		name,
-		208,
-		&format!(
-			"Does \x1b[1;95m{}\x1b[0m look good?",
-			path.file_name()
-				.ok_or(RefractError::InvalidImage)?
-				.to_string_lossy(),
-		)
-	))
+/// This is largely lifted from [`cavif`](https://crates.io/crates/cavif). It
+/// is simplified slightly as we don't support premultiplied/dirty alpha.
+fn load_rgba(mut data: &[u8]) -> Result<ImgVec<RGBA8>, RefractError> {
+	use rgb::FromSlice;
+
+	// PNG.
+	if data.get(0..4) == Some(&[0x89,b'P',b'N',b'G']) {
+		let img = lodepng::decode32(data)
+			.map_err(|_| RefractError::InvalidImage)?;
+
+		Ok(ImgVec::new(img.buffer, img.width, img.height))
+	}
+	// JPEG.
+	else {
+		use jpeg_decoder::PixelFormat::{CMYK32, L8, RGB24};
+
+		let mut jecoder = jpeg_decoder::Decoder::new(&mut data);
+		let pixels = jecoder.decode()
+			.map_err(|_| RefractError::InvalidImage)?;
+		let info = jecoder.info().ok_or(RefractError::InvalidImage)?;
+
+		// So many ways to be a JPEG...
+		let buf: Vec<_> = match info.pixel_format {
+			// Upscale greyscale to RGBA.
+			L8 => {
+				pixels.iter().copied().map(|g| RGBA8::new(g, g, g, 255)).collect()
+			},
+			// Upscale RGB to RGBA.
+			RGB24 => {
+				let rgb = pixels.as_rgb();
+				rgb.iter().map(|p| p.alpha(255)).collect()
+			},
+			// CMYK doesn't work.
+			CMYK32 => return Err(RefractError::InvalidImage),
+		};
+
+		Ok(ImgVec::new(buf, info.width.into(), info.height.into()))
+	}
 }
