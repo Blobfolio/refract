@@ -41,11 +41,19 @@ rustflags   := "-C link-arg=-s"
 
 # Build Release w/ Ravif Workaround.
 @build-ravif: clean
-	# When ravif is pulled down through crates.io, its rav1e dependency is not
-	# built from scratch, resulting in a 2x preformance hit to our finished
-	# binary. Pulling ravif in as a "local" dependency instead fixes the issue.
+	# This is a dirty workaround for a strange performance bug.
 
-	# This is a dirty workaround; a cleaner solution is desired!
+	# In short, the refract binary's AVIF encoding performance is cut in half
+	# when ravif is pulled from crates.io versus downloading its source and
+	# linking to the relative path (in the workspace).
+
+	# The same trick does not work when refract's source is not set up as a
+	# workspace, or when ravif's source override is handled via
+	# [patch.crates-io].
+
+	# More investigation is needed to figure out exactly where the difference
+	# is. In the meantime, this special Just recipe can handle a more
+	# complicated build, while leaving the default Cargo.toml clean.
 
 	# Get the source, if it doesn't exist.
 	[ ! -d "{{ justfile_directory() }}/cavif-rs" ] || rm -rf "{{ justfile_directory() }}/cavif-rs"
@@ -64,6 +72,7 @@ rustflags   := "-C link-arg=-s"
 	# Undo what we just did.
 	rm -rf "{{ justfile_directory() }}/cavif-rs"
 	sd -s 'path = "../cavif-rs/ravif"' '# path = "../cavif-rs/ravif"' "{{ pkg_dir2 }}/Cargo.toml"
+	just _fix-chown "{{ pkg_dir2 }}/Cargo.toml"
 
 
 # Build Debian package!
