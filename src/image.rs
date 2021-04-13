@@ -86,7 +86,7 @@ impl<'a> Image<'a> {
 				let img = ravif::cleared_alpha(self.img.clone());
 				let mut candidate = Candidate::new(self.src, img.as_ref(), enc);
 				self.guided_encode(enc, &mut candidate)?;
-				candidate.take_or(enc.error())
+				candidate.take_or(RefractError::NoCandidate(enc))
 			},
 			Encoder::Webp => {
 				let mut candidate = Candidate::new(self.src, self.img.as_ref(), enc);
@@ -105,7 +105,7 @@ impl<'a> Image<'a> {
 				}
 
 				self.guided_encode(enc, &mut candidate)?;
-				candidate.take_or(enc.error())
+				candidate.take_or(RefractError::NoCandidate(enc))
 			},
 		}
 	}
@@ -165,7 +165,7 @@ impl<'a> Image<'a> {
 			// than what we just tested. Update accordingly and try again.
 			else {
 				let q = NonZeroU8::new(q.get().saturating_sub(1))
-					.ok_or_else(|| enc.error())?;
+					.ok_or(RefractError::NoCandidate(enc))?;
 
 				quality.set_max(q);
 			}

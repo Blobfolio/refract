@@ -2,6 +2,7 @@
 # `Refract`: Error
 */
 
+use crate::Encoder;
 use std::{
 	error::Error,
 	fmt,
@@ -14,10 +15,8 @@ use std::{
 pub(super) enum RefractError {
 	/// # Invalid Image.
 	InvalidImage,
-	/// # Unable to produce an acceptable AVIF version.
-	NoAvif,
-	/// # Unable to produce an acceptable WebP version.
-	NoWebp,
+	/// # Unable to produce an acceptable candidate.
+	NoCandidate(Encoder),
 	/// # Write Fail.
 	Write,
 }
@@ -36,8 +35,10 @@ impl RefractError {
 	pub(crate) const fn as_str(self) -> &'static str {
 		match self {
 			Self::InvalidImage => "The image is invalid or unreadable.",
-			Self::NoAvif => "No acceptable AVIF candidate was found.",
-			Self::NoWebp => "No acceptable WebP candidate was found.",
+			Self::NoCandidate(e) => match e {
+				Encoder::Avif => "No acceptable AVIF candidate was found.",
+				Encoder::Webp => "No acceptable WebP candidate was found.",
+			},
 			Self::Write => "Unable to save the image.",
 		}
 	}

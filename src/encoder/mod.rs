@@ -59,17 +59,6 @@ impl Encoder {
 		}
 	}
 
-	#[must_use]
-	/// # Error.
-	///
-	/// This returns the format-specific error.
-	pub(crate) const fn error(self) -> RefractError {
-		match self {
-			Self::Avif => RefractError::NoAvif,
-			Self::Webp => RefractError::NoWebp,
-		}
-	}
-
 	/// # Lossy Encode.
 	///
 	/// Encode an image using lossy compression with the given quality setting.
@@ -97,7 +86,7 @@ impl Encoder {
 	/// Returns an error if the image cannot be re-encoded.
 	pub(crate) fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
 		match self {
-			Self::Avif => Err(RefractError::NoAvif),
+			Self::Avif => Err(RefractError::NoCandidate(Self::Avif)),
 			Self::Webp => webp::make_lossless(img),
 		}
 	}
