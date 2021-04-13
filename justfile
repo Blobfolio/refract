@@ -31,8 +31,7 @@ rustflags   := "-C link-arg=-s"
 
 
 # Build Release!
-@build: clean
-	# First let's build the Rust bit.
+@build:
 	RUSTFLAGS="--emit asm {{ rustflags }}" cargo build \
 		--bin "{{ pkg_id }}" \
 		--release \
@@ -40,8 +39,35 @@ rustflags   := "-C link-arg=-s"
 		--target-dir "{{ cargo_dir }}"
 
 
+# Build Release w/ Ravif Workaround.
+@build-ravif: clean
+	# When ravif is pulled down through crates.io, its rav1e dependency is not
+	# built from scratch, resulting in a 2x preformance hit to our finished
+	# binary. Pulling ravif in as a "local" dependency instead fixes the issue.
+
+	# This is a dirty workaround; a cleaner solution is desired!
+
+	# Get the source, if it doesn't exist.
+	[ ! -d "{{ justfile_directory() }}/cavif-rs" ] || rm -rf "{{ justfile_directory() }}/cavif-rs"
+	git clone https://github.com/kornelski/cavif-rs.git "{{ justfile_directory() }}/cavif-rs"
+
+	# Patch refract_core. (Cargo [patch] doesn't do what we need.)
+	sd -s '# path = "../cavif-rs/ravif"' 'path = "../cavif-rs/ravif"' "{{ pkg_dir2 }}/Cargo.toml"
+
+	# Build it!
+	RUSTFLAGS="--emit asm {{ rustflags }}" cargo build \
+		--bin "{{ pkg_id }}" \
+		--release \
+		--target x86_64-unknown-linux-gnu \
+		--target-dir "{{ cargo_dir }}"
+
+	# Undo what we just did.
+	rm -rf "{{ justfile_directory() }}/cavif-rs"
+	sd -s 'path = "../cavif-rs/ravif"' '# path = "../cavif-rs/ravif"' "{{ pkg_dir2 }}/Cargo.toml"
+
+
 # Build Debian package!
-@build-deb: credits build
+@build-deb: credits build-ravif
 	# Do completions/man.
 	cargo bashman -m "{{ pkg_dir1 }}/Cargo.toml"
 
@@ -165,9 +191,7 @@ version:
 
 # Init dependencies.
 @_init:
-	# We need beta until 1.51 is stable.
-	# env RUSTUP_PERMIT_COPY_RENAME=true rustup default beta
-	# env RUSTUP_PERMIT_COPY_RENAME=true rustup component add clippy
+	# Nothing here just now.
 
 
 # Fix file/directory permissions.

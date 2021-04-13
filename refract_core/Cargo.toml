@@ -27,4 +27,5 @@ features = [ "1_1", "static" ]
 
 [dependencies.ravif]
 version = "0.7.*"
+# path = "../cavif-rs/ravif" # Performance doubles when ravif is "local".
 default-features = false
