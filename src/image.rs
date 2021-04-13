@@ -205,7 +205,7 @@ impl<'a> Image<'a> {
 				border.as_bytes(),
 				b"+\x1b[0m\n\x1b[38;5;199m| \x1b[0m",
 				path.as_ref().as_bytes(),
-				b"\x1b[38;5;199m |\n\x1b[38;5;199m+",
+				b"\x1b[38;5;199m |\n+",
 				border.as_bytes(),
 				b"+\x1b[0m\n",
 			].concat()
@@ -227,11 +227,14 @@ impl<'a> Image<'a> {
 ///
 /// This is largely lifted from [`cavif`](https://crates.io/crates/cavif). It
 /// is simplified slightly as we don't support premultiplied/dirty alpha.
+///
+/// Image type checking can be a little looser here as we'll have already
+/// determined the file is either a PNG or a JPEG.
 fn load_rgba(mut data: &[u8]) -> Result<ImgVec<RGBA8>, RefractError> {
 	use rgb::FromSlice;
 
 	// PNG.
-	if data.get(0..4) == Some(&[0x89,b'P',b'N',b'G']) {
+	if data.get(0..4) == Some(&[0x89, b'P', b'N', b'G']) {
 		let img = lodepng::decode32(data)
 			.map_err(|_| RefractError::InvalidImage)?;
 
