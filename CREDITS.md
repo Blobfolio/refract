@@ -1919,6 +1919,7 @@ SOFTWARE.
 * [argyle 0.3.1](https://github.com/Blobfolio/argyle)
 * [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
 * [dowser 0.2.0](https://github.com/Blobfolio/dowser)
+* [refract 0.1.1](https://github.com/Blobfolio/refract)
 
 
 ```
@@ -1943,8 +1944,6 @@ TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 **Used By:**
 
 * [fyi_msg 0.7.0](https://github.com/Blobfolio/fyi)
-* [refract 0.1.1](https://github.com/Blobfolio/refract)
-* [refract_core 0.1.1](https://github.com/Blobfolio/refract)
 
 
 ```
