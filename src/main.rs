@@ -31,6 +31,25 @@
 
 
 
+mod candidate;
+mod encoder;
+mod error;
+mod image;
+mod kind;
+mod quality;
+mod refraction;
+
+pub(crate) use candidate::Candidate;
+pub(crate) use encoder::Encoder;
+pub(crate) use error::RefractError;
+pub(crate) use image::Image;
+pub(crate) use kind::ImageKind;
+pub(crate) use quality::{
+	MAX_QUALITY,
+	Quality,
+};
+pub(crate) use refraction::Refraction;
+
 use argyle::{
 	Argue,
 	ArgyleError,
@@ -44,13 +63,6 @@ use dactyl::{
 };
 use dowser::Dowser;
 use fyi_msg::Msg;
-use refract_core::{
-	Encoder,
-	Image,
-	MAX_QUALITY,
-	RefractError,
-	Refraction,
-};
 use std::{
 	convert::TryFrom,
 	ffi::OsStr,

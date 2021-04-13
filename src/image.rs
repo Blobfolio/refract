@@ -32,7 +32,7 @@ use std::{
 /// path, its size, its type, and all the pixels.
 ///
 /// Guided encoding (for any given format) is done through [`Image::try_encode`].
-pub struct Image<'a> {
+pub(super) struct Image<'a> {
 	src: &'a PathBuf,
 	img: ImgVec<RGBA8>,
 	kind: ImageKind,
@@ -75,7 +75,7 @@ impl<'a> Image<'a> {
 	///
 	/// This method returns an error if no acceptable image is found, either
 	/// because they all looked terrible or were larger than the source.
-	pub fn try_encode(&self, enc: Encoder) -> Result<Refraction, RefractError> {
+	pub(crate) fn try_encode(&self, enc: Encoder) -> Result<Refraction, RefractError> {
 		enc.write_title();
 
 		match enc {
@@ -182,8 +182,7 @@ impl<'a> Image<'a> {
 	/// ## Errors
 	///
 	/// This returns an error if the new size is bigger or zero.
-	fn normalize_size(&self, size: usize)
-	-> Option<NonZeroU64> {
+	fn normalize_size(&self, size: usize) -> Option<NonZeroU64> {
 		let size = u64::try_from(size).ok()?;
 		NonZeroU64::new(size).filter(|s| s < &self.size)
 	}
@@ -192,7 +191,7 @@ impl<'a> Image<'a> {
 	///
 	/// This prints an ANSI-formatted title for when we begin working on the
 	/// image.
-	pub fn write_title(&self) {
+	pub(crate) fn write_title(&self) {
 		use std::io::Write;
 
 		let path = self.src.to_string_lossy();
@@ -219,7 +218,7 @@ impl<'a> Image<'a> {
 	/// # Size.
 	///
 	/// Returns the disk size of the image (in bytes).
-	pub const fn size(&self) -> NonZeroU64 { self.size }
+	pub(crate) const fn size(&self) -> NonZeroU64 { self.size }
 }
 
 

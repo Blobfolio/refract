@@ -1,13 +1,90 @@
-[workspace]
-members = [
-    "refract",
-    "refract_core",
+[package]
+name = "refract"
+version = "0.1.1"
+license = "WTFPL"
+authors = ["Josh Stoik <josh@blobfolio.com>"]
+edition = "2018"
+description = "Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources."
+repository = "https://github.com/Blobfolio/refract"
+publish = false
+
+[package.metadata.deb]
+maintainer = "Josh Stoik <hello@blobfolio.com>"
+copyright = "2021, Blobfolio, LLC <hello@blobfolio.com>"
+license-file = ["./LICENSE", "0"]
+revision = "1"
+depends = "$auto"
+section = "utility"
+extended-description = """\
+.\n\
+Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality.\n \
+"""
+assets = [
+    ["./target/x86_64-unknown-linux-gnu/release/refract", "usr/bin/", "755"],
+    ["./release/completions/refract.bash", "etc/bash_completion.d/", "644"],
+    ["./release/man/refract.1.gz", "usr/share/man/man1/", "644"],
 ]
 
-[profile.bench]
-lto = true
-codegen-units = 1
-opt-level = 3
+[package.metadata.bashman]
+name = "Refract"
+bash-dir = "./release/completions"
+man-dir = "./release/man"
+
+[[package.metadata.bashman.switches]]
+short = "-h"
+long = "--help"
+description = "Print help information."
+
+[[package.metadata.bashman.switches]]
+long = "--no-avif"
+description = "Skip AVIF conversion."
+
+[[package.metadata.bashman.switches]]
+long = "--no-webp"
+description = "Skip WebP conversion."
+
+[[package.metadata.bashman.switches]]
+short = "-V"
+long = "--version"
+description = "Print program version."
+
+[[package.metadata.bashman.options]]
+short = "-l"
+long = "--list"
+label = "<FILE>"
+description = "Read file paths from this text file."
+path = true
+
+[[package.metadata.bashman.arguments]]
+label = "<PATH(s)…>"
+description = "Any number of images and directories to crawl and crunch."
+
+[dependencies]
+argyle = "0.3.*"
+dactyl = "0.1.*"
+dowser = "0.2.*"
+imghdr = "0.7.*"
+imgref = "1.9.*"
+jpeg-decoder = "0.1.*"
+lodepng = "3.4.*"
+num-integer = "0.1.*"
+rgb = "0.8.*"
+
+[dependencies.fyi_msg]
+git = "https://github.com/Blobfolio/fyi.git"
+tag = "v0.7.0"
+
+[dependencies.libwebp-sys2]
+version = "0.1.*"
+features = [ "1_1", "static" ]
+
+[dependencies.ravif]
+version = "0.7.*"
+default-features = false
+
+[features]
+default = [ "asm" ]   # Workaround for Travis. Its version of NASM is too old
+asm = [ "ravif/asm" ] # to build rav1e (via ravif) with asm enabled.
 
 [profile.release]
 lto = true

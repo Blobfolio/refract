@@ -14,7 +14,7 @@ use std::convert::TryFrom;
 /// on the file having the correct extension.
 ///
 /// The formats on the other end of conversion are defined by [`Encoder`].
-pub enum ImageKind {
+pub(super) enum ImageKind {
 	/// # JPEG.
 	Jpeg,
 	/// # PNG.

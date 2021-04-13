@@ -19,7 +19,7 @@ use std::num::NonZeroU8;
 ///
 /// This enum holds the conversion formats, `AVIF` and `WebP`. Source image
 /// formats are instead defined by [`ImageKind`].
-pub enum Encoder {
+pub(super) enum Encoder {
 	/// # `AVIF`.
 	Avif,
 	/// # `WebP`.
@@ -31,7 +31,7 @@ impl Encoder {
 	///
 	/// This prints an ANSI-formatted title for when we begin working on the
 	/// extension.
-	pub fn write_title(self) {
+	pub(crate) fn write_title(self) {
 		use std::io::Write;
 
 		let writer = std::io::stdout();
@@ -52,7 +52,7 @@ impl Encoder {
 	/// Note: this is returned as a byte slice because that's how this program
 	/// consumes it, but the values are valid UTF-8, so conversion to string,
 	/// etc., can be achieved if desired.
-	pub const fn ext(self) -> &'static [u8] {
+	pub(crate) const fn ext(self) -> &'static [u8] {
 		match self {
 			Self::Avif => b".avif",
 			Self::Webp => b".webp",
@@ -63,7 +63,7 @@ impl Encoder {
 	/// # Error.
 	///
 	/// This returns the format-specific error.
-	pub const fn error(self) -> RefractError {
+	pub(crate) const fn error(self) -> RefractError {
 		match self {
 			Self::Avif => RefractError::NoAvif,
 			Self::Webp => RefractError::NoWebp,
@@ -78,7 +78,7 @@ impl Encoder {
 	/// ## Errors
 	///
 	/// Returns an error if the image cannot be re-encoded.
-	pub fn lossy(self, img: Img<&[RGBA8]>, quality: NonZeroU8)
+	pub(crate) fn lossy(self, img: Img<&[RGBA8]>, quality: NonZeroU8)
 	-> Result<Vec<u8>, RefractError> {
 		match self {
 			Self::Avif => avif::make_lossy(img, quality),
@@ -95,7 +95,7 @@ impl Encoder {
 	/// ## Errors
 	///
 	/// Returns an error if the image cannot be re-encoded.
-	pub fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
+	pub(crate) fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
 		match self {
 			Self::Avif => Err(RefractError::NoAvif),
 			Self::Webp => webp::make_lossless(img),

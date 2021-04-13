@@ -11,15 +11,13 @@ use std::{
 
 #[derive(Debug, Copy, Clone)]
 /// # Error.
-pub enum RefractError {
+pub(super) enum RefractError {
 	/// # Invalid Image.
 	InvalidImage,
 	/// # Unable to produce an acceptable AVIF version.
 	NoAvif,
 	/// # Unable to produce an acceptable WebP version.
 	NoWebp,
-	/// # Too Big.
-	TooBig,
 	/// # Write Fail.
 	Write,
 }
@@ -35,12 +33,11 @@ impl fmt::Display for RefractError {
 impl RefractError {
 	#[must_use]
 	/// # As Str.
-	pub const fn as_str(self) -> &'static str {
+	pub(crate) const fn as_str(self) -> &'static str {
 		match self {
 			Self::InvalidImage => "The image is invalid or unreadable.",
 			Self::NoAvif => "No acceptable AVIF candidate was found.",
 			Self::NoWebp => "No acceptable WebP candidate was found.",
-			Self::TooBig => "The converted image was larger than the source.",
 			Self::Write => "Unable to save the image.",
 		}
 	}

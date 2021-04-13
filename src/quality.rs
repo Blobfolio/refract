@@ -12,12 +12,12 @@ use std::{
 /// # Minimum Quality
 ///
 /// The minimum quality is 1.
-pub const MIN_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(1) };
+pub(super) const MIN_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(1) };
 
 /// # Maximum Quality
 ///
 /// The maximum quality is 100.
-pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
+pub(super) const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 
 
 
@@ -29,7 +29,7 @@ pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 /// one individually.
 ///
 /// See [`Quality::next`] for more information.
-pub struct Quality {
+pub(super) struct Quality {
 	min: NonZeroU8,
 	max: NonZeroU8,
 	tested: HashSet<NonZeroU8>,
@@ -59,7 +59,7 @@ impl Quality {
 	/// in 5-10 steps instead of 100.
 	///
 	/// Think of it like a Bond villain room where the walls are closing in.
-	pub fn next(&mut self) -> Option<NonZeroU8> {
+	pub(crate) fn next(&mut self) -> Option<NonZeroU8> {
 		if self.min == self.max { return None; }
 
 		let max = self.max.get();
@@ -106,7 +106,7 @@ impl Quality {
 	/// This method will panic if the quality is greater than 100. The minimum
 	/// value is 1, however this is self-enforced by using [`std::num::NonZeroU8`],
 	/// so no panics necessary on that side.
-	pub fn set_max(&mut self, quality: NonZeroU8) {
+	pub(crate) fn set_max(&mut self, quality: NonZeroU8) {
 		assert!(quality <= MAX_QUALITY);
 
 		self.max = quality;
@@ -133,7 +133,7 @@ impl Quality {
 	/// This method will panic if the quality is greater than 100. The minimum
 	/// value is 1, however this is self-enforced by using [`std::num::NonZeroU8`],
 	/// so no panics necessary on that side.
-	pub fn set_min(&mut self, quality: NonZeroU8) {
+	pub(crate) fn set_min(&mut self, quality: NonZeroU8) {
 		assert!(quality <= MAX_QUALITY);
 
 		self.min = quality;

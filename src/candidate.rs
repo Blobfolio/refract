@@ -31,7 +31,7 @@ use std::{
 /// # Image Candidate
 ///
 /// This holds information for an in-progress candidate image.
-pub struct Candidate<'a> {
+pub(super) struct Candidate<'a> {
 	/// # The output path.
 	dst: PathBuf,
 	/// # The size of the output image, if any.
@@ -59,7 +59,7 @@ impl<'a> Candidate<'a> {
 	/// # New.
 	///
 	/// Start a new instance given a path, image, and encoder.
-	pub fn new(src: &Path, img: Img<&'a [RGBA8]>, enc: Encoder) -> Self {
+	pub(crate) fn new(src: &Path, img: Img<&'a [RGBA8]>, enc: Encoder) -> Self {
 		// The distribution and temporary paths are derived from the source
 		// path. Doing this from bytes is a lot more efficient than using `Path`
 		// methods.
@@ -83,7 +83,7 @@ impl<'a> Candidate<'a> {
 	///
 	/// This will return an error if the disk changes are unable to be written
 	/// due to permission errors, missing source, etc.
-	pub fn keep(&mut self, size: NonZeroU64, quality: NonZeroU8) -> Result<(), RefractError> {
+	pub(crate) fn keep(&mut self, size: NonZeroU64, quality: NonZeroU8) -> Result<(), RefractError> {
 		std::fs::rename(&self.tmp, &self.dst)
 			.map_err(|_| RefractError::Write)?;
 
@@ -112,7 +112,7 @@ impl<'a> Candidate<'a> {
 	///
 	/// If the distribution image does not exist or if either its size or
 	/// quality are undefined, the provided `err` is passed through instead.
-	pub fn take_or(self, err: RefractError) -> Result<Refraction, RefractError> {
+	pub(crate) fn take_or(self, err: RefractError) -> Result<Refraction, RefractError> {
 		if self.dst.exists() {
 			if let Some((size, quality)) = self.dst_size.zip(self.dst_quality) {
 				return Ok(Refraction::new(self.dst.clone(), size, quality));
@@ -159,21 +159,17 @@ impl<'a> Candidate<'a> {
 	///
 	/// Check if a given size is smaller than the current best. If there is no
 	/// current best, `true` is returned.
-	pub fn is_smaller(&self, size: NonZeroU64) -> bool {
+	pub(crate) fn is_smaller(&self, size: NonZeroU64) -> bool {
 		self.dst_size.map_or(true, |s| size < s)
 	}
 
 	#[must_use]
 	/// # Image.
-	pub const fn img(&self) -> Img<&'a [RGBA8]> { self.img }
-
-	#[must_use]
-	/// # Output Path.
-	pub const fn dst_path(&self) -> &PathBuf { &self.dst }
+	pub(crate) const fn img(&self) -> Img<&'a [RGBA8]> { self.img }
 
 	#[must_use]
 	/// # Temporary Path.
-	pub const fn tmp_path(&self) -> &PathBuf { &self.tmp }
+	pub(crate) const fn tmp_path(&self) -> &PathBuf { &self.tmp }
 }
 
 
