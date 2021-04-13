@@ -5,4 +5,4 @@ os:
 rust:
   - stable
 script:
-  - cargo build --release --verbose --workspace
+  - cargo build --release --no-default-features --verbose --workspace

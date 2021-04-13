@@ -66,7 +66,12 @@ dowser = "0.2.*"
 
 [dependencies.refract_core]
 path = "../refract_core"
+default-features = false
 
 [dependencies.fyi_msg]
 git = "https://github.com/Blobfolio/fyi.git"
 tag = "v0.7.0"
+
+[features]
+default = [ "asm" ]          # A convoluted workaround for Travis; its NASM
+asm = [ "refract_core/asm" ] # is too outdated to test build the asm feature.
