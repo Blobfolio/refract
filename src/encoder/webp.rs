@@ -141,24 +141,15 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 	// Fill the pixel buffers.
 	unsafe {
-		use dactyl::traits::SaturatingFrom;
-		use rgb::ComponentSlice;
-
-		// TODO: This is decently fast, but is there a better way to collapse
-		// the individual pixel RGBA values into a contiguous buffer?
-		let mut pixel_data = source
-			.pixels()
-			.fold(Vec::with_capacity(usize::saturating_from(width * height * 4)), |mut acc, px| {
-				acc.extend_from_slice(px.as_slice());
-				acc
-			});
-
-		let full_stride = argb_stride * 4;
-
+		let mut pixel_data = {
+			use rgb::ComponentBytes;
+			let (buf, _, _) = source.to_contiguous_buf();
+			buf.as_bytes().to_vec()
+		};
 		let status = WebPPictureImportRGBA(
 			&mut picture,
 			pixel_data.as_mut_ptr(),
-			full_stride,
+			argb_stride * 4,
 		);
 
 		// A few additional sanity checks.
