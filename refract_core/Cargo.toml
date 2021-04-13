@@ -30,5 +30,5 @@ version = "0.7.*"
 default-features = false
 
 [features]
-default = [ "asm" ]   # Workaround for Travis. It's version of NASM is too old
+default = [ "asm" ]   # Workaround for Travis. Its version of NASM is too old
 asm = [ "ravif/asm" ] # to build rav1e (via ravif) with asm enabled.

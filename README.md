@@ -24,7 +24,9 @@ Should you use this for every image ever? Probably not. But if you have a small 
 
 ## Installation
 
-This application is written in [Rust](https://www.rust-lang.org/) and can be built using [Cargo](https://github.com/rust-lang/cargo) for Linux or Mac systems.
+This application is written in [Rust](https://www.rust-lang.org/) and can be built using [Cargo](https://github.com/rust-lang/cargo) for x86-64 Linux or Mac systems.
+
+Note that building from source requires NASM to compile the [rav1e](https://github.com/xiph/rav1e#dependency-nasm) dependency.
 
 Pre-built `.deb` packages are also added for each [release](https://github.com/Blobfolio/refract/releases/latest), which should always work on the latest stable Debian and Ubuntu operating systems.
 
