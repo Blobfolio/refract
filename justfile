@@ -31,52 +31,16 @@ rustflags   := "-C link-arg=-s"
 
 
 # Build Release!
-@build:
+@build: clean
 	RUSTFLAGS="--emit asm {{ rustflags }}" cargo build \
 		--bin "{{ pkg_id }}" \
 		--release \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
-
-
-# Build Release w/ Ravif Workaround.
-@build-ravif: clean
-	# This is a dirty workaround for a strange performance bug.
-
-	# In short, the refract binary's AVIF encoding performance is cut in half
-	# when ravif is pulled from crates.io versus downloading its source and
-	# linking to the relative path (in the workspace).
-
-	# The same trick does not work when refract's source is not set up as a
-	# workspace, or when ravif's source override is handled via
-	# [patch.crates-io].
-
-	# More investigation is needed to figure out exactly where the difference
-	# is. In the meantime, this special Just recipe can handle a more
-	# complicated build, while leaving the default Cargo.toml clean.
-
-	# Get the source, if it doesn't exist.
-	[ ! -d "{{ justfile_directory() }}/cavif-rs" ] || rm -rf "{{ justfile_directory() }}/cavif-rs"
-	git clone https://github.com/kornelski/cavif-rs.git "{{ justfile_directory() }}/cavif-rs"
-
-	# Patch refract_core. (Cargo [patch] doesn't do what we need.)
-	sd -s '# path = "../cavif-rs/ravif"' 'path = "../cavif-rs/ravif"' "{{ pkg_dir2 }}/Cargo.toml"
-
-	# Build it!
-	RUSTFLAGS="--emit asm {{ rustflags }}" cargo build \
-		--bin "{{ pkg_id }}" \
-		--release \
-		--target x86_64-unknown-linux-gnu \
-		--target-dir "{{ cargo_dir }}"
-
-	# Undo what we just did.
-	rm -rf "{{ justfile_directory() }}/cavif-rs"
-	sd -s 'path = "../cavif-rs/ravif"' '# path = "../cavif-rs/ravif"' "{{ pkg_dir2 }}/Cargo.toml"
-	just _fix-chown "{{ pkg_dir2 }}/Cargo.toml"
 
 
 # Build Debian package!
-@build-deb: credits build-ravif
+@build-deb: credits build
 	# Do completions/man.
 	cargo bashman -m "{{ pkg_dir1 }}/Cargo.toml"
 

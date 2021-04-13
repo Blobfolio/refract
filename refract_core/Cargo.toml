@@ -15,6 +15,7 @@ imgref = "1.9.*"
 jpeg-decoder = "0.1.*"
 lodepng = "3.4.*"
 num-integer = "0.1.*"
+ravif = "0.7.*"
 rgb = "0.8.*"
 
 [dependencies.fyi_msg]
@@ -24,8 +25,3 @@ tag = "v0.7.0"
 [dependencies.libwebp-sys2]
 version = "0.1.*"
 features = [ "1_1", "static" ]
-
-[dependencies.ravif]
-version = "0.7.*"
-# path = "../cavif-rs/ravif" # Performance doubles when ravif is "local".
-default-features = false
