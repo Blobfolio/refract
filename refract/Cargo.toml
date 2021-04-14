@@ -12,7 +12,7 @@ publish = false
 [package.metadata.deb]
 maintainer = "Josh Stoik <hello@blobfolio.com>"
 copyright = "2021, Blobfolio, LLC <hello@blobfolio.com>"
-license-file = ["./LICENSE", "0"]
+license-file = ["../LICENSE", "0"]
 revision = "1"
 depends = "$auto"
 section = "utility"
@@ -21,15 +21,15 @@ extended-description = """\
 Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality.\n \
 """
 assets = [
-    ["./target/x86_64-unknown-linux-gnu/release/refract", "usr/bin/", "755"],
-    ["./release/completions/refract.bash", "etc/bash_completion.d/", "644"],
-    ["./release/man/refract.1.gz", "usr/share/man/man1/", "644"],
+    ["../target/x86_64-unknown-linux-gnu/release/refract", "usr/bin/", "755"],
+    ["../release/completions/refract.bash", "etc/bash_completion.d/", "644"],
+    ["../release/man/refract.1.gz", "usr/share/man/man1/", "644"],
 ]
 
 [package.metadata.bashman]
 name = "Refract"
-bash-dir = "./release/completions"
-man-dir = "./release/man"
+bash-dir = "../release/completions"
+man-dir = "../release/man"
 
 [[package.metadata.bashman.switches]]
 short = "-h"
