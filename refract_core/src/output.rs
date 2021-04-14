@@ -2,24 +2,28 @@
 # `Refract` - Encoding
 */
 
-use super::{
+use crate::{
 	RefractError,
 	Source,
 	SourceKind,
 };
-use imgref::ImgExt;
-use ravif::{
+use imgref::{
 	Img,
-	RGBA8,
+	ImgExt,
 };
-use std::borrow::Cow;
-use std::collections::HashSet;
-use std::convert::TryFrom;
-use std::ffi::OsStr;
-use std::num::NonZeroU64;
-use std::num::NonZeroU8;
-use std::os::unix::ffi::OsStrExt;
-use std::path::Path;
+use ravif::RGBA8;
+use std::{
+	borrow::Cow,
+	collections::HashSet,
+	convert::TryFrom,
+	ffi::OsStr,
+	num::{
+		NonZeroU64,
+		NonZeroU8,
+	},
+	os::unix::ffi::OsStrExt,
+	path::Path,
+};
 
 
 
@@ -62,7 +66,7 @@ impl OutputKind {
 	pub fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
 		match self {
 			Self::Avif => Err(RefractError::NoLossless),
-			Self::Webp => super::webp::make_lossless(img),
+			Self::Webp => crate::webp::make_lossless(img),
 		}
 	}
 
@@ -80,8 +84,8 @@ impl OutputKind {
 		quality: NonZeroU8
 	) -> Result<Vec<u8>, RefractError> {
 		match self {
-			Self::Avif => super::avif::make_lossy(img, quality),
-			Self::Webp => super::webp::make_lossy(img, quality),
+			Self::Avif => crate::avif::make_lossy(img, quality),
+			Self::Webp => crate::webp::make_lossy(img, quality),
 		}
 	}
 }

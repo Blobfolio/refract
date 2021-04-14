@@ -2,17 +2,21 @@
 # `Refract` - Source Image
 */
 
-use super::OutputIter;
-use super::OutputKind;
-use super::RefractError;
+use crate::{
+	OutputIter,
+	OutputKind,
+	RefractError,
+};
 use imgref::{
 	Img,
 	ImgVec,
 };
 use ravif::RGBA8;
-use std::convert::TryFrom;
-use std::num::NonZeroU64;
-use std::path::PathBuf;
+use std::{
+	convert::TryFrom,
+	num::NonZeroU64,
+	path::PathBuf,
+};
 
 
 

@@ -2,7 +2,7 @@
 # `Refract` - Error
 */
 
-use super::OutputKind;
+use crate::OutputKind;
 use std::{
 	error::Error,
 	fmt,
@@ -10,16 +10,22 @@ use std::{
 
 
 
-#[allow(missing_docs)]
 #[derive(Debug, Copy, Clone)]
 /// # Error.
 pub enum RefractError {
+	/// # No candidate found.
 	Candidate(OutputKind),
+	/// # Encoding error.
 	Encode,
+	/// # Encoder does not support lossless mode.
 	NoLossless,
+	/// # Unable to read source.
 	Read,
+	/// # Invalid image source.
 	Source,
+	/// # Candidate too big.
 	TooBig,
+	/// # Unable to write to file.
 	Write,
 }
 

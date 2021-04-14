@@ -6,11 +6,11 @@ It works very similarly to [`cavif`](https://crates.io/crates/cavif), but does
 not support premultiplied/dirty alpha operations.
 */
 
-use super::RefractError;
+use crate::RefractError;
+use imgref::Img;
 use ravif::{
 	ColorSpace,
 	Config,
-	Img,
 	RGBA8,
 };
 use std::num::NonZeroU8;

@@ -5,7 +5,8 @@ This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Go
 `libwebp`. Operations should be equivalent to the corresponding `cwebp` output.
 */
 
-use super::RefractError;
+use crate::RefractError;
+use imgref::Img;
 use libwebp_sys::{
 	WEBP_MAX_DIMENSION,
 	WebPConfig,
@@ -22,10 +23,7 @@ use libwebp_sys::{
 	WebPPictureInit,
 	WebPValidateConfig,
 };
-use ravif::{
-	Img,
-	RGBA8,
-};
+use ravif::RGBA8;
 use std::{
 	convert::TryFrom,
 	num::NonZeroU8,
