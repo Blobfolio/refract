@@ -23,6 +23,8 @@ use std::{
 #[allow(missing_docs)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # Source Kind.
+///
+/// This is a list of supported input formats.
 pub enum SourceKind {
 	Jpeg,
 	Png,
@@ -44,6 +46,20 @@ impl TryFrom<&[u8]> for SourceKind {
 
 #[derive(Debug)]
 /// # Source Image.
+///
+/// This struct holds the information for a source image. It is instantiated
+/// using `TryFrom<PathBuf>`, like:
+///
+/// ```no_run
+/// use refract_core::Source;
+/// use std::convert::TryFrom;
+/// use std::path::PathBuf;
+///
+/// let source = Source::try_from(PathBuf::from("/path/to/image.jpg")).unwrap();
+/// ```
+///
+/// The primary use of this struct is its [`Source::encode`] method,
+/// which returns an iterator to help find the best encoding.
 pub struct Source {
 	path: PathBuf,
 	size: NonZeroU64,
@@ -72,22 +88,34 @@ impl TryFrom<PathBuf> for Source {
 impl Source {
 	#[must_use]
 	/// # Image.
+	///
+	/// This returns the image pixel data as a reference.
 	pub fn img(&self) -> Img<&[RGBA8]> { self.img.as_ref() }
 
 	#[must_use]
 	/// # Owned Image.
+	///
+	/// This returns an owned copy of the image pixel data via cloning. This is
+	/// required by AVIF encoding as it works on a modified source (and we
+	/// don't want to pollute the authoritative copy).
 	pub fn img_owned(&self) -> Img<Vec<RGBA8>> { self.img.clone() }
 
 	#[must_use]
 	/// # Kind.
+	///
+	/// This returns the input kind.
 	pub const fn kind(&self) -> SourceKind { self.kind }
 
 	#[must_use]
 	/// # Path.
+	///
+	/// This returns a reference to the source's file path.
 	pub const fn path(&self) -> &PathBuf { &self.path }
 
 	#[must_use]
 	/// # Size.
+	///
+	/// This returns the size of the source image.
 	pub const fn size(&self) -> NonZeroU64 { self.size }
 }
 
@@ -101,7 +129,7 @@ impl Source {
 	/// acceptable candidate.
 	///
 	/// See [`OutputIter`] for more information.
-	pub fn guided_encode(&self, kind: OutputKind) -> OutputIter<'_> {
+	pub fn encode(&self, kind: OutputKind) -> OutputIter<'_> {
 		OutputIter::new(self, kind)
 	}
 }

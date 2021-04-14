@@ -17,6 +17,7 @@ use std::{
 	collections::HashSet,
 	convert::TryFrom,
 	ffi::OsStr,
+	fmt,
 	num::{
 		NonZeroU64,
 		NonZeroU8,
@@ -27,12 +28,12 @@ use std::{
 
 
 
-/// # Minimum Quality
+/// # Minimum Encoding Quality
 ///
 /// The minimum quality is 1.
 pub const MIN_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(1) };
 
-/// # Maximum Quality
+/// # Maximum Encoding Quality
 ///
 /// The maximum quality is 100.
 pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
@@ -47,6 +48,12 @@ pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 pub enum OutputKind {
 	Avif,
 	Webp,
+}
+
+impl fmt::Display for OutputKind {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
 }
 
 /// # Encoding.
@@ -94,6 +101,8 @@ impl OutputKind {
 impl OutputKind {
 	#[must_use]
 	/// # As Slice.
+	///
+	/// Return the encoder name as a byte slice.
 	pub const fn as_bytes(self) -> &'static [u8] {
 		match self {
 			Self::Avif => b"AVIF",
@@ -103,6 +112,8 @@ impl OutputKind {
 
 	#[must_use]
 	/// # As Str.
+	///
+	/// Return the encoder name as a string slice.
 	pub const fn as_str(self) -> &'static str {
 		match self {
 			Self::Avif => "AVIF",
@@ -112,6 +123,9 @@ impl OutputKind {
 
 	#[must_use]
 	/// # Extension as Slice.
+	///
+	/// Return the file extension for the encoder — with leading period — as a
+	/// byte slice.
 	pub const fn ext_bytes(self) -> &'static [u8] {
 		match self {
 			Self::Avif => b".avif",
@@ -121,6 +135,9 @@ impl OutputKind {
 
 	#[must_use]
 	/// # Extension as Str.
+	///
+	/// Return the file extension for the encoder — with leading period — as a
+	/// string slice.
 	pub const fn ext_str(self) -> &'static str {
 		match self {
 			Self::Avif => ".avif",
@@ -135,6 +152,13 @@ impl OutputKind {
 /// # Output Candidate.
 ///
 /// This struct holds the information for an encoded image.
+///
+/// The raw data can be accessed using [`Output::data`] or written to a file
+/// using [`Output::write`].
+///
+/// The format type, size, and encoder quality are retrievable via the
+/// [`Output::kind`], [`Output::size`], and [`Output::quality`] methods,
+/// respectively.
 pub struct Output {
 	data: Vec<u8>,
 	kind: OutputKind,
@@ -193,18 +217,30 @@ impl Output {
 impl Output {
 	#[must_use]
 	/// # Data.
+	///
+	/// Retrieve the raw image data as a byte slice.
 	pub fn data(&self) -> &[u8] { &self.data }
 
 	#[must_use]
 	/// # Kind.
+	///
+	/// Return the encoder format used.
 	pub const fn kind(&self) -> OutputKind { self.kind }
 
 	#[must_use]
 	/// # Quality.
+	///
+	/// Return the quality setting used to encode the image.
+	///
+	/// Note that a value of `100` typically indicates lossless compression, as
+	/// it is very unlikely a lossy `100` would result in any image shrinking.
+	/// At present, only `PNG->WebP` attempts lossless conversion.
 	pub const fn quality(&self) -> NonZeroU8 { self.quality }
 
 	#[must_use]
 	/// # Size.
+	///
+	/// Return the size of the encoded image.
 	pub const fn size(&self) -> NonZeroU64 { self.size }
 }
 
@@ -212,6 +248,21 @@ impl Output {
 
 #[derive(Debug, Clone)]
 /// # Guided Encoding.
+///
+/// This iterator is produced by calling [`Source::encode`]. Each tick
+/// returns a re-encoded copy of the source image at a different quality level.
+///
+/// The caller should take a look at that output and call either [`OutputIter::keep`]
+/// or [`OutputIter::discard`] prior to the next [`OutputIter::next`].
+///
+/// These methods will adjust the quality range accordingly — keep means the
+/// image looked fine; discard means it didn't — allowing the smallest possible
+/// candidate to be deduced in 5-10 steps instead of 100.
+///
+/// Once [`OutputIter::next`] returns `None`, you can call [`OutputIter::take`]
+/// to consume the struct and return the best image found, if any.
+///
+/// See the `refract` CLI crate for example usage.
 pub struct OutputIter<'a> {
 	bottom: NonZeroU8,
 	top: NonZeroU8,
@@ -361,6 +412,11 @@ impl<'a> OutputIter<'a> {
 	///
 	/// This converts a `usize` to a `NonZeroU64`, making sure it is smaller
 	/// than the source and current best, if any.
+	///
+	/// ## Errors
+	///
+	/// This method will return an error if a `NonZeroU64` cannot be created or
+	/// if the resulting value would be too big.
 	fn normalize_size(&self, size: usize) -> Result<NonZeroU64, RefractError> {
 		// The size has to fit in a `u64`.
 		let size = u64::try_from(size).map_err(|_| RefractError::TooBig)?;
@@ -372,7 +428,9 @@ impl<'a> OutputIter<'a> {
 		if let Some(s) = self.best_size() {
 			if size >= s { return Err(RefractError::TooBig); }
 		}
-		// It must be smaller than the source.
+		// It must be smaller than the source. Since the best is going to be
+		// smaller than the source, we only need to check this if there is no
+		// best yet.
 		else if size >= self.src_size { return Err(RefractError::TooBig); }
 
 		Ok(size)
@@ -425,21 +483,16 @@ impl<'a> OutputIter<'a> {
 
 /// # Best Getters.
 impl<'a> OutputIter<'a> {
+	#[inline]
 	#[must_use]
 	/// # Best Size.
+	///
+	/// This returns the current best size, if any.
 	pub fn best_size(&self) -> Option<NonZeroU64> {
 		self.best.as_ref().map(|b| b.size)
 	}
 
-	#[must_use]
-	/// # Savings.
-	pub fn savings(&self) -> Option<NonZeroU64> {
-		self.best_size()
-			.map(|s| unsafe {
-				NonZeroU64::new_unchecked(self.src_size.get() - s.get())
-			})
-	}
-
+	#[inline]
 	/// # Take.
 	///
 	/// Consume the iterator and return the best candidate found, if any.

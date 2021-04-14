@@ -127,7 +127,7 @@ fn _main() -> Result<(), ArgyleError> {
 					let prompt = cli::path_prompt(&tmp);
 
 					// Guided encode!
-					let mut guide = img.guided_encode(e);
+					let mut guide = img.encode(e);
 					while let Some(candidate) = guide.next().filter(|c| c.write(&tmp).is_ok()) {
 						if prompt.prompt() {
 							guide.keep(candidate);
