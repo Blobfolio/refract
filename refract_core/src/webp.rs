@@ -5,7 +5,7 @@ This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Go
 `libwebp`. Operations should be equivalent to the corresponding `cwebp` output.
 */
 
-use crate::RefractError;
+use super::RefractError;
 use libwebp_sys::{
 	WEBP_MAX_DIMENSION,
 	WebPConfig,
@@ -121,20 +121,20 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 	}
 
 	// Check the source dimensions.
-	let width = i32::try_from(source.width()).map_err(|_| RefractError::InvalidImage)?;
-	let height = i32::try_from(source.height()).map_err(|_| RefractError::InvalidImage)?;
+	let width = i32::try_from(source.width()).map_err(|_| RefractError::Encode)?;
+	let height = i32::try_from(source.height()).map_err(|_| RefractError::Encode)?;
 	if width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION {
-		return Err(RefractError::InvalidImage);
+		return Err(RefractError::Encode);
 	}
 
 	// Set up the picture struct.
 	let mut picture: WebPPicture = unsafe { std::mem::zeroed() };
 	if unsafe { WebPPictureInit(&mut picture) } == 0 {
-		return Err(RefractError::InvalidImage);
+		return Err(RefractError::Encode);
 	}
 
 	let argb_stride = i32::try_from(source.stride())
-		.map_err(|_| RefractError::InvalidImage)?;
+		.map_err(|_| RefractError::Encode)?;
 	picture.use_argb = 1;
 	picture.width = width;
 	picture.height = height;
@@ -160,7 +160,7 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 			expected_size == 0 ||
 			i32::try_from(pixel_data.len()).unwrap_or(0) != expected_size
 		{
-			return Err(RefractError::InvalidImage);
+			return Err(RefractError::Encode);
 		}
 
 		// Clean-up.
@@ -169,7 +169,7 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 	// A few more sanity checks.
 	if picture.use_argb != 1 || ! picture.y.is_null() || picture.argb.is_null() {
-		return Err(RefractError::InvalidImage);
+		return Err(RefractError::Encode);
 	}
 
 	// Hook in the writer.
@@ -198,7 +198,7 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 fn encode(source: Img<&[RGBA8]>, config: WebPConfig) -> Result<Vec<u8>, RefractError> {
 	let (mut picture, writer_ptr) = init_picture(source)?;
 	if unsafe { WebPEncode(&config, &mut picture) } == 0 {
-		return Err(RefractError::InvalidImage);
+		return Err(RefractError::Encode);
 	}
 
 	// Copy output.
@@ -214,6 +214,6 @@ fn encode(source: Img<&[RGBA8]>, config: WebPConfig) -> Result<Vec<u8>, RefractE
 		std::mem::drop(writer);
 	}
 
-	if output.is_empty() { Err(RefractError::InvalidImage) }
+	if output.is_empty() { Err(RefractError::Encode) }
 	else { Ok(output) }
 }

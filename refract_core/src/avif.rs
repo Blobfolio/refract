@@ -6,7 +6,7 @@ It works very similarly to [`cavif`](https://crates.io/crates/cavif), but does
 not support premultiplied/dirty alpha operations.
 */
 
-use crate::RefractError;
+use super::RefractError;
 use ravif::{
 	ColorSpace,
 	Config,
@@ -45,7 +45,7 @@ pub(super) fn make_lossy(img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<Vec<u
 			threads: 0,
 		}
 	)
-		.map_err(|_| RefractError::Write)?;
+		.map_err(|_| RefractError::Encode)?;
 
 	Ok(out)
 }

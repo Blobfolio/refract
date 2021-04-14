@@ -17,7 +17,8 @@
 
 pkg_id      := "refract"
 pkg_name    := "Refract"
-pkg_dir1    := justfile_directory()
+pkg_dir1    := justfile_directory() + "/refract"
+pkg_dir2    := justfile_directory() + "/refract_core"
 
 cargo_dir   := "/tmp/" + pkg_id + "-cargo"
 cargo_bin   := cargo_dir + "/x86_64-unknown-linux-gnu/release/" + pkg_id
@@ -33,6 +34,7 @@ rustflags   := "-C link-arg=-s"
 @build: clean
 	RUSTFLAGS="--emit asm {{ rustflags }}" cargo build \
 		--bin "{{ pkg_id }}" \
+		--workspace \
 		--release \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
@@ -62,6 +64,7 @@ rustflags   := "-C link-arg=-s"
 	# First let's build the Rust bit.
 	RUSTFLAGS="{{ rustflags }}" cargo check \
 		--release \
+		--workspace \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
 
@@ -74,6 +77,7 @@ rustflags   := "-C link-arg=-s"
 	# they place *other* shit in the designated target dir. Haha.
 	[ ! -d "{{ justfile_directory() }}/target" ] || rm -rf "{{ justfile_directory() }}/target"
 	[ ! -d "{{ pkg_dir1 }}/target" ] || rm -rf "{{ pkg_dir1 }}/target"
+	[ ! -d "{{ pkg_dir2 }}/target" ] || rm -rf "{{ pkg_dir2 }}/target"
 
 
 # Clippy.
@@ -81,6 +85,7 @@ rustflags   := "-C link-arg=-s"
 	clear
 	RUSTFLAGS="{{ rustflags }}" cargo clippy \
 		--release \
+		--workspace \
 		--all-features \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
@@ -102,6 +107,7 @@ rustflags   := "-C link-arg=-s"
 	# Make the docs.
 	cargo doc \
 		--release \
+		--workspace \
 		--no-deps \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
@@ -144,6 +150,7 @@ version:
 
 	# Set the release version!
 	just _version "{{ pkg_dir1 }}" "$_ver2"
+	just _version "{{ pkg_dir2 }}" "$_ver2"
 
 
 # Set version for real.

@@ -26,24 +26,7 @@
 
 
 
-mod candidate;
-mod encoder;
-mod error;
-mod image;
-mod kind;
-mod quality;
-mod refraction;
-
-pub(crate) use candidate::Candidate;
-pub(crate) use encoder::Encoder;
-pub(crate) use error::RefractError;
-pub(crate) use image::Image;
-pub(crate) use kind::ImageKind;
-pub(crate) use quality::{
-	MAX_QUALITY,
-	Quality,
-};
-pub(crate) use refraction::Refraction;
+mod cli;
 
 use argyle::{
 	Argue,
@@ -52,9 +35,9 @@ use argyle::{
 	FLAG_REQUIRED,
 	FLAG_VERSION,
 };
-use dactyl::{
-	NiceU64,
-	NicePercent,
+use refract_core::{
+	OutputKind,
+	Source,
 };
 use dowser::Dowser;
 use fyi_msg::Msg;
@@ -62,7 +45,10 @@ use std::{
 	convert::TryFrom,
 	ffi::OsStr,
 	os::unix::ffi::OsStrExt,
-	path::PathBuf,
+	path::{
+		Path,
+		PathBuf,
+	},
 };
 
 
@@ -93,12 +79,12 @@ fn _main() -> Result<(), ArgyleError> {
 		.with_list();
 
 	// Figure out which types we're dealing with.
-	let mut encoders: Vec<Encoder> = Vec::with_capacity(2);
+	let mut encoders: Vec<OutputKind> = Vec::with_capacity(2);
 	if ! args.switch(b"--no-webp") {
-		encoders.push(Encoder::Webp);
+		encoders.push(OutputKind::Webp);
 	}
 	if ! args.switch(b"--no-avif") {
-		encoders.push(Encoder::Avif);
+		encoders.push(OutputKind::Avif);
 	}
 
 	if encoders.is_empty() {
@@ -124,17 +110,43 @@ fn _main() -> Result<(), ArgyleError> {
 	paths.sort();
 
 	// Run through the set to see what gets created!
-	paths.iter()
+	paths.into_iter()
 		.for_each(|x|
-			if let Ok(img) = Image::try_from(x) {
-				img.write_title();
+			if let Ok(img) = Source::try_from(x) {
+				cli::print_path_title(img.path());
 
+				// Store the original size. We'll need it later.
 				let size = img.size().get();
+
 				encoders.iter().for_each(|&e| {
-					let res = img.try_encode(e);
-					print_result(size, res);
+					// Print the extension title.
+					cli::print_outputkind_title(e);
+
+					// Output paths.
+					let (tmp, dst) = suffixed_paths(img.path(), e);
+					let prompt = cli::path_prompt(&tmp);
+
+					// Guided encode!
+					let mut guide = img.guided_encode(e);
+					while let Some(candidate) = guide.next().filter(|c| c.write(&tmp).is_ok()) {
+						if prompt.prompt() {
+							guide.keep(candidate);
+						}
+						else {
+							guide.discard(candidate);
+						}
+					}
+
+					// Remove the temporary file if it exists.
+					if tmp.exists() {
+						let _res = std::fs::remove_file(tmp);
+					}
+
+					// Handle the result!
+					cli::handle_result(size, &dst, guide.take());
 				});
 
+				// Print a line break between sources.
 				println!();
 			}
 		);
@@ -142,50 +154,18 @@ fn _main() -> Result<(), ArgyleError> {
 	Ok(())
 }
 
-/// # Print Refraction Result.
-fn print_result(size: u64, result: Result<Refraction, RefractError>) {
-	match result {
-		Ok(res) => {
-			let diff = size - res.size().get();
-			let per = dactyl::int_div_float(diff, size);
+#[allow(trivial_casts)] // Triviality is necessary.
+/// # Generate Suffixed Output Path.
+///
+/// This generates output paths (temporary and final) given a source path and
+/// output type.
+fn suffixed_paths(path: &Path, kind: OutputKind) -> (PathBuf, PathBuf) {
+	let stub: &[u8] = unsafe { &*(path.as_os_str() as *const OsStr as *const [u8]) };
 
-			// Lossless.
-			if res.quality() == MAX_QUALITY {
-				Msg::success(format!(
-					"Created \x1b[1m{}\x1b[0m (lossless).",
-					res.name()
-				))
-			}
-			// Lossy.
-			else {
-				Msg::success(format!(
-					"Created \x1b[1m{}\x1b[0m with quality {}.",
-					res.name(),
-					res.quality()
-				))
-			}
-				.with_indent(1)
-				.with_suffix(
-					if let Some(per) = per {
-						format!(
-							" \x1b[2m(Saved {} bytes, {}.)\x1b[0m",
-							NiceU64::from(diff).as_str(),
-							NicePercent::from(per).as_str(),
-						)
-					}
-					else {
-						format!(
-							" \x1b[2m(Saved {} bytes.)\x1b[0m",
-							NiceU64::from(diff).as_str(),
-						)
-					}
-				)
-				.print();
-		},
-		Err(e) => {
-			Msg::warning(e.as_str()).with_indent(1).print();
-		},
-	}
+	(
+		PathBuf::from(OsStr::from_bytes(&[stub, b".PROPOSED", kind.ext_bytes()].concat())),
+		PathBuf::from(OsStr::from_bytes(&[stub, kind.ext_bytes()].concat()))
+	)
 }
 
 #[cold]

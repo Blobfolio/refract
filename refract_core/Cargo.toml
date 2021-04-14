@@ -1,0 +1,34 @@
+[package]
+name = "refract_core"
+version = "0.1.1"
+license = "WTFPL"
+authors = ["Josh Stoik <josh@blobfolio.com>"]
+edition = "2018"
+description = "The library for Refract."
+repository = "https://github.com/Blobfolio/refract"
+readme = "README.md"
+publish = false
+
+[dependencies]
+imghdr = "0.7.*"
+imgref = "1.9.*"
+jpeg-decoder = "0.1.*"
+lodepng = "3.4.*"
+num-integer = "0.1.*"
+rgb = "0.8.*"
+
+[dependencies.libwebp-sys2]
+version = "0.1.*"
+features = [ "1_1", "static" ]
+
+[dependencies.ravif]
+version = "0.7.*"
+default-features = false
+
+[dependencies.tempfile-fast]
+git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
+rev = "7cd84b2"
+
+[features]
+default = [ "asm" ]   # Workaround for Travis. Its version of NASM is too old
+asm = [ "ravif/asm" ] # to build rav1e (via ravif) with asm enabled.
