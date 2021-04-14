@@ -22,11 +22,6 @@
 #![warn(unused_extern_crates)]
 #![warn(unused_import_braces)]
 
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::map_err_ignore)]
-#![allow(clippy::missing_errors_doc)]
 #![allow(clippy::module_name_repetitions)]
 
 
@@ -107,7 +102,7 @@ fn _main() -> Result<(), ArgyleError> {
 	}
 
 	if encoders.is_empty() {
-		return Err(ArgyleError::Custom("With both WebP and AVIF disabled, there is nothing to do!"));
+		return Err(ArgyleError::Custom("You've disabled all encoders; there is nothing to do!"));
 	}
 
 	// Find the paths.
@@ -232,7 +227,7 @@ FLAGS:
     -V, --version     Prints version information.
 
 OPTIONS:
-    -l, --list <list> Read file paths from this list.
+    -l, --list <list> Read image/dir paths from this text file.
 
 ARGS:
     <PATH(S)>...      One or more images or directories to crawl and crunch.
