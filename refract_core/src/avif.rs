@@ -1,16 +1,16 @@
 /*!
 # `Refract`: `AVIF` Handling
 
-This program uses [`ravif`](https://crates.io/crates/ravif) for AVIF encoding.
-It works very similarly to [`cavif`](https://crates.io/crates/cavif), but does
-not support premultiplied/dirty alpha operations.
+This program uses [`ravif`](https://crates.io/crates/ravif) under the hood for
+AVIF encoding. It works very similarly to [`cavif`](https://crates.io/crates/cavif), but does
+not support premultiplied/dirty alpha operations, and the speed is always `1`.
 */
 
 use crate::RefractError;
+use imgref::Img;
 use ravif::{
 	ColorSpace,
 	Config,
-	Img,
 	RGBA8,
 };
 use std::num::NonZeroU8;
@@ -45,7 +45,7 @@ pub(super) fn make_lossy(img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<Vec<u
 			threads: 0,
 		}
 	)
-		.map_err(|_| RefractError::Write)?;
+		.map_err(|_| RefractError::Encode)?;
 
 	Ok(out)
 }

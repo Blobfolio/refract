@@ -1,7 +1,8 @@
 /*!
-# `Refract`: Error
+# `Refract` - Error
 */
 
+use crate::OutputKind;
 use std::{
 	error::Error,
 	fmt,
@@ -12,15 +13,19 @@ use std::{
 #[derive(Debug, Copy, Clone)]
 /// # Error.
 pub enum RefractError {
-	/// # Invalid Image.
-	InvalidImage,
-	/// # Unable to produce an acceptable AVIF version.
-	NoAvif,
-	/// # Unable to produce an acceptable WebP version.
-	NoWebp,
-	/// # Too Big.
+	/// # No candidate found.
+	Candidate(OutputKind),
+	/// # Encoding error.
+	Encode,
+	/// # Encoder does not support lossless mode.
+	NoLossless,
+	/// # Unable to read source.
+	Read,
+	/// # Invalid image source.
+	Source,
+	/// # Candidate too big.
 	TooBig,
-	/// # Write Fail.
+	/// # Unable to write to file.
 	Write,
 }
 
@@ -37,10 +42,15 @@ impl RefractError {
 	/// # As Str.
 	pub const fn as_str(self) -> &'static str {
 		match self {
-			Self::InvalidImage => "The image is invalid or unreadable.",
-			Self::NoAvif => "No acceptable AVIF candidate was found.",
-			Self::NoWebp => "No acceptable WebP candidate was found.",
-			Self::TooBig => "The converted image was larger than the source.",
+			Self::Candidate(kind) => match kind {
+				OutputKind::Avif => "No acceptable AVIF candidate was found.",
+				OutputKind::Webp => "No acceptable WebP candidate was found.",
+			},
+			Self::Encode => "Errors were encountered while trying to encode the image.",
+			Self::NoLossless => "Lossless encoding is not supported.",
+			Self::Read => "Unable to read the source image.",
+			Self::Source => "Invalid image source.",
+			Self::TooBig => "The encoded image was larger than the source.",
 			Self::Write => "Unable to save the image.",
 		}
 	}

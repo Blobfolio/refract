@@ -1,5 +1,5 @@
 /*!
-# `Refract`: The Hard Bits
+# `Refract` - Library
 */
 
 #![warn(clippy::filetype_is_file)]
@@ -24,24 +24,22 @@
 
 #![allow(clippy::module_name_repetitions)]
 
-
-
-mod candidate;
-mod encoder;
 mod error;
-mod image;
-mod kind;
-mod quality;
-mod refraction;
+mod output;
+mod source;
 
-pub use candidate::Candidate;
-pub use encoder::Encoder;
+pub(self) mod avif;
+pub(self) mod webp;
+
 pub use error::RefractError;
-pub use image::Image;
-pub use kind::ImageKind;
-pub use quality::{
-	MAX_QUALITY,
+pub use output::{
 	MIN_QUALITY,
-	Quality,
+	MAX_QUALITY,
+	Output,
+	OutputIter,
+	OutputKind,
 };
-pub use refraction::Refraction;
+pub use source::{
+	Source,
+	SourceKind,
+};

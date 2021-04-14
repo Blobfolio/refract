@@ -1,11 +1,12 @@
 [package]
 name = "refract"
-version = "0.1.1"
+version = "0.2.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
 description = "Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources."
 repository = "https://github.com/Blobfolio/refract"
+readme = "README.md"
 publish = false
 
 [package.metadata.deb]
@@ -64,14 +65,14 @@ argyle = "0.3.*"
 dactyl = "0.1.*"
 dowser = "0.2.*"
 
-[dependencies.refract_core]
-path = "../refract_core"
-default-features = false
-
 [dependencies.fyi_msg]
 git = "https://github.com/Blobfolio/fyi.git"
 tag = "v0.7.0"
 
+[dependencies.refract_core]
+path = "../refract_core"
+default-features = false
+
 [features]
-default = [ "asm" ]
-asm = [ "refract_core/asm" ] # See refract_core/Cargo.toml for explanation.
+default = [ "asm" ]          # See refract_core for explanation.
+asm = [ "refract_core/asm" ]

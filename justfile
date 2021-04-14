@@ -34,6 +34,7 @@ rustflags   := "-C link-arg=-s"
 @build: clean
 	RUSTFLAGS="--emit asm {{ rustflags }}" cargo build \
 		--bin "{{ pkg_id }}" \
+		--workspace \
 		--release \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
@@ -62,8 +63,8 @@ rustflags   := "-C link-arg=-s"
 @check:
 	# First let's build the Rust bit.
 	RUSTFLAGS="{{ rustflags }}" cargo check \
-		--workspace \
 		--release \
+		--workspace \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
 
@@ -83,8 +84,8 @@ rustflags   := "-C link-arg=-s"
 @clippy:
 	clear
 	RUSTFLAGS="{{ rustflags }}" cargo clippy \
-		--workspace \
 		--release \
+		--workspace \
 		--all-features \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
@@ -105,8 +106,8 @@ rustflags   := "-C link-arg=-s"
 @doc:
 	# Make the docs.
 	cargo doc \
-		--workspace \
 		--release \
+		--workspace \
 		--no-deps \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"

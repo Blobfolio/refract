@@ -22,14 +22,11 @@
 #![warn(unused_extern_crates)]
 #![warn(unused_import_braces)]
 
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::map_err_ignore)]
-#![allow(clippy::missing_errors_doc)]
 #![allow(clippy::module_name_repetitions)]
 
 
+
+mod cli;
 
 use argyle::{
 	Argue,
@@ -38,24 +35,20 @@ use argyle::{
 	FLAG_REQUIRED,
 	FLAG_VERSION,
 };
-use dactyl::{
-	NiceU64,
-	NicePercent,
+use refract_core::{
+	OutputKind,
+	Source,
 };
 use dowser::Dowser;
 use fyi_msg::Msg;
-use refract_core::{
-	Encoder,
-	Image,
-	MAX_QUALITY,
-	RefractError,
-	Refraction,
-};
 use std::{
 	convert::TryFrom,
 	ffi::OsStr,
 	os::unix::ffi::OsStrExt,
-	path::PathBuf,
+	path::{
+		Path,
+		PathBuf,
+	},
 };
 
 
@@ -86,16 +79,16 @@ fn _main() -> Result<(), ArgyleError> {
 		.with_list();
 
 	// Figure out which types we're dealing with.
-	let mut encoders: Vec<Encoder> = Vec::with_capacity(2);
+	let mut encoders: Vec<OutputKind> = Vec::with_capacity(2);
 	if ! args.switch(b"--no-webp") {
-		encoders.push(Encoder::Webp);
+		encoders.push(OutputKind::Webp);
 	}
 	if ! args.switch(b"--no-avif") {
-		encoders.push(Encoder::Avif);
+		encoders.push(OutputKind::Avif);
 	}
 
 	if encoders.is_empty() {
-		return Err(ArgyleError::Custom("With both WebP and AVIF disabled, there is nothing to do!"));
+		return Err(ArgyleError::Custom("You've disabled all encoders; there is nothing to do!"));
 	}
 
 	// Find the paths.
@@ -117,68 +110,73 @@ fn _main() -> Result<(), ArgyleError> {
 	paths.sort();
 
 	// Run through the set to see what gets created!
-	paths.iter()
-		.for_each(|x|
-			if let Ok(img) = Image::try_from(x) {
-				img.write_title();
+	paths.into_iter()
+		.for_each(|x| {
+			cli::print_path_title(&x);
 
-				let size = img.size().get();
-				encoders.iter().for_each(|&e| {
-					let res = img.try_encode(e);
-					print_result(size, res);
-				});
+			match Source::try_from(x) {
+				Ok(img) => {
+					// Store the original size. We'll need it later.
+					let size = img.size().get();
 
-				println!();
+					encoders.iter().for_each(|&e| {
+						// Print the extension title.
+						cli::print_outputkind_title(e);
+
+						// Output paths.
+						let (tmp, dst) = suffixed_paths(img.path(), e);
+						let prompt = cli::path_prompt(&tmp);
+
+						// Make sure the temporary file exists. This establishes
+						// the file permissions in a saner way than `Sponge` does.
+						if ! tmp.exists() {
+							let _res = std::fs::File::create(&tmp);
+						}
+
+						// Guided encode!
+						let mut guide = img.encode(e);
+						while let Some(candidate) = guide.next().filter(|c| c.write(&tmp).is_ok()) {
+							if prompt.prompt() {
+								guide.keep(candidate);
+							}
+							else {
+								guide.discard(candidate);
+							}
+						}
+
+						// Remove the temporary file if it exists.
+						if tmp.exists() {
+							let _res = std::fs::remove_file(tmp);
+						}
+
+						// Handle the result!
+						cli::handle_result(size, &dst, guide.take());
+					});
+				},
+				Err(e) => {
+					Msg::error(e.as_str()).print();
+				},
 			}
-		);
+
+			// Print a line break between sources.
+			println!();
+		});
 
 	Ok(())
 }
 
-/// # Print Refraction Result.
-fn print_result(size: u64, result: Result<Refraction, RefractError>) {
-	match result {
-		Ok(res) => {
-			let diff = size - res.size().get();
-			let per = dactyl::int_div_float(diff, size);
+#[allow(trivial_casts)] // Triviality is necessary.
+/// # Generate Suffixed Output Path.
+///
+/// This generates output paths (temporary and final) given a source path and
+/// output type.
+fn suffixed_paths(path: &Path, kind: OutputKind) -> (PathBuf, PathBuf) {
+	let stub: &[u8] = unsafe { &*(path.as_os_str() as *const OsStr as *const [u8]) };
 
-			// Lossless.
-			if res.quality() == MAX_QUALITY {
-				Msg::success(format!(
-					"Created \x1b[1m{}\x1b[0m (lossless).",
-					res.name()
-				))
-			}
-			// Lossy.
-			else {
-				Msg::success(format!(
-					"Created \x1b[1m{}\x1b[0m with quality {}.",
-					res.name(),
-					res.quality()
-				))
-			}
-				.with_indent(1)
-				.with_suffix(
-					if let Some(per) = per {
-						format!(
-							" \x1b[2m(Saved {} bytes, {}.)\x1b[0m",
-							NiceU64::from(diff).as_str(),
-							NicePercent::from(per).as_str(),
-						)
-					}
-					else {
-						format!(
-							" \x1b[2m(Saved {} bytes.)\x1b[0m",
-							NiceU64::from(diff).as_str(),
-						)
-					}
-				)
-				.print();
-		},
-		Err(e) => {
-			Msg::warning(e.as_str()).with_indent(1).print();
-		},
-	}
+	(
+		PathBuf::from(OsStr::from_bytes(&[stub, b".PROPOSED", kind.ext_bytes()].concat())),
+		PathBuf::from(OsStr::from_bytes(&[stub, kind.ext_bytes()].concat()))
+	)
 }
 
 #[cold]
@@ -220,7 +218,7 @@ FLAGS:
     -V, --version     Prints version information.
 
 OPTIONS:
-    -l, --list <list> Read file paths from this list.
+    -l, --list <list> Read image/dir paths from this text file.
 
 ARGS:
     <PATH(S)>...      One or more images or directories to crawl and crunch.

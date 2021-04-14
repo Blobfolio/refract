@@ -6,6 +6,7 @@ This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Go
 */
 
 use crate::RefractError;
+use imgref::Img;
 use libwebp_sys::{
 	WEBP_MAX_DIMENSION,
 	WebPConfig,
@@ -22,10 +23,7 @@ use libwebp_sys::{
 	WebPPictureInit,
 	WebPValidateConfig,
 };
-use ravif::{
-	Img,
-	RGBA8,
-};
+use ravif::RGBA8;
 use std::{
 	convert::TryFrom,
 	num::NonZeroU8,
@@ -121,19 +119,20 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 	}
 
 	// Check the source dimensions.
-	let width = i32::try_from(source.width()).map_err(|_| RefractError::InvalidImage)?;
-	let height = i32::try_from(source.height()).map_err(|_| RefractError::InvalidImage)?;
+	let width = i32::try_from(source.width()).map_err(|_| RefractError::Encode)?;
+	let height = i32::try_from(source.height()).map_err(|_| RefractError::Encode)?;
 	if width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION {
-		return Err(RefractError::InvalidImage);
+		return Err(RefractError::Encode);
 	}
 
 	// Set up the picture struct.
 	let mut picture: WebPPicture = unsafe { std::mem::zeroed() };
 	if unsafe { WebPPictureInit(&mut picture) } == 0 {
-		return Err(RefractError::InvalidImage);
+		return Err(RefractError::Encode);
 	}
 
-	let argb_stride = i32::try_from(source.stride()).map_err(|_| RefractError::InvalidImage)?;
+	let argb_stride = i32::try_from(source.stride())
+		.map_err(|_| RefractError::Encode)?;
 	picture.use_argb = 1;
 	picture.width = width;
 	picture.height = height;
@@ -141,30 +140,25 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 	// Fill the pixel buffers.
 	unsafe {
-		use dactyl::traits::SaturatingFrom;
-		use rgb::ComponentSlice;
-
-		// TODO: This is decently fast, but is there a better way to collapse
-		// the individual pixel RGBA values into a contiguous buffer?
-		let mut pixel_data = source
-			.pixels()
-			.fold(Vec::with_capacity(usize::saturating_from(width * height * 4)), |mut acc, px| {
-				acc.extend_from_slice(px.as_slice());
-				acc
-			});
-
-		let full_stride = argb_stride * 4;
-
+		let mut pixel_data = {
+			use rgb::ComponentBytes;
+			let (buf, _, _) = source.to_contiguous_buf();
+			buf.as_bytes().to_vec()
+		};
 		let status = WebPPictureImportRGBA(
 			&mut picture,
 			pixel_data.as_mut_ptr(),
-			full_stride,
+			argb_stride * 4,
 		);
 
 		// A few additional sanity checks.
 		let expected_size = argb_stride * height * 4;
-		if status == 0 || expected_size == 0 || i32::try_from(pixel_data.len()).unwrap_or(0) != expected_size {
-			return Err(RefractError::InvalidImage);
+		if
+			status == 0 ||
+			expected_size == 0 ||
+			i32::try_from(pixel_data.len()).unwrap_or(0) != expected_size
+		{
+			return Err(RefractError::Encode);
 		}
 
 		// Clean-up.
@@ -173,7 +167,7 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 	// A few more sanity checks.
 	if picture.use_argb != 1 || ! picture.y.is_null() || picture.argb.is_null() {
-		return Err(RefractError::InvalidImage);
+		return Err(RefractError::Encode);
 	}
 
 	// Hook in the writer.
@@ -202,7 +196,7 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 fn encode(source: Img<&[RGBA8]>, config: WebPConfig) -> Result<Vec<u8>, RefractError> {
 	let (mut picture, writer_ptr) = init_picture(source)?;
 	if unsafe { WebPEncode(&config, &mut picture) } == 0 {
-		return Err(RefractError::InvalidImage);
+		return Err(RefractError::Encode);
 	}
 
 	// Copy output.
@@ -218,6 +212,6 @@ fn encode(source: Img<&[RGBA8]>, config: WebPConfig) -> Result<Vec<u8>, RefractE
 		std::mem::drop(writer);
 	}
 
-	if output.is_empty() { Err(RefractError::InvalidImage) }
+	if output.is_empty() { Err(RefractError::Encode) }
 	else { Ok(output) }
 }

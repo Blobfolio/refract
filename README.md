@@ -26,7 +26,7 @@ Should you use this for every image ever? Probably not. But if you have a small 
 
 This application is written in [Rust](https://www.rust-lang.org/) and can be built using [Cargo](https://github.com/rust-lang/cargo) for x86-64 Linux or Mac systems.
 
-Note that building from source requires NASM to compile the [rav1e](https://github.com/xiph/rav1e#dependency-nasm) dependency.
+Note that if building from source, you'll need NASM installed to compile the [rav1e](https://github.com/xiph/rav1e#dependency-nasm) dependency with its optimized assembly. Alternatively, you can pass the `--no-default-features` Cargo flag to disable those optimizations, but that will give you much slower AVIF encoding performance.
 
 Pre-built `.deb` packages are also added for each [release](https://github.com/Blobfolio/refract/releases/latest), which should always work on the latest stable Debian and Ubuntu operating systems.
 
