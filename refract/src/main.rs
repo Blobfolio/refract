@@ -111,45 +111,56 @@ fn _main() -> Result<(), ArgyleError> {
 
 	// Run through the set to see what gets created!
 	paths.into_iter()
-		.for_each(|x|
-			if let Ok(img) = Source::try_from(x) {
-				cli::print_path_title(img.path());
+		.for_each(|x| {
+			cli::print_path_title(&x);
 
-				// Store the original size. We'll need it later.
-				let size = img.size().get();
+			match Source::try_from(x) {
+				Ok(img) => {
+					// Store the original size. We'll need it later.
+					let size = img.size().get();
 
-				encoders.iter().for_each(|&e| {
-					// Print the extension title.
-					cli::print_outputkind_title(e);
+					encoders.iter().for_each(|&e| {
+						// Print the extension title.
+						cli::print_outputkind_title(e);
 
-					// Output paths.
-					let (tmp, dst) = suffixed_paths(img.path(), e);
-					let prompt = cli::path_prompt(&tmp);
+						// Output paths.
+						let (tmp, dst) = suffixed_paths(img.path(), e);
+						let prompt = cli::path_prompt(&tmp);
 
-					// Guided encode!
-					let mut guide = img.encode(e);
-					while let Some(candidate) = guide.next().filter(|c| c.write(&tmp).is_ok()) {
-						if prompt.prompt() {
-							guide.keep(candidate);
+						// Make sure the temporary file exists. This establishes
+						// the file permissions in a saner way than `Sponge` does.
+						if ! tmp.exists() {
+							let _res = std::fs::File::create(&tmp);
 						}
-						else {
-							guide.discard(candidate);
+
+						// Guided encode!
+						let mut guide = img.encode(e);
+						while let Some(candidate) = guide.next().filter(|c| c.write(&tmp).is_ok()) {
+							if prompt.prompt() {
+								guide.keep(candidate);
+							}
+							else {
+								guide.discard(candidate);
+							}
 						}
-					}
 
-					// Remove the temporary file if it exists.
-					if tmp.exists() {
-						let _res = std::fs::remove_file(tmp);
-					}
+						// Remove the temporary file if it exists.
+						if tmp.exists() {
+							let _res = std::fs::remove_file(tmp);
+						}
 
-					// Handle the result!
-					cli::handle_result(size, &dst, guide.take());
-				});
-
-				// Print a line break between sources.
-				println!();
+						// Handle the result!
+						cli::handle_result(size, &dst, guide.take());
+					});
+				},
+				Err(e) => {
+					Msg::error(e.as_str()).print();
+				},
 			}
-		);
+
+			// Print a line break between sources.
+			println!();
+		});
 
 	Ok(())
 }
