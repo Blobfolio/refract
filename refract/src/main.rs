@@ -26,7 +26,7 @@
 
 
 
-mod cli;
+mod image;
 
 use argyle::{
 	Argue,
@@ -35,6 +35,7 @@ use argyle::{
 	FLAG_REQUIRED,
 	FLAG_VERSION,
 };
+use image::ImageCli;
 use refract_core::{
 	OutputKind,
 	Source,
@@ -45,10 +46,7 @@ use std::{
 	convert::TryFrom,
 	ffi::OsStr,
 	os::unix::ffi::OsStrExt,
-	path::{
-		Path,
-		PathBuf,
-	},
+	path::PathBuf,
 };
 
 
@@ -112,71 +110,19 @@ fn _main() -> Result<(), ArgyleError> {
 	// Run through the set to see what gets created!
 	paths.into_iter()
 		.for_each(|x| {
-			cli::print_path_title(&x);
+			ImageCli::print_path_title(&x);
 
 			match Source::try_from(x) {
-				Ok(img) => {
-					// Store the original size. We'll need it later.
-					let size = img.size().get();
-
-					encoders.iter().for_each(|&e| {
-						// Print the extension title.
-						cli::print_outputkind_title(e);
-
-						// Output paths.
-						let (tmp, dst) = suffixed_paths(img.path(), e);
-						let prompt = cli::path_prompt(&tmp);
-
-						// Make sure the temporary file exists. This establishes
-						// the file permissions in a saner way than `Sponge` does.
-						if ! tmp.exists() {
-							let _res = std::fs::File::create(&tmp);
-						}
-
-						// Guided encode!
-						let mut guide = img.encode(e);
-						while let Some(candidate) = guide.next().filter(|c| c.write(&tmp).is_ok()) {
-							if prompt.prompt() {
-								guide.keep(candidate);
-							}
-							else {
-								guide.discard(candidate);
-							}
-						}
-
-						// Remove the temporary file if it exists.
-						if tmp.exists() {
-							let _res = std::fs::remove_file(tmp);
-						}
-
-						// Handle the result!
-						cli::handle_result(size, &dst, guide.take());
-					});
-				},
-				Err(e) => {
-					Msg::error(e.as_str()).print();
-				},
+				Ok(img) => encoders.iter()
+					.map(|&e| ImageCli::new(&img, e))
+					.for_each(ImageCli::encode),
+				Err(e) => Msg::error(e.as_str()).print(),
 			}
 
-			// Print a line break between sources.
-			println!();
+			ImageCli::print_newline();
 		});
 
 	Ok(())
-}
-
-#[allow(trivial_casts)] // Triviality is necessary.
-/// # Generate Suffixed Output Path.
-///
-/// This generates output paths (temporary and final) given a source path and
-/// output type.
-fn suffixed_paths(path: &Path, kind: OutputKind) -> (PathBuf, PathBuf) {
-	let stub: &[u8] = unsafe { &*(path.as_os_str() as *const OsStr as *const [u8]) };
-
-	(
-		PathBuf::from(OsStr::from_bytes(&[stub, b".PROPOSED", kind.ext_bytes()].concat())),
-		PathBuf::from(OsStr::from_bytes(&[stub, kind.ext_bytes()].concat()))
-	)
 }
 
 #[cold]
