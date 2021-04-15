@@ -65,10 +65,9 @@ impl<'a> ImageCli<'a> {
 		].concat());
 	}
 
+	#[inline]
 	/// # Print line break.
-	pub(crate) fn print_newline() {
-		locked_write(b"\n");
-	}
+	pub(crate) fn print_newline() { locked_write(b"\n"); }
 
 	#[allow(trivial_casts)] // Triviality is necessary.
 	/// # New Instance.
