@@ -34,7 +34,6 @@ rustflags   := "-C link-arg=-s"
 @build: clean
 	RUSTFLAGS="--emit asm {{ rustflags }}" cargo build \
 		--bin "{{ pkg_id }}" \
-		--workspace \
 		--release \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
