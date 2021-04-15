@@ -63,3 +63,20 @@ AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
 AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
 AVIF: Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] 
 Success: Created statler_waldorf_cutout.png.avif with quality 59. (Saved 237,741 bytes, 92.76%.)
+
+Source: /share/skel/assets/wolf.jpg
+WEBP: Does wolf.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does wolf.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does wolf.jpg.PROPOSED.webp look good? [y/N] y
+WEBP: Does wolf.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does wolf.jpg.PROPOSED.webp look good? [y/N] y
+WEBP: Does wolf.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does wolf.jpg.PROPOSED.webp look good? [y/N] y
+Success: Created wolf.jpg.webp with quality 83. (Saved 656,433 bytes, 90.80%.)
+AVIF: Does wolf.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does wolf.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does wolf.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does wolf.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does wolf.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does wolf.jpg.PROPOSED.avif look good? [y/N] y
+Success: Created wolf.jpg.avif with quality 63. (Saved 661,923 bytes, 91.56%.)
