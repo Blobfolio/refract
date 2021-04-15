@@ -56,6 +56,21 @@ impl fmt::Display for OutputKind {
 	}
 }
 
+impl TryFrom<&[u8]> for OutputKind {
+	type Error = RefractError;
+
+	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
+		let kind = infer::get(src)
+			.ok_or(RefractError::Encode)?;
+
+		match kind.mime_type() {
+			"image/avif" => Ok(Self::Avif),
+			"image/webp" => Ok(Self::Webp),
+			_ => Err(RefractError::Encode),
+		}
+	}
+}
+
 /// # Encoding.
 impl OutputKind {
 	/// # Encode Lossless.
@@ -71,10 +86,11 @@ impl OutputKind {
 	/// encoding, or if there are any other miscellaneous encoder issues along
 	/// the way.
 	pub fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
-		match self {
+		let out = match self {
 			Self::Avif => Err(RefractError::NoLossless),
 			Self::Webp => crate::webp::make_lossless(img),
-		}
+		}?;
+		self.check_kind(out)
 	}
 
 	/// # Encode Lossy.
@@ -90,10 +106,22 @@ impl OutputKind {
 		img: Img<&[RGBA8]>,
 		quality: NonZeroU8
 	) -> Result<Vec<u8>, RefractError> {
-		match self {
+		let out = match self {
 			Self::Avif => crate::avif::make_lossy(img, quality),
 			Self::Webp => crate::webp::make_lossy(img, quality),
-		}
+		}?;
+		self.check_kind(out)
+	}
+
+	/// # Check Type.
+	///
+	/// This wlil double-check a given byte slice is the same kind as the
+	/// encoder. The bytes will be passed through on success, otherwise an
+	/// error is returned.
+	fn check_kind(self, data: Vec<u8>) -> Result<Vec<u8>, RefractError> {
+		let data_kind = Self::try_from(data.as_slice())?;
+		if self == data_kind { Ok(data) }
+		else { Err(RefractError::Encode) }
 	}
 }
 

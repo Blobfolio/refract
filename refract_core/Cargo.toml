@@ -10,12 +10,15 @@ readme = "README.md"
 publish = false
 
 [dependencies]
-imghdr = "0.7.*"
 imgref = "1.9.*"
 jpeg-decoder = "0.1.*"
 lodepng = "3.4.*"
 num-integer = "0.1.*"
 rgb = "0.8.*"
+
+[dependencies.infer]
+version = "0.4.*"
+default-features = false
 
 [dependencies.libwebp-sys2]
 version = "0.1.*"
