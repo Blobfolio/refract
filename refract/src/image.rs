@@ -9,7 +9,7 @@ use dactyl::{
 };
 use fyi_msg::Msg;
 use refract_core::{
-	OutputIter,
+	Output,
 	OutputKind,
 	RefractError,
 	Source,
@@ -35,9 +35,17 @@ use std::{
 pub(super) struct ImageCli<'a> {
 	src: &'a Source,
 	kind: OutputKind,
-	guide: OutputIter<'a>,
 	tmp: PathBuf,
 	dst: PathBuf,
+}
+
+impl<'a> Drop for ImageCli<'a> {
+	fn drop(&mut self) {
+		// Remove the preview file if it still exists.
+		if self.tmp.exists() {
+			let _res = std::fs::remove_file(&self.tmp);
+		}
+	}
 }
 
 impl<'a> ImageCli<'a> {
@@ -87,14 +95,13 @@ impl<'a> ImageCli<'a> {
 		Self {
 			src,
 			kind,
-			guide: src.encode(kind),
 			tmp,
 			dst,
 		}
 	}
 
 	/// # Encode.
-	pub(crate) fn encode(mut self) {
+	pub(crate) fn encode(self) {
 		// Print a header for the encoding type.
 		locked_write(&[
 			b"\x1b[34m[\x1b[96;1m",
@@ -111,33 +118,29 @@ impl<'a> ImageCli<'a> {
 			.with_indent(1);
 
 		// Loop it.
-		while let Some(candidate) = self.guide.next().filter(|c| c.write(&self.tmp).is_ok()) {
+		let mut guide = self.src.encode(self.kind);
+		while let Some(candidate) = guide.next().filter(|c| c.write(&self.tmp).is_ok()) {
 			if prompt.prompt() {
-				self.guide.keep(candidate);
+				guide.keep(candidate);
 			}
 			else {
-				self.guide.discard(candidate);
+				guide.discard(candidate);
 			}
 		}
 
 		// Wrap it up!
-		self.finish();
+		self.finish(guide.take());
 	}
 
 	/// # Finish.
-	fn finish(self) {
-		// Remove the preview file if it still exists.
-		if self.tmp.exists() {
-			let _res = std::fs::remove_file(&self.tmp);
-		}
-
+	fn finish(self, result: Result<Output, RefractError>) {
 		// Handle results.
-		match self.guide.take() {
-			Ok(res) => match res.write(&self.dst) {
+		match result {
+			Ok(result) => match result.write(&self.dst) {
 				Ok(_) => print_success(
 					self.src.size().get(),
-					res.size().get(),
-					res.quality().get(),
+					result.size().get(),
+					result.quality().get(),
 					&self.dst
 				),
 				Err(e) => print_error(e),
