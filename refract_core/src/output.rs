@@ -308,7 +308,7 @@ pub struct OutputIter<'a> {
 
 	src: Img<Cow<'a, [RGBA8]>>,
 	src_size: NonZeroU64,
-	src_kind: OutputKind,
+	kind: OutputKind,
 
 	best: Option<Output>,
 }
@@ -328,7 +328,7 @@ impl<'a> OutputIter<'a> {
 
 					src: ravif::cleared_alpha(src.img_owned()).into(),
 					src_size: src.size(),
-					src_kind: kind,
+					kind,
 
 					best: None,
 				}
@@ -341,7 +341,7 @@ impl<'a> OutputIter<'a> {
 
 					src: src.img().into(),
 					src_size: src.size(),
-					src_kind: kind,
+					kind,
 
 					best: None,
 				};
@@ -373,12 +373,12 @@ impl<'a> Iterator for OutputIter<'a> {
 
 	fn next(&mut self) -> Option<Self::Item> {
 		let quality = self.next_quality()?;
-		let data = self.src_kind.lossy(self.src.as_ref(), quality).ok()?;
+		let data = self.kind.lossy(self.src.as_ref(), quality).ok()?;
 
 		match self.normalize_size(data.len()) {
 			Ok(size) => Some(Output {
 				data,
-				kind: self.src_kind,
+				kind: self.kind,
 				size,
 				quality,
 			}),
@@ -531,8 +531,9 @@ impl<'a> OutputIter<'a> {
 	#[must_use]
 	/// # Best Size.
 	///
-	/// This returns the current best size, if any.
-	pub fn best_size(&self) -> Option<NonZeroU64> {
+	/// A convenience method to return the size of the best-found image, if
+	/// any.
+	fn best_size(&self) -> Option<NonZeroU64> {
 		self.best.as_ref().map(|b| b.size)
 	}
 
@@ -547,6 +548,6 @@ impl<'a> OutputIter<'a> {
 	///
 	/// If no candidates were found, an error is returned.
 	pub fn take(self) -> Result<Output, RefractError> {
-		self.best.ok_or(RefractError::Candidate(self.src_kind))
+		self.best.ok_or(RefractError::Candidate(self.kind))
 	}
 }
