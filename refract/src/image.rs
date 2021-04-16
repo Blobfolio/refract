@@ -49,34 +49,6 @@ impl<'a> Drop for ImageCli<'a> {
 }
 
 impl<'a> ImageCli<'a> {
-	/// # Print Path Title.
-	///
-	/// This prints the source image path with a nice ANSI-colored border, like:
-	///
-	/// ```ignore
-	/// +---------------------+
-	/// | /path/to/source.png |
-	/// +---------------------+
-	/// ```
-	pub(crate) fn print_path_title(path: &Path) {
-		let txt = path.to_string_lossy();
-		let dashes = "-".repeat(txt.len() + 2);
-
-		locked_write(&[
-			b"\x1b[38;5;199m+",
-			dashes.as_bytes(),
-			b"+\n| \x1b[0m",
-			txt.as_bytes(),
-			b" \x1b[38;5;199m|\n+",
-			dashes.as_bytes(),
-			b"+\x1b[0m\n",
-		].concat());
-	}
-
-	#[inline]
-	/// # Print line break.
-	pub(crate) fn print_newline() { locked_write(b"\n"); }
-
 	#[allow(trivial_casts)] // Triviality is necessary.
 	/// # New Instance.
 	pub(crate) fn new(src: &'a Source, kind: OutputKind) -> Self {
@@ -156,6 +128,30 @@ impl<'a> ImageCli<'a> {
 }
 
 
+
+/// # Print Path Title.
+///
+/// This prints the source image path with a nice ANSI-colored border, like:
+///
+/// ```ignore
+/// +---------------------+
+/// | /path/to/source.png |
+/// +---------------------+
+/// ```
+pub(crate) fn print_path_title(path: &Path) {
+	let txt = path.to_string_lossy();
+	let dashes = "-".repeat(txt.len() + 2);
+
+	locked_write(&[
+		b"\x1b[38;5;199m+",
+		dashes.as_bytes(),
+		b"+\n| \x1b[0m",
+		txt.as_bytes(),
+		b" \x1b[38;5;199m|\n+",
+		dashes.as_bytes(),
+		b"+\x1b[0m\n",
+	].concat());
+}
 
 /// # Print Error.
 fn print_error(err: RefractError) {

@@ -110,7 +110,7 @@ fn _main() -> Result<(), ArgyleError> {
 	// Run through the set to see what gets created!
 	paths.into_iter()
 		.for_each(|x| {
-			ImageCli::print_path_title(&x);
+			image::print_path_title(&x);
 
 			match Source::try_from(x) {
 				Ok(img) => encoders.iter()
@@ -119,7 +119,7 @@ fn _main() -> Result<(), ArgyleError> {
 				Err(e) => Msg::error(e.as_str()).print(),
 			}
 
-			ImageCli::print_newline();
+			println!();
 		});
 
 	Ok(())
