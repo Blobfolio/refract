@@ -60,14 +60,31 @@ impl TryFrom<&[u8]> for OutputKind {
 	type Error = RefractError;
 
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
-		let kind = infer::get(src)
-			.ok_or(RefractError::Encode)?;
+		// If the source is big enough for headers, keep going!
+		if src.len() > 12 {
+			// WebP is fairly straightforward.
+			if
+				src[..4] == [0x52, 0x49, 0x46, 0x46] &&
+				src[8..12] == [0x57, 0x45, 0x42, 0x50]
+			{
+				return Ok(Self::Webp);
+			}
 
-		match kind.mime_type() {
-			"image/avif" => Ok(Self::Avif),
-			"image/webp" => Ok(Self::Webp),
-			_ => Err(RefractError::Encode),
+			// AVIF has a few ways to be. We're ignoring sequences since we
+			// aren't building them.
+			if
+				src[4..8] == [0x66, 0x74, 0x79, 0x70] &&
+				(
+					src[8..12] == [0x61, 0x76, 0x69, 0x66] ||
+					src[8..12] == [0x4d, 0x41, 0x31, 0x42] ||
+					src[8..12] == [0x4d, 0x41, 0x31, 0x41]
+				)
+			{
+				return Ok(Self::Avif);
+			}
 		}
+
+		Err(RefractError::Encode)
 	}
 }
 

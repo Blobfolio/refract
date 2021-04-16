@@ -16,10 +16,6 @@ lodepng = "3.4.*"
 num-integer = "0.1.*"
 rgb = "0.8.*"
 
-[dependencies.infer]
-version = "0.4.*"
-default-features = false
-
 [dependencies.libwebp-sys2]
 version = "0.1.*"
 features = [ "1_1", "static" ]
