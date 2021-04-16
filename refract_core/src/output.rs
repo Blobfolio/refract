@@ -521,6 +521,12 @@ impl<'a> OutputIter<'a> {
 
 /// # Best Getters.
 impl<'a> OutputIter<'a> {
+	#[must_use]
+	/// # Best.
+	///
+	/// Returns the current best as a reference, if any.
+	pub const fn best(&self) -> Option<&Output> { self.best.as_ref() }
+
 	#[inline]
 	#[must_use]
 	/// # Best Size.
@@ -533,7 +539,9 @@ impl<'a> OutputIter<'a> {
 	#[inline]
 	/// # Take.
 	///
-	/// Consume the iterator and return the best candidate found, if any.
+	/// Consume the iterator and return the best candidate found, if any. To
+	/// obtain a reference to the candidate without consuming, use
+	/// [`OutputIter::best`] instead.
 	///
 	/// ## Errors
 	///
