@@ -56,6 +56,38 @@ impl fmt::Display for OutputKind {
 	}
 }
 
+impl TryFrom<&[u8]> for OutputKind {
+	type Error = RefractError;
+
+	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
+		// If the source is big enough for headers, keep going!
+		if src.len() > 12 {
+			// WebP is fairly straightforward.
+			if
+				src[..4] == [0x52, 0x49, 0x46, 0x46] &&
+				src[8..12] == [0x57, 0x45, 0x42, 0x50]
+			{
+				return Ok(Self::Webp);
+			}
+
+			// AVIF has a few ways to be. We're ignoring sequences since we
+			// aren't building them.
+			if
+				src[4..8] == [0x66, 0x74, 0x79, 0x70] &&
+				(
+					src[8..12] == [0x61, 0x76, 0x69, 0x66] ||
+					src[8..12] == [0x4d, 0x41, 0x31, 0x42] ||
+					src[8..12] == [0x4d, 0x41, 0x31, 0x41]
+				)
+			{
+				return Ok(Self::Avif);
+			}
+		}
+
+		Err(RefractError::Encode)
+	}
+}
+
 /// # Encoding.
 impl OutputKind {
 	/// # Encode Lossless.
@@ -71,10 +103,11 @@ impl OutputKind {
 	/// encoding, or if there are any other miscellaneous encoder issues along
 	/// the way.
 	pub fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
-		match self {
+		let out = match self {
 			Self::Avif => Err(RefractError::NoLossless),
 			Self::Webp => crate::webp::make_lossless(img),
-		}
+		}?;
+		self.check_kind(out)
 	}
 
 	/// # Encode Lossy.
@@ -90,10 +123,22 @@ impl OutputKind {
 		img: Img<&[RGBA8]>,
 		quality: NonZeroU8
 	) -> Result<Vec<u8>, RefractError> {
-		match self {
+		let out = match self {
 			Self::Avif => crate::avif::make_lossy(img, quality),
 			Self::Webp => crate::webp::make_lossy(img, quality),
-		}
+		}?;
+		self.check_kind(out)
+	}
+
+	/// # Check Type.
+	///
+	/// This wlil double-check a given byte slice is the same kind as the
+	/// encoder. The bytes will be passed through on success, otherwise an
+	/// error is returned.
+	fn check_kind(self, data: Vec<u8>) -> Result<Vec<u8>, RefractError> {
+		let data_kind = Self::try_from(data.as_slice())?;
+		if self == data_kind { Ok(data) }
+		else { Err(RefractError::Encode) }
 	}
 }
 

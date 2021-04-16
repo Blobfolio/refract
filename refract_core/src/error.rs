@@ -40,6 +40,8 @@ impl fmt::Display for RefractError {
 impl RefractError {
 	#[must_use]
 	/// # As Str.
+	///
+	/// Return the error as an English string slice.
 	pub const fn as_str(self) -> &'static str {
 		match self {
 			Self::Candidate(kind) => match kind {
