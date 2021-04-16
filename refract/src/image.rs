@@ -138,7 +138,7 @@ impl<'a> ImageCli<'a> {
 /// | /path/to/source.png |
 /// +---------------------+
 /// ```
-pub(crate) fn print_path_title(path: &Path) {
+pub(super) fn print_path_title(path: &Path) {
 	let txt = path.to_string_lossy();
 	let dashes = "-".repeat(txt.len() + 2);
 
