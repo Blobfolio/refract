@@ -16,6 +16,42 @@ AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N]
 AVIF: Does cats.jpg.PROPOSED.avif look good? [y/N] 
 Success: Created cats.jpg.avif with quality 43. (Saved 354,371 bytes, 79.80%.)
 
+/share/skel/assets/circles.jpg
+WEBP: Does circles.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does circles.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does circles.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does circles.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does circles.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does circles.jpg.PROPOSED.webp look good? [y/N] y
+WEBP: Does circles.jpg.PROPOSED.webp look good? [y/N] y
+Success: Created circles.jpg.webp with quality 97. (Saved 38,001 bytes, 51.64%.)
+AVIF: Does circles.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does circles.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does circles.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does circles.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does circles.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does circles.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does circles.jpg.PROPOSED.avif look good? [y/N] 
+Success: Created circles.jpg.avif with quality 53. (Saved 62,855 bytes, 85.42%.)
+
+/share/skel/assets/derby.jpg
+WEBP: Does derby.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does derby.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does derby.jpg.PROPOSED.webp look good? [y/N] y
+WEBP: Does derby.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does derby.jpg.PROPOSED.webp look good? [y/N] y
+WEBP: Does derby.jpg.PROPOSED.webp look good? [y/N] 
+WEBP: Does derby.jpg.PROPOSED.webp look good? [y/N] 
+Success: Created derby.jpg.webp with quality 84. (Saved 91,283 bytes, 65.45%.)
+AVIF: Does derby.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does derby.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does derby.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does derby.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does derby.jpg.PROPOSED.avif look good? [y/N] y
+AVIF: Does derby.jpg.PROPOSED.avif look good? [y/N] 
+AVIF: Does derby.jpg.PROPOSED.avif look good? [y/N] 
+Success: Created derby.jpg.avif with quality 65. (Saved 97,664 bytes, 70.03%.)
+
 Source: /share/skel/assets/mountains-on-mars.png
 Success: Created mountains-on-mars.png.webp (lossless). (Saved 5,882 bytes, 31.56%.)
 AVIF: Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] 
