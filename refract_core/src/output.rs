@@ -426,7 +426,7 @@ impl<'a> OutputIter<'a> {
 			diff = num_integer::div_floor(diff, 2);
 		}
 
-		// See if this is new!
+		// See if this is new! We can't exceed u8::MAX here, so unsafe is fine.
 		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
 		if self.tried.insert(next) {
 			return Some(next);
@@ -435,6 +435,7 @@ impl<'a> OutputIter<'a> {
 		// If the above didn't work, let's see if there are any untested values
 		// left and just run with the first.
 		for i in min..=max {
+			// Again, we can't exceed u8::MAX here, so unsafe is fine.
 			let next = unsafe { NonZeroU8::new_unchecked(i) };
 			if self.tried.insert(next) {
 				return Some(next);
@@ -513,6 +514,8 @@ impl<'a> OutputIter<'a> {
 			self.top = self.bottom;
 		}
 		else {
+			// We've already checked quality is bigger than one, so minus one
+			// will fit just fine.
 			self.set_top(unsafe { NonZeroU8::new_unchecked(quality.get() - 1) });
 		}
 	}
