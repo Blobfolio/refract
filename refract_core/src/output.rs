@@ -229,7 +229,6 @@ impl Output {
 			.map_err(|_| RefractError::Write)
 	}
 
-	#[allow(trivial_casts)] // Triviality is necessary.
 	/// # Write to File (Suffixed).
 	///
 	/// This method will append the appropriate file extension to the provided
@@ -245,7 +244,7 @@ impl Output {
 		// library methods, besides which, they don't really provide a way to
 		// append to a file name.
 		self.write(OsStr::from_bytes(&[
-			unsafe { &*(path.as_ref().as_os_str() as *const OsStr as *const [u8]) },
+			path.as_ref().as_os_str().as_bytes(),
 			self.kind.ext_bytes(),
 		].concat()))
 	}

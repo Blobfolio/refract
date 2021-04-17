@@ -49,12 +49,11 @@ impl<'a> Drop for ImageCli<'a> {
 }
 
 impl<'a> ImageCli<'a> {
-	#[allow(trivial_casts)] // Triviality is necessary.
 	/// # New Instance.
 	pub(crate) fn new(src: &'a Source, kind: OutputKind) -> Self {
 		// Let's start by setting up the file system paths we'll be using for
 		// preview and permanent output.
-		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
+		let stub: &[u8] = src.path().as_os_str().as_bytes();
 		let tmp: PathBuf = PathBuf::from(OsStr::from_bytes(&[stub, b".PROPOSED", kind.ext_bytes()].concat()));
 		let dst: PathBuf = PathBuf::from(OsStr::from_bytes(&[stub, kind.ext_bytes()].concat()));
 
