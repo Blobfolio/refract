@@ -49,12 +49,11 @@ impl<'a> Drop for ImageCli<'a> {
 }
 
 impl<'a> ImageCli<'a> {
-	#[allow(trivial_casts)] // Triviality is necessary.
 	/// # New Instance.
 	pub(crate) fn new(src: &'a Source, kind: OutputKind) -> Self {
 		// Let's start by setting up the file system paths we'll be using for
 		// preview and permanent output.
-		let stub: &[u8] = unsafe { &*(src.path().as_os_str() as *const OsStr as *const [u8]) };
+		let stub: &[u8] = src.path().as_os_str().as_bytes();
 		let tmp: PathBuf = PathBuf::from(OsStr::from_bytes(&[stub, b".PROPOSED", kind.ext_bytes()].concat()));
 		let dst: PathBuf = PathBuf::from(OsStr::from_bytes(&[stub, kind.ext_bytes()].concat()));
 
@@ -75,11 +74,7 @@ impl<'a> ImageCli<'a> {
 	/// # Encode.
 	pub(crate) fn encode(self) {
 		// Print a header for the encoding type.
-		locked_write(&[
-			b"\x1b[34m[\x1b[96;1m",
-			self.kind.as_bytes(),
-			b"\x1b[0;34m]\x1b[0m\n",
-		].concat());
+		println!("\x1b[34m[\x1b[96;1m{}\x1b[0;34m]\x1b[0m", self.kind);
 
 		// We'll be re-using this prompt throughout.
 		let prompt = Msg::plain(format!(
@@ -138,19 +133,16 @@ impl<'a> ImageCli<'a> {
 /// | /path/to/source.png |
 /// +---------------------+
 /// ```
-pub(crate) fn print_path_title(path: &Path) {
+pub(super) fn print_path_title(path: &Path) {
 	let txt = path.to_string_lossy();
 	let dashes = "-".repeat(txt.len() + 2);
 
-	locked_write(&[
-		b"\x1b[38;5;199m+",
-		dashes.as_bytes(),
-		b"+\n| \x1b[0m",
-		txt.as_bytes(),
-		b" \x1b[38;5;199m|\n+",
-		dashes.as_bytes(),
-		b"+\x1b[0m\n",
-	].concat());
+	println!(
+		"\x1b[38;5;199m+{}+\n| \x1b[0m{} \x1b[38;5;199m|\n+{}+\x1b[0m",
+		dashes,
+		txt,
+		dashes,
+	);
 }
 
 /// # Print Error.
@@ -199,15 +191,4 @@ fn print_success(src_size: u64, dst_size: u64, dst_quality: u8, dst_path: &Path)
 			}
 		)
 		.print();
-}
-
-/// # Locked write.
-///
-/// This prints arbitrary bytes to STDOUT, ensuring the writer is locked and
-/// flushed. Errors are suppressed silently.
-fn locked_write(data: &[u8]) {
-	use std::io::Write;
-	let writer = std::io::stdout();
-	let mut handle = writer.lock();
-	let _res = handle.write_all(data).and_then(|_| handle.flush());
 }

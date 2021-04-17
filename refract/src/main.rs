@@ -38,6 +38,7 @@ use argyle::{
 use image::ImageCli;
 use refract_core::{
 	OutputKind,
+	RefractError,
 	Source,
 };
 use dowser::Dowser;
@@ -55,10 +56,10 @@ use std::{
 fn main() {
 	match _main() {
 		Ok(_) => {},
-		Err(ArgyleError::WantsVersion) => {
+		Err(RefractError::Menu(ArgyleError::WantsVersion)) => {
 			println!(concat!("Refract v", env!("CARGO_PKG_VERSION")));
 		},
-		Err(ArgyleError::WantsHelp) => {
+		Err(RefractError::Menu(ArgyleError::WantsHelp)) => {
 			helper();
 		},
 		Err(e) => {
@@ -71,7 +72,7 @@ fn main() {
 /// # Actual Main.
 ///
 /// This just gives us an easy way to bubble errors up to the real entrypoint.
-fn _main() -> Result<(), ArgyleError> {
+fn _main() -> Result<(), RefractError> {
 	// Parse CLI arguments.
 	let args = Argue::new(FLAG_HELP | FLAG_REQUIRED | FLAG_VERSION)?
 		.with_list();
@@ -86,7 +87,7 @@ fn _main() -> Result<(), ArgyleError> {
 	}
 
 	if encoders.is_empty() {
-		return Err(ArgyleError::Custom("You've disabled all encoders; there is nothing to do!"));
+		return Err(RefractError::NoEncoders);
 	}
 
 	// Find the paths.
@@ -102,7 +103,7 @@ fn _main() -> Result<(), ArgyleError> {
 		)
 			.with_paths(args.args().iter().map(|x| OsStr::from_bytes(x.as_ref())))
 	)
-		.map_err(|_| ArgyleError::Custom("No images were found."))?;
+		.map_err(|_| RefractError::NoImages)?;
 
 	// Sort the paths to make it easier for people to follow.
 	paths.sort();

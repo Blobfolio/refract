@@ -7,9 +7,9 @@ License details for project dependencies are listed below.
 * Apache License 2.0 (10)
 * MIT License (6)
 * BSD 3-Clause &quot;New&quot; or &quot;Revised&quot; License (4)
-* Do What The F*ck You Want To Public License (2)
 * BSD 2-Clause &quot;Simplified&quot; License (1)
 * Creative Commons Zero v1.0 Universal (1)
+* Do What The F*ck You Want To Public License (1)
 
 
 ## Complete Licenses:
@@ -2365,11 +2365,12 @@ SOFTWARE.
 
 **Used By:**
 
-* [argyle 0.3.1](https://github.com/Blobfolio/argyle)
+* [argyle 0.4.1](https://github.com/Blobfolio/argyle)
 * [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
-* [dowser 0.2.0](https://github.com/Blobfolio/dowser)
-* [refract 0.2.1](https://github.com/Blobfolio/refract)
-* [refract_core 0.2.1](https://github.com/Blobfolio/refract)
+* [dowser 0.2.1](https://github.com/Blobfolio/dowser)
+* [fyi_msg 0.7.1](https://github.com/Blobfolio/fyi)
+* [refract 0.2.2](https://github.com/Blobfolio/refract)
+* [refract_core 0.2.2](https://github.com/Blobfolio/refract)
 
 
 ```
@@ -2386,28 +2387,6 @@ DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
 TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 
 0. You just DO WHAT THE FUCK YOU WANT TO.
-
-```
-
-### Do What The F*ck You Want To Public License
-
-**Used By:**
-
-* [fyi_msg 0.7.0](https://github.com/Blobfolio/fyi)
-
-
-```
-DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-Version 2, December 2004
-
-Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
-
-Everyone is permitted to copy and distribute verbatim or modified copies of this license document, and changing it is allowed as long as the name is changed.
-
-DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
-
-  0. You just DO WHAT THE FUCK YOU WANT TO.
 
 ```
 

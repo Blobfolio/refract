@@ -63,22 +63,15 @@ impl TryFrom<&[u8]> for OutputKind {
 		// If the source is big enough for headers, keep going!
 		if src.len() > 12 {
 			// WebP is fairly straightforward.
-			if
-				src[..4] == [0x52, 0x49, 0x46, 0x46] &&
-				src[8..12] == [0x57, 0x45, 0x42, 0x50]
-			{
+			if src[..4] == *b"RIFF" && src[8..12] == *b"WEBP" {
 				return Ok(Self::Webp);
 			}
 
 			// AVIF has a few ways to be. We're ignoring sequences since we
 			// aren't building them.
 			if
-				src[4..8] == [0x66, 0x74, 0x79, 0x70] &&
-				(
-					src[8..12] == [0x61, 0x76, 0x69, 0x66] ||
-					src[8..12] == [0x4d, 0x41, 0x31, 0x42] ||
-					src[8..12] == [0x4d, 0x41, 0x31, 0x41]
-				)
+				src[4..8] == *b"ftyp" &&
+				matches!(&src[8..12], b"avif" | b"MA1B" | b"MA1A")
 			{
 				return Ok(Self::Avif);
 			}
@@ -236,7 +229,6 @@ impl Output {
 			.map_err(|_| RefractError::Write)
 	}
 
-	#[allow(trivial_casts)] // Triviality is necessary.
 	/// # Write to File (Suffixed).
 	///
 	/// This method will append the appropriate file extension to the provided
@@ -252,7 +244,7 @@ impl Output {
 		// library methods, besides which, they don't really provide a way to
 		// append to a file name.
 		self.write(OsStr::from_bytes(&[
-			unsafe { &*(path.as_ref().as_os_str() as *const OsStr as *const [u8]) },
+			path.as_ref().as_os_str().as_bytes(),
 			self.kind.ext_bytes(),
 		].concat()))
 	}
@@ -315,7 +307,7 @@ pub struct OutputIter<'a> {
 
 	src: Img<Cow<'a, [RGBA8]>>,
 	src_size: NonZeroU64,
-	src_kind: OutputKind,
+	kind: OutputKind,
 
 	best: Option<Output>,
 }
@@ -335,7 +327,7 @@ impl<'a> OutputIter<'a> {
 
 					src: ravif::cleared_alpha(src.img_owned()).into(),
 					src_size: src.size(),
-					src_kind: kind,
+					kind,
 
 					best: None,
 				}
@@ -348,7 +340,7 @@ impl<'a> OutputIter<'a> {
 
 					src: src.img().into(),
 					src_size: src.size(),
-					src_kind: kind,
+					kind,
 
 					best: None,
 				};
@@ -380,12 +372,12 @@ impl<'a> Iterator for OutputIter<'a> {
 
 	fn next(&mut self) -> Option<Self::Item> {
 		let quality = self.next_quality()?;
-		let data = self.src_kind.lossy(self.src.as_ref(), quality).ok()?;
+		let data = self.kind.lossy(self.src.as_ref(), quality).ok()?;
 
 		match self.normalize_size(data.len()) {
 			Ok(size) => Some(Output {
 				data,
-				kind: self.src_kind,
+				kind: self.kind,
 				size,
 				quality,
 			}),
@@ -434,7 +426,7 @@ impl<'a> OutputIter<'a> {
 			diff = num_integer::div_floor(diff, 2);
 		}
 
-		// See if this is new!
+		// See if this is new! We can't exceed u8::MAX here, so unsafe is fine.
 		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
 		if self.tried.insert(next) {
 			return Some(next);
@@ -443,6 +435,7 @@ impl<'a> OutputIter<'a> {
 		// If the above didn't work, let's see if there are any untested values
 		// left and just run with the first.
 		for i in min..=max {
+			// Again, we can't exceed u8::MAX here, so unsafe is fine.
 			let next = unsafe { NonZeroU8::new_unchecked(i) };
 			if self.tried.insert(next) {
 				return Some(next);
@@ -521,6 +514,8 @@ impl<'a> OutputIter<'a> {
 			self.top = self.bottom;
 		}
 		else {
+			// We've already checked quality is bigger than one, so minus one
+			// will fit just fine.
 			self.set_top(unsafe { NonZeroU8::new_unchecked(quality.get() - 1) });
 		}
 	}
@@ -528,24 +523,33 @@ impl<'a> OutputIter<'a> {
 
 /// # Best Getters.
 impl<'a> OutputIter<'a> {
+	#[must_use]
+	/// # Best.
+	///
+	/// Returns the current best as a reference, if any.
+	pub const fn best(&self) -> Option<&Output> { self.best.as_ref() }
+
 	#[inline]
 	#[must_use]
 	/// # Best Size.
 	///
-	/// This returns the current best size, if any.
-	pub fn best_size(&self) -> Option<NonZeroU64> {
+	/// A convenience method to return the size of the best-found image, if
+	/// any.
+	fn best_size(&self) -> Option<NonZeroU64> {
 		self.best.as_ref().map(|b| b.size)
 	}
 
 	#[inline]
 	/// # Take.
 	///
-	/// Consume the iterator and return the best candidate found, if any.
+	/// Consume the iterator and return the best candidate found, if any. To
+	/// obtain a reference to the candidate without consuming, use
+	/// [`OutputIter::best`] instead.
 	///
 	/// ## Errors
 	///
 	/// If no candidates were found, an error is returned.
 	pub fn take(self) -> Result<Output, RefractError> {
-		self.best.ok_or(RefractError::Candidate(self.src_kind))
+		self.best.ok_or(RefractError::Candidate(self.kind))
 	}
 }

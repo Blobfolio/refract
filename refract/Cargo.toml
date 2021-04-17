@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.2.1"
+version = "0.2.2"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -61,17 +61,18 @@ label = "<PATH(s)…>"
 description = "Any number of images and directories to crawl and crunch."
 
 [dependencies]
-argyle = "0.3.*"
+argyle = "0.4.*"
 dactyl = "0.1.*"
 dowser = "0.2.*"
 
 [dependencies.fyi_msg]
 git = "https://github.com/Blobfolio/fyi.git"
-tag = "v0.7.0"
+tag = "v0.7.1"
 
 [dependencies.refract_core]
 path = "../refract_core"
 default-features = false
+features = [ "menu" ]
 
 [features]
 default = [ "asm" ]          # See refract_core for explanation.
