@@ -74,7 +74,8 @@ fn main() {
 /// This just gives us an easy way to bubble errors up to the real entrypoint.
 fn _main() -> Result<(), RefractError> {
 	// Parse CLI arguments.
-	let args = Argue::new(FLAG_HELP | FLAG_REQUIRED | FLAG_VERSION)?
+	let args = Argue::new(FLAG_HELP | FLAG_REQUIRED | FLAG_VERSION)
+		.map_err(RefractError::Menu)?
 		.with_list();
 
 	// Figure out which types we're dealing with.

@@ -75,9 +75,3 @@ impl RefractError {
 		}
 	}
 }
-
-#[cfg(feature = "menu")]
-impl From<ArgyleError> for RefractError {
-	#[inline]
-	fn from(src: ArgyleError) -> Self { Self::Menu(src) }
-}
