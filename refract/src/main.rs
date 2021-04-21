@@ -41,7 +41,10 @@ use refract_core::{
 	RefractError,
 	Source,
 };
-use dowser::Dowser;
+use dowser::{
+	Dowser,
+	Extension,
+};
 use fyi_msg::Msg;
 use std::{
 	convert::TryFrom,
@@ -73,6 +76,11 @@ fn main() {
 ///
 /// This just gives us an easy way to bubble errors up to the real entrypoint.
 fn _main() -> Result<(), RefractError> {
+	// The extensions we're going to be looking for.
+	const E_JPG: Extension = Extension::new3(*b"jpg");
+	const E_PNG: Extension = Extension::new3(*b"png");
+	const E_JPEG: Extension = Extension::new4(*b"jpeg");
+
 	// Parse CLI arguments.
 	let args = Argue::new(FLAG_HELP | FLAG_REQUIRED | FLAG_VERSION)
 		.map_err(RefractError::Menu)?
@@ -93,13 +101,10 @@ fn _main() -> Result<(), RefractError> {
 
 	// Find the paths.
 	let mut paths = Vec::<PathBuf>::try_from(
-		Dowser::filtered(|p| p.extension()
-			.map_or(
-				false,
-				|e| {
-					let ext = e.as_bytes().to_ascii_lowercase();
-					ext == b"jpg" || ext == b"png" || ext == b"jpeg"
-				}
+		Dowser::filtered(|p|
+			Extension::try_from3(p).map_or_else(
+				|| Extension::try_from4(p).map_or(false, |e| e == E_JPEG),
+				|e| e == E_JPG || e == E_PNG
 			)
 		)
 			.with_paths(args.args().iter().map(|x| OsStr::from_bytes(x.as_ref())))
