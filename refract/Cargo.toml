@@ -41,6 +41,10 @@ long = "--no-avif"
 description = "Skip AVIF conversion."
 
 [[package.metadata.bashman.switches]]
+long = "--no-jxl"
+description = "Skip JPEG XL conversion."
+
+[[package.metadata.bashman.switches]]
 long = "--no-webp"
 description = "Skip WebP conversion."
 
@@ -77,4 +81,3 @@ features = [ "menu" ]
 [features]
 default = [ "asm" ]          # See refract_core for explanation.
 asm = [ "refract_core/asm" ]
-jxl = [ "refract_core/jxl" ] # Enable experimental JPEG XL support.

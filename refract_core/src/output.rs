@@ -47,7 +47,7 @@ pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 /// This is a list of supported encoders.
 pub enum OutputKind {
 	Avif,
-	#[cfg(feature = "jxl")] Jxl,
+	Jxl,
 	Webp,
 }
 
@@ -77,7 +77,6 @@ impl TryFrom<&[u8]> for OutputKind {
 				return Ok(Self::Avif);
 			}
 
-			#[cfg(feature = "jxl")]
 			// JPEG XL can either be a codestream or containerized.
 			if
 				src[..2] == [0xFF, 0x0A] ||
@@ -108,7 +107,7 @@ impl OutputKind {
 	pub fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
 		let out = match self {
 			Self::Avif => Err(RefractError::NoLossless),
-			#[cfg(feature = "jxl")] Self::Jxl => crate::jxl::make_lossless(img),
+			Self::Jxl => crate::jxl::make_lossless(img),
 			Self::Webp => crate::webp::make_lossless(img),
 		}?;
 		self.check_kind(out)
@@ -129,7 +128,7 @@ impl OutputKind {
 	) -> Result<Vec<u8>, RefractError> {
 		let out = match self {
 			Self::Avif => crate::avif::make_lossy(img, quality),
-			#[cfg(feature = "jxl")] Self::Jxl => crate::jxl::make_lossy(img, quality),
+			Self::Jxl => crate::jxl::make_lossy(img, quality),
 			Self::Webp => crate::webp::make_lossy(img, quality),
 		}?;
 		self.check_kind(out)
@@ -156,7 +155,7 @@ impl OutputKind {
 	pub const fn as_bytes(self) -> &'static [u8] {
 		match self {
 			Self::Avif => b"AVIF",
-			#[cfg(feature = "jxl")] Self::Jxl => b"JPEG XL",
+			Self::Jxl => b"JPEG XL",
 			Self::Webp => b"WebP",
 		}
 	}
@@ -168,7 +167,7 @@ impl OutputKind {
 	pub const fn as_str(self) -> &'static str {
 		match self {
 			Self::Avif => "AVIF",
-			#[cfg(feature = "jxl")] Self::Jxl => "JPEG XL",
+			Self::Jxl => "JPEG XL",
 			Self::Webp => "WebP",
 		}
 	}
@@ -181,7 +180,7 @@ impl OutputKind {
 	pub const fn ext_bytes(self) -> &'static [u8] {
 		match self {
 			Self::Avif => b".avif",
-			#[cfg(feature = "jxl")] Self::Jxl => b".jxl",
+			Self::Jxl => b".jxl",
 			Self::Webp => b".webp",
 		}
 	}
@@ -194,7 +193,7 @@ impl OutputKind {
 	pub const fn ext_str(self) -> &'static str {
 		match self {
 			Self::Avif => ".avif",
-			#[cfg(feature = "jxl")] Self::Jxl => ".jxl",
+			Self::Jxl => ".jxl",
 			Self::Webp => ".webp",
 		}
 	}
@@ -286,26 +285,6 @@ impl Output {
 	/// Return the quality setting used to encode the image.
 	pub const fn quality(&self) -> NonZeroU8 { self.quality }
 
-	#[cfg(not(feature = "jxl"))]
-	#[must_use]
-	/// # Formatted Quality.
-	///
-	/// This returns the quality as a string, formatted according to the type
-	/// and value.
-	pub fn nice_quality(&self) -> Cow<str> {
-		let quality = self.quality.get();
-
-		// Lossless.
-		if quality == 100 && self.kind == OutputKind::Webp {
-			Cow::Borrowed("lossless")
-		}
-		// It is what it is.
-		else {
-			Cow::Owned(format!("{}", quality))
-		}
-	}
-
-	#[cfg(feature = "jxl")]
 	#[must_use]
 	/// # Formatted Quality.
 	///
@@ -319,16 +298,16 @@ impl Output {
 			(quality == 150 && self.kind == OutputKind::Jxl) ||
 			(quality == 100 && self.kind == OutputKind::Webp)
 		{
-			Cow::Borrowed("lossless")
+			Cow::Borrowed("lossless quality")
 		}
 		// Weird JPEG XL.
 		else if self.kind == OutputKind::Jxl {
 			let f_quality = f32::from(150_u8 - quality) / 10.0;
-			Cow::Owned(format!("{:.1}", f_quality))
+			Cow::Owned(format!("quality {:.1}", f_quality))
 		}
 		// It is what it is.
 		else {
-			Cow::Owned(format!("{}", quality))
+			Cow::Owned(format!("quality {}", quality))
 		}
 	}
 
@@ -390,14 +369,13 @@ impl<'a> OutputIter<'a> {
 					best: None,
 				}
 			},
-			#[cfg(feature = "jxl")]
 			OutputKind::Jxl => {
 				let mut out = Self {
 					bottom: MIN_QUALITY,
 					top: unsafe { NonZeroU8::new_unchecked(150) },
 					tried: HashSet::new(),
 
-					src: src.img().into(),
+					src: ravif::cleared_alpha(src.img_owned()).into(),
 					src_size: src.size(),
 					kind,
 
@@ -415,7 +393,7 @@ impl<'a> OutputIter<'a> {
 							data,
 							kind,
 							size,
-							quality: MAX_QUALITY,
+							quality: out.top,
 						});
 					}
 				}

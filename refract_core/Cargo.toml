@@ -13,6 +13,7 @@ publish = false
 imgref = "1.9.*"
 jpeg-decoder = "0.1.*"
 lodepng = "3.4.*"
+num_cpus = "1.13.*"
 num-integer = "0.1.*"
 rgb = "0.8.*"
 
@@ -20,11 +21,10 @@ rgb = "0.8.*"
 version = "0.4.*"
 optional = true
 
-[dependencies.jpegxl-rs]
+[dependencies.jpegxl-sys]
 version = "0.3.7"
 default-features = false
 features = [ "threads" ]
-optional = true
 
 [dependencies.libwebp-sys2]
 version = "0.1.*"
@@ -39,7 +39,6 @@ git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
 rev = "7cd84b2"
 
 [features]
-default = [ "asm" ]   # Workaround for Travis. Its version of NASM is too old
-asm = [ "ravif/asm" ] # to build rav1e (via ravif) with asm enabled.
-menu = [ "argyle" ]   # Passthrough menu errors.
-jxl = [ "jpegxl-rs" ] # Enable experimental JPEG XL support.
+default = [ "asm" ]    # Workaround for Travis. Its version of NASM is too old
+asm = [ "ravif/asm" ]  # to build rav1e (via ravif) with asm enabled.
+menu = [ "argyle" ]    # Passthrough menu errors.

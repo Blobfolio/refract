@@ -23,10 +23,12 @@
     Does cats.jpg.PROPOSED.jxl look good? [y/N]
     Does cats.jpg.PROPOSED.jxl look good? [y/N]
     Does cats.jpg.PROPOSED.jxl look good? [y/N] y
+    Does cats.jpg.PROPOSED.jxl look good? [y/N]
+    Does cats.jpg.PROPOSED.jxl look good? [y/N]
+    Does cats.jpg.PROPOSED.jxl look good? [y/N]
+    Does cats.jpg.PROPOSED.jxl look good? [y/N]
     Does cats.jpg.PROPOSED.jxl look good? [y/N] y
-    Does cats.jpg.PROPOSED.jxl look good? [y/N]
-    Does cats.jpg.PROPOSED.jxl look good? [y/N]
-    Success: Created cats.jpg.jxl with quality 3.4. (Saved 93,071 bytes, 20.96%.)
+    Success: Created cats.jpg.jxl with quality 2.0. (Saved 224,700 bytes, 50.60%.)
 
 +--------------------------------+
 | /share/skel/assets/circles.jpg |
@@ -53,11 +55,11 @@
     Does circles.jpg.PROPOSED.jxl look good? [y/N]
     Does circles.jpg.PROPOSED.jxl look good? [y/N]
     Does circles.jpg.PROPOSED.jxl look good? [y/N]
+    Does circles.jpg.PROPOSED.jxl look good? [y/N]
     Does circles.jpg.PROPOSED.jxl look good? [y/N] y
+    Does circles.jpg.PROPOSED.jxl look good? [y/N]
     Does circles.jpg.PROPOSED.jxl look good? [y/N] y
-    Does circles.jpg.PROPOSED.jxl look good? [y/N] y
-    Does circles.jpg.PROPOSED.jxl look good? [y/N] y
-    Success: Created circles.jpg.jxl with quality 1.8. (Saved 27,318 bytes, 37.12%.)
+    Success: Created circles.jpg.jxl with quality 0.7. (Saved 38,219 bytes, 51.94%.)
 
 +------------------------------+
 | /share/skel/assets/derby.jpg |
@@ -85,9 +87,10 @@
     Does derby.jpg.PROPOSED.jxl look good? [y/N]
     Does derby.jpg.PROPOSED.jxl look good? [y/N]
     Does derby.jpg.PROPOSED.jxl look good? [y/N] y
+    Does derby.jpg.PROPOSED.jxl look good? [y/N]
     Does derby.jpg.PROPOSED.jxl look good? [y/N] y
-    Does derby.jpg.PROPOSED.jxl look good? [y/N] y
-    Success: Created derby.jpg.jxl with quality 1.8. (Saved 19,980 bytes, 14.32%.)
+    Does derby.jpg.PROPOSED.jxl look good? [y/N]
+    Success: Created derby.jpg.jxl with quality 1.3. (Saved 74,431 bytes, 53.37%.)
 
 +------------------------------------------+
 | /share/skel/assets/mountains-on-mars.png |
@@ -104,7 +107,9 @@
 	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
 	Success: Created mountains-on-mars.png.avif with quality 84. (Saved 9,957 bytes, 53.43%.)
 [JPEG XL]
-    Success: Created mountains-on-mars.png.jxl with quality 5.0. (Saved 10,702 bytes, 57.43%.)
+    Does mountains-on-mars.png.PROPOSED.jxl look good? [y/N]
+    Does mountains-on-mars.png.PROPOSED.jxl look good? [y/N]
+    Success: Created mountains-on-mars.png.jxl with lossless quality. (Saved 10,563 bytes, 56.68%.)
 
 +------------------------------+
 | /share/skel/assets/myrna.png |
@@ -135,7 +140,7 @@
     Does myrna.png.PROPOSED.jxl look good? [y/N]
     Does myrna.png.PROPOSED.jxl look good? [y/N]
     Does myrna.png.PROPOSED.jxl look good? [y/N]
-    Success: Created myrna.png.jxl with quality 1.9. (Saved 240,193 bytes, 54.64%.)
+    Success: Created myrna.png.jxl with quality 1.9. (Saved 367,807 bytes, 83.67%.)
 
 +----------------------------+
 | /share/skel/assets/poe.png |
@@ -144,6 +149,8 @@
 	Warning: No acceptable WebP candidate was found.
 [AVIF]
 	Warning: No acceptable AVIF candidate was found.
+[JPEG XL]
+    Warning: No acceptable JPEG XL candidate was found.
 
 +-----------------------------------------------+
 | /share/skel/assets/statler_waldorf_cutout.png |
@@ -167,13 +174,13 @@
 	Success: Created statler_waldorf_cutout.png.avif with quality 59. (Saved 237,741 bytes, 92.76%.)
 [JPEG XL]
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N]
-    Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N] y
-    Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N]
-    Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N]
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N]
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N]
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N] y
-    Success: Created statler_waldorf_cutout.png.jxl with quality 4.0. (Saved 219,415 bytes, 85.61%.)
+    Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N] y
+    Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N] y
+    Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N] y
+    Success: Created statler_waldorf_cutout.png.jxl with quality 1.8. (Saved 219,234 bytes, 85.54%.)
 
 +-----------------------------+
 | /share/skel/assets/wolf.jpg |
@@ -200,7 +207,7 @@
     Does wolf.jpg.PROPOSED.jxl look good? [y/N]
     Does wolf.jpg.PROPOSED.jxl look good? [y/N] y
     Does wolf.jpg.PROPOSED.jxl look good? [y/N]
-    Does wolf.jpg.PROPOSED.jxl look good? [y/N]
     Does wolf.jpg.PROPOSED.jxl look good? [y/N] y
     Does wolf.jpg.PROPOSED.jxl look good? [y/N] y
-    Success: Created wolf.jpg.jxl with quality 2.3. (Saved 597,973 bytes, 82.71%.)
+    Does wolf.jpg.PROPOSED.jxl look good? [y/N] y
+    Success: Created wolf.jpg.jxl with quality 2.8. (Saved 682,474 bytes, 94.40%.)

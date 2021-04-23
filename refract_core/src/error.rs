@@ -59,7 +59,7 @@ impl RefractError {
 		match self {
 			Self::Candidate(kind) => match kind {
 				OutputKind::Avif => "No acceptable AVIF candidate was found.",
-				#[cfg(feature = "jxl")] OutputKind::Jxl => "No acceptable JPEG XL candidate was found.",
+				OutputKind::Jxl => "No acceptable JPEG XL candidate was found.",
 				OutputKind::Webp => "No acceptable WebP candidate was found.",
 			},
 			Self::Encode => "Errors were encountered while trying to encode the image.",

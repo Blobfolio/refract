@@ -154,7 +154,7 @@ fn print_success(src_size: u64, output: &Output, dst_path: &Path) {
 		.map_or_else(|| Cow::Borrowed("?"), OsStr::to_string_lossy);
 
 	Msg::success(format!(
-		"Created \x1b[1m{}\x1b[0m with quality {}.",
+		"Created \x1b[1m{}\x1b[0m with {}.",
 		name,
 		output.nice_quality(),
 	))
