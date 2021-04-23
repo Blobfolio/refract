@@ -11,8 +11,8 @@ use imgref::Img;
 use ravif::{
 	ColorSpace,
 	Config,
-	RGBA8,
 };
+use rgb::RGBA8;
 use std::num::NonZeroU8;
 
 

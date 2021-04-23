@@ -76,6 +76,10 @@ fn main() {
 ///
 /// This just gives us an easy way to bubble errors up to the real entrypoint.
 fn _main() -> Result<(), RefractError> {
+	/*let tmp = std::fs::read("/share/skel/assets/myrna.png.jxl").unwrap();
+	println!("{:?}", &tmp[0..12]);
+	std::process::exit(0);*/
+
 	// The extensions we're going to be looking for.
 	const E_JPG: Extension = Extension::new3(*b"jpg");
 	const E_PNG: Extension = Extension::new3(*b"png");
@@ -93,6 +97,10 @@ fn _main() -> Result<(), RefractError> {
 	}
 	if ! args.switch(b"--no-avif") {
 		encoders.push(OutputKind::Avif);
+	}
+	#[cfg(feature = "jxl")]
+	if ! args.switch(b"--no-jxl") {
+		encoders.push(OutputKind::Jxl);
 	}
 
 	if encoders.is_empty() {

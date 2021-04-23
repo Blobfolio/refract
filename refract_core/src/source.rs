@@ -11,7 +11,7 @@ use imgref::{
 	Img,
 	ImgVec,
 };
-use ravif::RGBA8;
+use rgb::RGBA8;
 use std::{
 	convert::TryFrom,
 	num::NonZeroU64,

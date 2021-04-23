@@ -29,6 +29,7 @@ mod output;
 mod source;
 
 pub(self) mod avif;
+#[cfg(feature = "jxl")] pub(self) mod jxl;
 pub(self) mod webp;
 
 pub use error::RefractError;

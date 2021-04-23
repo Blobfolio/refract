@@ -23,7 +23,7 @@ use libwebp_sys::{
 	WebPPictureInit,
 	WebPValidateConfig,
 };
-use ravif::RGBA8;
+use rgb::RGBA8;
 use std::{
 	convert::TryFrom,
 	num::NonZeroU8,

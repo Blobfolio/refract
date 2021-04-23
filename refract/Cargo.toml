@@ -77,3 +77,4 @@ features = [ "menu" ]
 [features]
 default = [ "asm" ]          # See refract_core for explanation.
 asm = [ "refract_core/asm" ]
+jxl = [ "refract_core/jxl" ] # Enable experimental JPEG XL support.

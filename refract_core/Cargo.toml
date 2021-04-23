@@ -20,6 +20,12 @@ rgb = "0.8.*"
 version = "0.4.*"
 optional = true
 
+[dependencies.jpegxl-rs]
+version = "0.3.7"
+default-features = false
+features = [ "threads" ]
+optional = true
+
 [dependencies.libwebp-sys2]
 version = "0.1.*"
 features = [ "1_1", "static" ]
@@ -36,3 +42,4 @@ rev = "7cd84b2"
 default = [ "asm" ]   # Workaround for Travis. Its version of NASM is too old
 asm = [ "ravif/asm" ] # to build rav1e (via ravif) with asm enabled.
 menu = [ "argyle" ]   # Passthrough menu errors.
+jxl = [ "jpegxl-rs" ] # Enable experimental JPEG XL support.

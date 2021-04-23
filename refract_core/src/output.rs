@@ -11,7 +11,7 @@ use imgref::{
 	Img,
 	ImgExt,
 };
-use ravif::RGBA8;
+use rgb::RGBA8;
 use std::{
 	borrow::Cow,
 	collections::HashSet,
@@ -47,6 +47,7 @@ pub const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 /// This is a list of supported encoders.
 pub enum OutputKind {
 	Avif,
+	#[cfg(feature = "jxl")] Jxl,
 	Webp,
 }
 
@@ -75,6 +76,15 @@ impl TryFrom<&[u8]> for OutputKind {
 			{
 				return Ok(Self::Avif);
 			}
+
+			#[cfg(feature = "jxl")]
+			// JPEG XL can either be a codestream or containerized.
+			if
+				src[..2] == [0xFF, 0x0A] ||
+				src[..12] == [0x00, 0x00, 0x00, 0x0C, b'J', b'X', b'L', 0x20, 0x0D, 0x0A, 0x87, 0x0A]
+			{
+				return Ok(Self::Jxl);
+			}
 		}
 
 		Err(RefractError::Encode)
@@ -98,6 +108,7 @@ impl OutputKind {
 	pub fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
 		let out = match self {
 			Self::Avif => Err(RefractError::NoLossless),
+			#[cfg(feature = "jxl")] Self::Jxl => crate::jxl::make_lossless(img),
 			Self::Webp => crate::webp::make_lossless(img),
 		}?;
 		self.check_kind(out)
@@ -118,6 +129,7 @@ impl OutputKind {
 	) -> Result<Vec<u8>, RefractError> {
 		let out = match self {
 			Self::Avif => crate::avif::make_lossy(img, quality),
+			#[cfg(feature = "jxl")] Self::Jxl => crate::jxl::make_lossy(img, quality),
 			Self::Webp => crate::webp::make_lossy(img, quality),
 		}?;
 		self.check_kind(out)
@@ -144,6 +156,7 @@ impl OutputKind {
 	pub const fn as_bytes(self) -> &'static [u8] {
 		match self {
 			Self::Avif => b"AVIF",
+			#[cfg(feature = "jxl")] Self::Jxl => b"JPEG XL",
 			Self::Webp => b"WebP",
 		}
 	}
@@ -155,6 +168,7 @@ impl OutputKind {
 	pub const fn as_str(self) -> &'static str {
 		match self {
 			Self::Avif => "AVIF",
+			#[cfg(feature = "jxl")] Self::Jxl => "JPEG XL",
 			Self::Webp => "WebP",
 		}
 	}
@@ -167,6 +181,7 @@ impl OutputKind {
 	pub const fn ext_bytes(self) -> &'static [u8] {
 		match self {
 			Self::Avif => b".avif",
+			#[cfg(feature = "jxl")] Self::Jxl => b".jxl",
 			Self::Webp => b".webp",
 		}
 	}
@@ -179,6 +194,7 @@ impl OutputKind {
 	pub const fn ext_str(self) -> &'static str {
 		match self {
 			Self::Avif => ".avif",
+			#[cfg(feature = "jxl")] Self::Jxl => ".jxl",
 			Self::Webp => ".webp",
 		}
 	}
@@ -268,11 +284,53 @@ impl Output {
 	/// # Quality.
 	///
 	/// Return the quality setting used to encode the image.
-	///
-	/// Note that a value of `100` typically indicates lossless compression, as
-	/// it is very unlikely a lossy `100` would result in any image shrinking.
-	/// At present, only `PNG->WebP` attempts lossless conversion.
 	pub const fn quality(&self) -> NonZeroU8 { self.quality }
+
+	#[cfg(not(feature = "jxl"))]
+	#[must_use]
+	/// # Formatted Quality.
+	///
+	/// This returns the quality as a string, formatted according to the type
+	/// and value.
+	pub fn nice_quality(&self) -> Cow<str> {
+		let quality = self.quality.get();
+
+		// Lossless.
+		if quality == 100 && self.kind == OutputKind::Webp {
+			Cow::Borrowed("lossless")
+		}
+		// It is what it is.
+		else {
+			Cow::Owned(format!("{}", quality))
+		}
+	}
+
+	#[cfg(feature = "jxl")]
+	#[must_use]
+	/// # Formatted Quality.
+	///
+	/// This returns the quality as a string, formatted according to the type
+	/// and value.
+	pub fn nice_quality(&self) -> Cow<str> {
+		let quality = self.quality.get();
+
+		// Lossless.
+		if
+			(quality == 150 && self.kind == OutputKind::Jxl) ||
+			(quality == 100 && self.kind == OutputKind::Webp)
+		{
+			Cow::Borrowed("lossless")
+		}
+		// Weird JPEG XL.
+		else if self.kind == OutputKind::Jxl {
+			let f_quality = f32::from(150_u8 - quality) / 10.0;
+			Cow::Owned(format!("{:.1}", f_quality))
+		}
+		// It is what it is.
+		else {
+			Cow::Owned(format!("{}", quality))
+		}
+	}
 
 	#[must_use]
 	/// # Size.
@@ -331,6 +389,38 @@ impl<'a> OutputIter<'a> {
 
 					best: None,
 				}
+			},
+			#[cfg(feature = "jxl")]
+			OutputKind::Jxl => {
+				let mut out = Self {
+					bottom: MIN_QUALITY,
+					top: unsafe { NonZeroU8::new_unchecked(150) },
+					tried: HashSet::new(),
+
+					src: src.img().into(),
+					src_size: src.size(),
+					kind,
+
+					best: None,
+				};
+
+				// This would trigger lossless mode, which we're about to
+				// do right now.
+				out.tried.insert(out.top);
+
+				// And now said lossless.
+				if let Ok(data) = kind.lossless(out.src.as_ref()) {
+					if let Ok(size) = out.normalize_size(data.len()) {
+						out.best = Some(Output {
+							data,
+							kind,
+							size,
+							quality: MAX_QUALITY,
+						});
+					}
+				}
+
+				out
 			},
 			OutputKind::Webp => {
 				let mut out = Self {
