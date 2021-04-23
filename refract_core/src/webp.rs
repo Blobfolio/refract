@@ -140,11 +140,13 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 	// Fill the pixel buffers.
 	unsafe {
-		let mut pixel_data = {
-			use rgb::ComponentBytes;
-			let (buf, _, _) = source.to_contiguous_buf();
-			buf.as_bytes().to_vec()
-		};
+		let mut pixel_data = source.pixels().fold(
+			Vec::with_capacity(source.width() * source.height() * 4),
+			|mut acc, p| {
+				acc.extend_from_slice(&[p.r, p.g, p.b, p.a]);
+				acc
+			}
+		);
 		let status = WebPPictureImportRGBA(
 			&mut picture,
 			pixel_data.as_mut_ptr(),
