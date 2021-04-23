@@ -96,7 +96,7 @@
 | /share/skel/assets/mountains-on-mars.png |
 +------------------------------------------+
 [WebP]
-	Success: Created mountains-on-mars.png.webp with quality lossless. (Saved 5,882 bytes, 31.56%.)
+	Success: Created mountains-on-mars.png.webp with lossless quality. (Saved 5,882 bytes, 31.56%.)
 [AVIF]
 	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
 	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
