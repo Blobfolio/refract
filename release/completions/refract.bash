@@ -10,6 +10,7 @@ _basher___refract() {
 		opts+=("--help")
 	fi
 	[[ " ${COMP_LINE} " =~ " --no-avif " ]] || opts+=("--no-avif")
+	[[ " ${COMP_LINE} " =~ " --no-jxl " ]] || opts+=("--no-jxl")
 	[[ " ${COMP_LINE} " =~ " --no-webp " ]] || opts+=("--no-webp")
 	if [[ ! " ${COMP_LINE} " =~ " -V " ]] && [[ ! " ${COMP_LINE} " =~ " --version " ]]; then
 		opts+=("-V")
