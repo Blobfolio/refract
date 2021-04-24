@@ -158,8 +158,8 @@ fn helper() {
   ,||`   ||   |||`
  |||`         ||
 ,||           ||  ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r"
-||`           ||  Guided WebP/AVIF image conversion
-|||,         |||  for JPEG and PNG sources.
+||`           ||  Guided AVIF/JPEG XL/WebP image
+|||,         |||  conversion for JPEG and PNG sources.
  `|||,,    ,|||
    ``||||||||`
 

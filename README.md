@@ -1,6 +1,6 @@
 # Refract
 
-Refract is a guided [WebP](https://en.wikipedia.org/wiki/WebP)/[AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF)) CLI conversion tool for JPEG and PNG image sources. It generates images at various qualities, asking at each step if they look OK, arriving at the smallest acceptable candidate.
+Refract is a guided [AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF))/[JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL)/[WebP](https://en.wikipedia.org/wiki/WebP) CLI conversion tool for [JPEG](https://en.wikipedia.org/wiki/JPEG) and [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) image sources. It generates images at various qualities, asking at each step if they look OK, arriving at the smallest acceptable candidate.
 
 It works similarly to the vision tests your eye doctor performs. "How does this look?" *Click.* "How about now?" *Click.* "Here's your prescription!"
 
@@ -30,7 +30,7 @@ Note that if building from source, you'll need NASM installed to compile the [ra
 
 Pre-built `.deb` packages are also added for each [release](https://github.com/Blobfolio/refract/releases/latest), which should always work on the latest stable Debian and Ubuntu operating systems.
 
-Note: WebP and AVIF encoding are handled by the Refract binary directly; systems running it do not need `libwebp`, etc., separately installed.
+Note: All encoding is handled by the Refract binary directly; systems running the program do not need external libraries like `libwebp`, etc., installed.
 
 
 
@@ -45,6 +45,7 @@ The following flags are available:
 ```bash
 -h, --help        Prints help information.
     --no-avif     Skip AVIF conversion.
+    --no-jxl      Skip JPEG XL conversion.
     --no-webp     Skip WebP conversion.
 -V, --version     Prints version information.
 ```
@@ -62,9 +63,9 @@ Refract will load each image one-at-a-time and try to generate proposed WebP and
 
 (You can preview the proposed images in any application of your choosing. Web browsers are a nice, lightweight option.)
 
-If your answers and the file sizes work out right, a final best-case copy will be created in the source directory with `.webp` or `.avif` appended to the source path, e.g. `/path/to/image.jpg.webp`.
+If your answers and the file sizes work out right, a final best-case copy will be created in the source directory with `.avif`, `.jxl`, or `.webp` appended to the source path, e.g. `/path/to/image.jpg.webp`.
 
-Encoding performance is on par with standalone encoders like `cwebp` and `cavif`. WebP is generally pretty zippy, but AVIF can be a bit slow. If running this against thousands of images, make yourself a pot of coffee ahead of time. :)
+Encoding performance is on par with each format's standlone encoder — `cavif` for AVIF, `cjxl` for JPEG XL, and `cwebp` for WebP. WebP is generally pretty zippy, but AVIF and JPEG XL can be a bit slow, even with parallelization. If running this against thousands of images, make yourself a pot of coffee ahead of time. :)
 
 
 
