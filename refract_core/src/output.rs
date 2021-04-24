@@ -6,12 +6,9 @@ use crate::{
 	RefractError,
 	Source,
 	SourceKind,
+	TreatedSource,
+	TreatmentKind,
 };
-use imgref::{
-	Img,
-	ImgExt,
-};
-use rgb::RGBA8;
 use std::{
 	borrow::Cow,
 	collections::HashSet,
@@ -104,7 +101,7 @@ impl OutputKind {
 	/// This will return an error if the encoder does not support lossless
 	/// encoding, or if there are any other miscellaneous encoder issues along
 	/// the way.
-	pub fn lossless(self, img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
+	pub fn lossless(self, img: &TreatedSource) -> Result<Vec<u8>, RefractError> {
 		let out = match self {
 			Self::Avif => Err(RefractError::NoLossless),
 			Self::Jxl => crate::jxl::make_lossless(img),
@@ -123,7 +120,7 @@ impl OutputKind {
 	/// If the encoder runs into trouble, an error will be returned.
 	pub fn lossy(
 		self,
-		img: Img<&[RGBA8]>,
+		img: &TreatedSource,
 		quality: NonZeroU8
 	) -> Result<Vec<u8>, RefractError> {
 		let out = match self {
@@ -342,7 +339,7 @@ pub struct OutputIter<'a> {
 	top: NonZeroU8,
 	tried: HashSet<NonZeroU8>,
 
-	src: Img<Cow<'a, [RGBA8]>>,
+	src: TreatedSource<'a>,
 	src_size: NonZeroU64,
 	kind: OutputKind,
 
@@ -362,7 +359,10 @@ impl<'a> OutputIter<'a> {
 					top: MAX_QUALITY,
 					tried: HashSet::new(),
 
-					src: ravif::cleared_alpha(src.img_owned()).into(),
+					src: TreatedSource::new(
+						ravif::cleared_alpha(src.img_owned()).into(),
+						TreatmentKind::Image
+					),
 					src_size: src.size(),
 					kind,
 
@@ -375,7 +375,10 @@ impl<'a> OutputIter<'a> {
 					top: unsafe { NonZeroU8::new_unchecked(150) },
 					tried: HashSet::new(),
 
-					src: ravif::cleared_alpha(src.img_owned()).into(),
+					src: TreatedSource::new(
+						ravif::cleared_alpha(src.img_owned()).into(),
+						TreatmentKind::BufferUsed
+					),
 					src_size: src.size(),
 					kind,
 
@@ -387,7 +390,7 @@ impl<'a> OutputIter<'a> {
 				out.tried.insert(out.top);
 
 				// And now said lossless.
-				if let Ok(data) = kind.lossless(out.src.as_ref()) {
+				if let Ok(data) = kind.lossless(&out.src) {
 					if let Ok(size) = out.normalize_size(data.len()) {
 						out.best = Some(Output {
 							data,
@@ -406,7 +409,10 @@ impl<'a> OutputIter<'a> {
 					top: MAX_QUALITY,
 					tried: HashSet::new(),
 
-					src: src.img().into(),
+					src: TreatedSource::new(
+						src.img().into(),
+						TreatmentKind::BufferFull
+					),
 					src_size: src.size(),
 					kind,
 
@@ -417,7 +423,7 @@ impl<'a> OutputIter<'a> {
 				// fails, but if it succeeds, we'll use this as a starting
 				// point.
 				if src.kind() == SourceKind::Png {
-					if let Ok(data) = kind.lossless(out.src.as_ref()) {
+					if let Ok(data) = kind.lossless(&out.src) {
 						if let Ok(size) = out.normalize_size(data.len()) {
 							out.best = Some(Output {
 								data,
@@ -440,7 +446,7 @@ impl<'a> Iterator for OutputIter<'a> {
 
 	fn next(&mut self) -> Option<Self::Item> {
 		let quality = self.next_quality()?;
-		let data = self.kind.lossy(self.src.as_ref(), quality).ok()?;
+		let data = self.kind.lossy(&self.src, quality).ok()?;
 
 		match self.normalize_size(data.len()) {
 			Ok(size) => Some(Output {

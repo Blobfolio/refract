@@ -24,6 +24,7 @@
 
 #![allow(clippy::module_name_repetitions)]
 
+mod color;
 mod error;
 mod output;
 mod source;
@@ -32,6 +33,7 @@ pub(self) mod avif;
 pub(self) mod jxl;
 pub(self) mod webp;
 
+pub use color::ColorKind;
 pub use error::RefractError;
 pub use output::{
 	MIN_QUALITY,
@@ -43,4 +45,6 @@ pub use output::{
 pub use source::{
 	Source,
 	SourceKind,
+	TreatedSource,
+	TreatmentKind,
 };

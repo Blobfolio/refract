@@ -3,16 +3,19 @@
 */
 
 use crate::{
+	ColorKind,
 	OutputIter,
 	OutputKind,
 	RefractError,
 };
 use imgref::{
 	Img,
+	ImgExt,
 	ImgVec,
 };
 use rgb::RGBA8;
 use std::{
+	borrow::Cow,
 	convert::TryFrom,
 	num::NonZeroU64,
 	path::PathBuf,
@@ -153,6 +156,154 @@ impl Source {
 	pub fn encode(&self, kind: OutputKind) -> OutputIter<'_> {
 		OutputIter::new(self, kind)
 	}
+}
+
+
+
+#[derive(Debug, Clone)]
+/// # Treated Source Data.
+///
+/// This enum allows us to store different kinds of treated image sources for
+/// use with the [`TreatedSource`] struct.
+enum TreatedSourceKind<'a> {
+	/// # A contiguous buffer slice.
+	Buffer(Box<[u8]>),
+	/// # A vector of pixels.
+	Image(Img<Cow<'a, [RGBA8]>>),
+}
+
+impl From<Vec<u8>> for TreatedSourceKind<'_> {
+	#[inline]
+	fn from(src: Vec<u8>) -> Self {
+		Self::Buffer(src.into_boxed_slice())
+	}
+}
+
+impl<'a> From<Img<&'a [RGBA8]>> for TreatedSourceKind<'a> {
+	#[inline]
+	fn from(src: Img<&'a [RGBA8]>) -> Self {
+		Self::Image(src.into())
+	}
+}
+
+impl From<ImgVec<RGBA8>> for TreatedSourceKind<'_> {
+	#[inline]
+	fn from(src: ImgVec<RGBA8>) -> Self {
+		Self::Image(src.into())
+	}
+}
+
+
+
+#[derive(Debug, Copy, Clone)]
+/// # Treatment Kind.
+///
+/// This enum is only used for initializing a [`TreatedSource`].
+pub enum TreatmentKind {
+	/// # Buffer.
+	///
+	/// A buffer with 4-channel RGBA data, regardless of whether all those
+	/// channels are used.
+	BufferFull,
+	/// # Buffer (Compact).
+	///
+	/// A buffer containing only the channels used. It could be anywhere from
+	/// one byte per pixel (greyscale) or four bytes per pixel (RGBA).
+	BufferUsed,
+	/// # An Image.
+	///
+	/// An owned or borrowed `Img`.
+	Image,
+}
+
+
+
+#[derive(Debug, Clone)]
+/// # Treated Source.
+///
+/// This is the raw image data, pre-treated, ready to feed to an encoder.
+pub struct TreatedSource<'a> {
+	img: TreatedSourceKind<'a>,
+	width: usize,
+	height: usize,
+	stride: usize,
+	color: ColorKind,
+}
+
+/// # Initialization.
+impl<'a> TreatedSource<'a> {
+	#[must_use]
+	/// # New.
+	pub fn new(img: Img<Cow<'a, [RGBA8]>>, style: TreatmentKind) -> Self {
+		let color = ColorKind::from(img.as_ref());
+
+		Self {
+			width: img.width(),
+			height: img.height(),
+			stride: img.stride(),
+			img: match style {
+				TreatmentKind::BufferFull => TreatedSourceKind::Buffer(
+					ColorKind::Rgba.to_buf(img.as_ref())
+				),
+				TreatmentKind::BufferUsed => TreatedSourceKind::Buffer(
+					color.to_buf(img.as_ref())
+				),
+				TreatmentKind::Image => TreatedSourceKind::Image(img),
+			},
+			color,
+		}
+	}
+}
+
+/// # Getters.
+impl<'a> TreatedSource<'a> {
+	#[must_use]
+	/// # Buffer.
+	///
+	/// Return the image buffer as a byte slice.
+	///
+	/// ## Panics
+	///
+	/// This will panic if the image is not stored as a
+	/// [`TreatedSourceKind::Buffer`]. This program doesn't make that mistake,
+	/// but if for some reason you're using this as an external library, make
+	/// sure you call the right getter for the right type.
+	pub fn buffer(&self) -> &[u8] {
+		match &self.img {
+			TreatedSourceKind::Buffer(b) => b,
+			_ => panic!("Invalid format."),
+		}
+	}
+
+	#[must_use]
+	/// # Color Kind.
+	pub const fn color(&self) -> ColorKind { self.color }
+
+	#[must_use]
+	/// # Dimensions.
+	pub const fn dimensions(&self) -> (usize, usize) { (self.width, self.height) }
+
+	#[must_use]
+	/// # Buffer.
+	///
+	/// Return the image buffer as a byte slice.
+	///
+	/// ## Panics
+	///
+	/// This will panic if the image is not stored as a
+	/// [`TreatedSourceKind::Image`]. This program doesn't make that mistake,
+	/// but if for some reason you're using this as an external library, make
+	/// sure you call the right getter for the right type.
+	pub fn img_ref(&self) -> Img<&[RGBA8]> {
+		match &self.img {
+			TreatedSourceKind::Image(i) => i.as_ref(),
+			_ => panic!("Invalid format."),
+		}
+	}
+
+	#[must_use]
+	/// # Stride.
+	pub const fn stride(&self) -> usize { self.stride }
 }
 
 

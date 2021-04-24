@@ -6,13 +6,15 @@ AVIF encoding. It works very similarly to [`cavif`](https://crates.io/crates/cav
 not support premultiplied/dirty alpha operations, and the speed is always `1`.
 */
 
-use crate::RefractError;
-use imgref::Img;
+use crate::{
+	RefractError,
+	TreatedSource,
+};
+use imgref::ImgExt;
 use ravif::{
 	ColorSpace,
 	Config,
 };
-use rgb::RGBA8;
 use std::num::NonZeroU8;
 
 
@@ -26,7 +28,7 @@ use std::num::NonZeroU8;
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossy(img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
+pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
 	// Calculate qualities.
 	let quality = quality.get();
 	let alpha_quality = num_integer::div_floor(quality + 100, 2).min(
@@ -35,7 +37,7 @@ pub(super) fn make_lossy(img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<Vec<u
 
 	// Encode it!
 	let (out, _, _) = ravif::encode_rgba(
-		img,
+		img.img_ref().as_ref(),
 		&Config {
 			quality,
 			speed: 1,
