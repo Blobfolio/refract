@@ -5,8 +5,10 @@ This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Go
 `libwebp`. Operations should be equivalent to the corresponding `cwebp` output.
 */
 
-use crate::RefractError;
-use imgref::Img;
+use crate::{
+	RefractError,
+	TreatedSource,
+};
 use libwebp_sys::{
 	WEBP_MAX_DIMENSION,
 	WebPConfig,
@@ -23,7 +25,6 @@ use libwebp_sys::{
 	WebPPictureInit,
 	WebPValidateConfig,
 };
-use ravif::RGBA8;
 use std::{
 	convert::TryFrom,
 	num::NonZeroU8,
@@ -41,7 +42,7 @@ use std::{
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossy(img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
+pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
 	encode(img, init_config(quality))
 }
 
@@ -55,7 +56,7 @@ pub(super) fn make_lossy(img: Img<&[RGBA8]>, quality: NonZeroU8) -> Result<Vec<u
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossless(img: Img<&[RGBA8]>) -> Result<Vec<u8>, RefractError> {
+pub(super) fn make_lossless(img: &TreatedSource) -> Result<Vec<u8>, RefractError> {
 	encode(img, init_lossless_config())
 }
 
@@ -106,7 +107,7 @@ fn init_lossless_config() -> WebPConfig {
 ///
 /// This will return an error if there are problems along the way, including
 /// invalid image dimensions or logical issues with the various components.
-fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWriter), RefractError> {
+fn init_picture(source: &TreatedSource) -> Result<(WebPPicture, *mut WebPMemoryWriter), RefractError> {
 	use std::os::raw::c_int;
 
 	// A Writer wrapper function. (It has to be "safe".)
@@ -119,8 +120,9 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 	}
 
 	// Check the source dimensions.
-	let width = i32::try_from(source.width()).map_err(|_| RefractError::Encode)?;
-	let height = i32::try_from(source.height()).map_err(|_| RefractError::Encode)?;
+	let (width, height) = source.dimensions();
+	let width = i32::try_from(width).map_err(|_| RefractError::Encode)?;
+	let height = i32::try_from(height).map_err(|_| RefractError::Encode)?;
 	if width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION {
 		return Err(RefractError::Encode);
 	}
@@ -140,11 +142,7 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 
 	// Fill the pixel buffers.
 	unsafe {
-		let mut pixel_data = {
-			use rgb::ComponentBytes;
-			let (buf, _, _) = source.to_contiguous_buf();
-			buf.as_bytes().to_vec()
-		};
+		let mut pixel_data = source.buffer().to_vec();
 		let status = WebPPictureImportRGBA(
 			&mut picture,
 			pixel_data.as_mut_ptr(),
@@ -193,7 +191,7 @@ fn init_picture(source: Img<&[RGBA8]>) -> Result<(WebPPicture, *mut WebPMemoryWr
 ///
 /// This will return an error if there are any problems along the way or if
 /// the resulting image is empty (for some reason).
-fn encode(source: Img<&[RGBA8]>, config: WebPConfig) -> Result<Vec<u8>, RefractError> {
+fn encode(source: &TreatedSource, config: WebPConfig) -> Result<Vec<u8>, RefractError> {
 	let (mut picture, writer_ptr) = init_picture(source)?;
 	if unsafe { WebPEncode(&config, &mut picture) } == 0 {
 		return Err(RefractError::Encode);

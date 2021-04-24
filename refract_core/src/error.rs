@@ -18,6 +18,8 @@ pub enum RefractError {
 	Candidate(OutputKind),
 	/// # Encoding error.
 	Encode,
+	/// # Wrong Format.
+	Format,
 	/// # No Encoders.
 	NoEncoders,
 	/// # No Images.
@@ -59,9 +61,11 @@ impl RefractError {
 		match self {
 			Self::Candidate(kind) => match kind {
 				OutputKind::Avif => "No acceptable AVIF candidate was found.",
+				OutputKind::Jxl => "No acceptable JPEG XL candidate was found.",
 				OutputKind::Webp => "No acceptable WebP candidate was found.",
 			},
 			Self::Encode => "Errors were encountered while trying to encode the image.",
+			Self::Format => "The image cannot be returned in the desired.",
 			Self::NoEncoders => "You've disabled all encoders; there is nothing to do!",
 			Self::NoImages => "No images were found.",
 			Self::NoLossless => "Lossless encoding is not supported.",
@@ -74,10 +78,4 @@ impl RefractError {
 			Self::Menu(e) => e.as_str(),
 		}
 	}
-}
-
-#[cfg(feature = "menu")]
-impl From<ArgyleError> for RefractError {
-	#[inline]
-	fn from(src: ArgyleError) -> Self { Self::Menu(src) }
 }

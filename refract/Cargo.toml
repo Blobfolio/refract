@@ -1,10 +1,10 @@
 [package]
 name = "refract"
-version = "0.2.2"
+version = "0.3.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
-description = "Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources."
+description = "Refract is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources."
 repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
 publish = false
@@ -18,7 +18,7 @@ depends = "$auto"
 section = "utility"
 extended-description = """\
 .\n\
-Refract is a guided WebP/AVIF conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality.\n \
+Refract is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality.\n \
 """
 assets = [
     ["../target/x86_64-unknown-linux-gnu/release/refract", "usr/bin/", "755"],
@@ -39,6 +39,10 @@ description = "Print help information."
 [[package.metadata.bashman.switches]]
 long = "--no-avif"
 description = "Skip AVIF conversion."
+
+[[package.metadata.bashman.switches]]
+long = "--no-jxl"
+description = "Skip JPEG XL conversion."
 
 [[package.metadata.bashman.switches]]
 long = "--no-webp"

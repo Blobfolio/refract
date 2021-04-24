@@ -3,9 +3,9 @@
 */
 
 use dactyl::{
+	NiceElapsed,
 	NicePercent,
 	NiceU64,
-	NiceU8,
 };
 use fyi_msg::Msg;
 use refract_core::{
@@ -21,6 +21,10 @@ use std::{
 	path::{
 		Path,
 		PathBuf,
+	},
+	time::{
+		Duration,
+		Instant,
 	},
 };
 
@@ -84,19 +88,33 @@ impl<'a> ImageCli<'a> {
 		))
 			.with_indent(1);
 
+		// Keep track of the timings. Could be interesting.
+		let mut time = Duration::from_secs(0);
+		let mut now = Instant::now();
+
 		// Loop it.
 		let mut guide = self.src.encode(self.kind);
 		while let Some(candidate) = guide.next().filter(|c| c.write(&self.tmp).is_ok()) {
+			time += now.elapsed();
 			if prompt.prompt() {
 				guide.keep(candidate);
 			}
 			else {
 				guide.discard(candidate);
 			}
+			now = Instant::now();
 		}
+		time += now.elapsed();
 
 		// Wrap it up!
 		self.finish(guide.take());
+
+		Msg::plain(format!(
+			"\x1b[2mTotal computation time: {}.\x1b[0m\n",
+			NiceElapsed::from(time).as_str(),
+		))
+			.with_indent(1)
+			.print();
 	}
 
 	/// # Finish.
@@ -104,12 +122,7 @@ impl<'a> ImageCli<'a> {
 		// Handle results.
 		match result {
 			Ok(result) => match result.write(&self.dst) {
-				Ok(_) => print_success(
-					self.src.size().get(),
-					result.size().get(),
-					result.quality().get(),
-					&self.dst
-				),
+				Ok(_) => print_success(self.src.size().get(), &result, &self.dst),
 				Err(e) => print_error(e),
 			},
 			Err(e) => {
@@ -153,27 +166,17 @@ fn print_error(err: RefractError) {
 }
 
 /// # Print Success.
-fn print_success(src_size: u64, dst_size: u64, dst_quality: u8, dst_path: &Path) {
-	let diff: u64 = src_size - dst_size;
+fn print_success(src_size: u64, output: &Output, dst_path: &Path) {
+	let diff: u64 = src_size - output.size().get();
 	let per = dactyl::int_div_float(diff, src_size);
 	let name = dst_path.file_name()
 		.map_or_else(|| Cow::Borrowed("?"), OsStr::to_string_lossy);
 
-	// Lossless.
-	if dst_quality == 100 {
-		Msg::success(format!(
-			"Created \x1b[1m{}\x1b[0m (lossless).",
-			name
-		))
-	}
-	// Lossy.
-	else {
-		Msg::success(format!(
-			"Created \x1b[1m{}\x1b[0m with quality {}.",
-			name,
-			NiceU8::from(dst_quality).as_str(),
-		))
-	}
+	Msg::success(format!(
+		"Created \x1b[1m{}\x1b[0m with {}.",
+		name,
+		output.nice_quality(),
+	))
 		.with_indent(1)
 		.with_suffix(
 			if let Some(per) = per {
