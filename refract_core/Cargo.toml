@@ -13,7 +13,7 @@ publish = false
 imgref = "1.9.*"
 jpeg-decoder = "0.1.*"
 lodepng = "3.4.*"
-loop9 = "0.1.3"
+loop9 = "0.1.*"
 num_cpus = "1.13.*"
 num-integer = "0.1.*"
 rgb = "0.8.*"
@@ -33,7 +33,7 @@ default-features = false
 features = [ "codec-rav1e" ]
 
 [dependencies.libwebp-sys2]
-version = "0.1.*"
+version = "0.1.2"
 features = [ "1_1", "static" ]
 
 [dependencies.tempfile-fast]
