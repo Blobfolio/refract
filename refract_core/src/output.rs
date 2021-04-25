@@ -5,7 +5,6 @@
 use crate::{
 	RefractError,
 	Source,
-	SourceKind,
 	TreatedSource,
 	TreatmentKind,
 };
@@ -422,16 +421,14 @@ impl<'a> OutputIter<'a> {
 				// Try lossless conversion straight away. It is OK if this
 				// fails, but if it succeeds, we'll use this as a starting
 				// point.
-				if src.kind() == SourceKind::Png {
-					if let Ok(data) = kind.lossless(&out.src) {
-						if let Ok(size) = out.normalize_size(data.len()) {
-							out.best = Some(Output {
-								data,
-								kind,
-								size,
-								quality: MAX_QUALITY,
-							});
-						}
+				if let Ok(data) = kind.lossless(&out.src) {
+					if let Ok(size) = out.normalize_size(data.len()) {
+						out.best = Some(Output {
+							data,
+							kind,
+							size,
+							quality: MAX_QUALITY,
+						});
 					}
 				}
 
