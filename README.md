@@ -1,8 +1,5 @@
 # Refract
 
-**Note:**
- >Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483), including those created by GIMP, cavif, refract, libheif, image.rs, sharp, and others. For the time being, it is recommended you disable AVIF generation in this program by passing the `--no-avif` flag.
-
 Refract is a guided CLI image conversion tool. It takes [JPEG](https://en.wikipedia.org/wiki/JPEG) and [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) image sources and produces [AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF)), [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL), and [WebP](https://en.wikipedia.org/wiki/WebP) clones.
 
 The program is named after — and works like — eye doctor Refraction Tests. It generates images at various qualities, asking at each step how it looks, until it arrives at the smallest acceptable candidate possible.
@@ -49,10 +46,10 @@ The following compression modes are attempted when generating next-gen image can
 | WebP | Lossless | PNG | `cwebp -lossless -z 9 -q 100` |
 | WebP | Lossy | JPEG, PNG | `cwebp -m 6 -pass 10 -q <N>` |
 
-Both AVIF and JPEG XL are CPU-aware and will leverage thread parallelization when encoding. This provides massive, but relative, performance improvements for these famously _slow_ formats.
+Both AVIF and JPEG XL are CPU-aware and will leverage thread parallelization when encoding. This provides massive — but relative — performance improvements for these famously _slow_ formats. (They're still 4-10x slower than WebP.)
 
-Speaking of AVIF and JPEG XL, both standards are still cutting edge, and will likely see a number of upstream improvements going forward. They'll probably never be anywhere near as fast as WebP (which will never be anywhere near as fast as JPEG), but should get faster than they are today.
-
+**Note:**
+ >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid sadness.
 
 
 ## Usage
