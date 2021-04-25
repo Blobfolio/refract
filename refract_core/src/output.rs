@@ -235,7 +235,14 @@ impl Output {
 	where P: AsRef<Path> {
 		use std::io::Write;
 
-		tempfile_fast::Sponge::new_for(path.as_ref())
+		// If the file doesn't exist yet, touch it really quick to set sane
+		// starting permissions. (Tempfile doesn't do that.)
+		let path = path.as_ref();
+		if ! path.exists() {
+			let _res = std::fs::File::create(&path);
+		}
+
+		tempfile_fast::Sponge::new_for(path)
 			.and_then(|mut out| out.write_all(&self.data).and_then(|_| out.commit()))
 			.map_err(|_| RefractError::Write)
 	}
