@@ -44,7 +44,6 @@ use std::{
 
 
 
-#[derive(Debug)]
 /// # Hold the Encoder.
 ///
 /// This wrapper exists solely to help with drop cleanup.
@@ -68,7 +67,6 @@ impl Drop for JxlImageEncoder {
 
 
 
-#[derive(Debug)]
 /// # Hold the Thread Runner.
 ///
 /// This wrapper exists solely to help with drop cleanup.
