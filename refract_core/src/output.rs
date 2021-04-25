@@ -239,7 +239,8 @@ impl Output {
 		// starting permissions. (Tempfile doesn't do that.)
 		let path = path.as_ref();
 		if ! path.exists() {
-			let _res = std::fs::File::create(&path);
+			std::fs::File::create(&path)
+				.map_err(|_| RefractError::Write)?;
 		}
 
 		tempfile_fast::Sponge::new_for(path)
