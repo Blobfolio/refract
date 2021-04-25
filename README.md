@@ -36,7 +36,7 @@ Only JPEG and PNG input sources are supported. They can have RGB, RGBA, greyscal
 
 Conversion is done at pixel level; gamma and other metadata profile information is not factored or present in the converted copies, so is not supported.
 
-The following compression modes are attempted when generating next-gen image candidates. The under-the-hood implementations are a bit different, but performance and savings are comparable to the referenced third-party commands:
+Refract implements `libavif`, `libjxl`, and `libwebp` directly so has comparable performance to each format's official standalone binaries (at similar settings). There is some nuance under-the-hood, but Refract's encoding passes roughly correspond to the following third-party commands:
 
 | Encoding | Mode | Inputs | Comparable To Running |
 | -------- | ---- | ---- | ---- |
@@ -49,7 +49,7 @@ The following compression modes are attempted when generating next-gen image can
 Both AVIF and JPEG XL are CPU-aware and will leverage thread parallelization when encoding. This provides massive — but relative — performance improvements for these famously _slow_ formats. (They're still 4-10x slower than WebP.)
 
 **Note:**
- >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid sadness.
+ >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.
 
 
 ## Usage
@@ -93,11 +93,11 @@ If your answers and the file sizes work out right, a final best-case copy of eac
 
 ## Installation
 
-Refract is a Linux-first application. Pre-built `.deb` packages are added to each [release](https://github.com/Blobfolio/refract/releases/latest) for Debian and Ubuntu users. (These packages could also be installed in a Debian/Ubuntu Docker container and run on any host.)
+Pre-built `.deb` packages are added to each [release](https://github.com/Blobfolio/refract/releases/latest) for Debian and Ubuntu users (or in a Docker container, etc.).
 
-But it is written in [Rust](https://www.rust-lang.org/) and so can be built from source using [Cargo](https://github.com/rust-lang/cargo) on other x86-64 Unix platforms (Mac, etc.).
+It is written in [Rust](https://www.rust-lang.org/) and so can be built from source using [Cargo](https://github.com/rust-lang/cargo) on other x86-64 Unix platforms (Mac, etc.).
 
-Note that if building from source, you'll also need NASM, GCC, and Clang installed.
+Note that if building from source, you'll need to have the build dependencies for `libavif`, `libjxl`, and `libwebp` installed, including modern Clang, GCC, NASM, Ninja. (Damn the convoluted development ecosystem!)
 
 
 

@@ -1,9 +1,5 @@
 /*!
 # `Refract`: `AVIF` Handling
-
-This program uses [`ravif`](https://crates.io/crates/ravif) under the hood for
-AVIF encoding. It works very similarly to [`cavif`](https://crates.io/crates/cavif), but does
-not support premultiplied/dirty alpha operations, and the speed is always `1`.
 */
 
 use crate::{
@@ -153,6 +149,8 @@ impl Drop for AvifData {
 /// `libavif`, i.e. 0 is the worst and 63 is the best. (We'll flip it later
 /// on.)
 ///
+/// See [`quality_to_quantizers`] for more information.
+///
 /// ## Errors
 ///
 /// This returns an error in cases where the resulting file size is larger
@@ -182,10 +180,18 @@ pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8) -> Result<Vec<
 #[allow(clippy::cast_possible_truncation)]
 /// # Quality to Quantizer(s).
 ///
-/// AVIF's quality system works in the opposite direction from the quality
-/// stepping of [`OutputIter`], so we need to reverse the values, first of all.
+/// This converts the quality stepping from [`OutputIter`] into appropriate
+/// `libavif` quantizers.
 ///
-/// Additionally, we need to calculate a suitable and seperate alpha value.
+/// The first step is to flip the provided value as [`OutputIter`] and
+/// `libavif` work backward relative to one another. (Or best is their worst.)
+///
+/// AVIF separates out color and alpha values. For the latter, we apply the
+/// formula used by `ravif` as it seems to work well.
+///
+/// It should be noted that since we're starting from a `NonZeroU8`, we can't
+/// actually test the worst possible AVIF quantizers. That's fine, though, as
+/// they're never appropriate.
 fn quality_to_quantizers(quality: NonZeroU8) -> (u8, u8) {
 	// Color first.
 	let q = 63 - quality.get().min(63);
