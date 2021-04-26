@@ -94,17 +94,16 @@ impl Drop for AvifImage {
 /// resources on drop, but also handles setup.
 struct AvifEncoder(*mut avifEncoder);
 
-impl AvifEncoder {
-	#[allow(clippy::cast_possible_truncation)] // It fits.
-	#[allow(clippy::cast_possible_wrap)]
+impl TryFrom<NonZeroU8> for AvifEncoder {
+	type Error = RefractError;
+
 	/// # New Instance.
-	fn new(width: usize, height: usize, quality: NonZeroU8) -> Result<Self, RefractError> {
+	fn try_from(quality: NonZeroU8) -> Result<Self, RefractError> {
 		// Convert quality to quantizers. AVIF is so convoluted...
 		let (q, aq) = quality_to_quantizers(quality);
 
 		// Total threads.
-		let cpus = num_cpus::get();
-		let threads = i32::try_from(cpus).map_err(|_| RefractError::Encode)?;
+		let threads = i32::try_from(num_cpus::get()).map_err(|_| RefractError::Encode)?;
 
 		// Start up the encoder!
 		let encoder = unsafe { avifEncoderCreate() };
@@ -121,38 +120,6 @@ impl AvifEncoder {
 			// There is a speed 0, but it is brutally slow and has very little
 			// benefit.
 			(*encoder).speed = 1;
-
-			// Enable tiling if we are multi-threaded. We want to try to keep
-			// the combined X/Y value equal to the total number of threads,
-			// while also ensuring we aren't trying to divide a small dimension
-			// into too many chunks.
-			if cpus > 1 {
-				let tiles_x;
-				let tiles_y;
-
-				// Prioritize carving up width.
-				if width >= height {
-					// The magic "128" number is 2^6, where 6 is the absolute
-					// maximum accepted tiling value.
-					tiles_x = cpus.min(num_integer::div_floor(width, 128)).max(1);
-					tiles_y = num_integer::div_floor(cpus, tiles_x)
-						.min(num_integer::div_floor(height, 128))
-						.max(1);
-				}
-				// Prioritize carving up the height.
-				else {
-					tiles_y = cpus.min(num_integer::div_floor(height, 128)).max(1);
-					tiles_x = num_integer::div_floor(cpus, tiles_y)
-						.min(num_integer::div_floor(width, 128))
-						.max(1);
-				}
-
-				// We can only split up to 6 times, so cap values thusly.
-				if tiles_x > 1 || tiles_y > 1 {
-					(*encoder).tileRowsLog2 = 6.min(tiles_x) as i32;
-					(*encoder).tileColsLog2 = 6.min(tiles_y) as i32;
-				}
-			}
 		};
 
 		Ok(Self(encoder))
@@ -195,7 +162,7 @@ impl Drop for AvifData {
 /// encountered during encoding or saving.
 pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
 	let image = AvifImage::try_from(img)?;
-	let encoder = AvifEncoder::new(img.width(), img.height(), quality)?;
+	let encoder = AvifEncoder::try_from(quality)?;
 	let mut data = AvifData(avifRWData::default());
 
 	// Encode!
