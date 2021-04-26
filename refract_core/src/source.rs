@@ -266,8 +266,12 @@ impl TreatedSource {
 	pub const fn color(&self) -> ColorKind { self.color }
 
 	#[must_use]
-	/// # Dimensions.
-	pub const fn dimensions(&self) -> (usize, usize) { (self.width, self.height) }
+	/// # Width.
+	pub const fn width(&self) -> usize { self.width }
+
+	#[must_use]
+	/// # Height.
+	pub const fn height(&self) -> usize { self.height }
 
 	#[must_use]
 	/// # Stride.

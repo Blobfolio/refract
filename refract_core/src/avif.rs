@@ -45,9 +45,8 @@ impl TryFrom<&TreatedSource> for AvifImage {
 	type Error = RefractError;
 	fn try_from(src: &TreatedSource) -> Result<Self, Self::Error> {
 		// Make sure dimensions fit u32.
-		let (width, height) = src.dimensions();
-		let width = u32::try_from(width).map_err(|_| RefractError::Encode)?;
-		let height = u32::try_from(height).map_err(|_| RefractError::Encode)?;
+		let width = u32::try_from(src.width()).map_err(|_| RefractError::Encode)?;
+		let height = u32::try_from(src.height()).map_err(|_| RefractError::Encode)?;
 
 		// Grab the buffer.
 		let raw: &[u8] = src.buffer();
@@ -196,8 +195,7 @@ impl Drop for AvifData {
 /// encountered during encoding or saving.
 pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
 	let image = AvifImage::try_from(img)?;
-	let (width, height) = img.dimensions();
-	let encoder = AvifEncoder::new(width, height, quality)?;
+	let encoder = AvifEncoder::new(img.width(), img.height(), quality)?;
 	let mut data = AvifData(avifRWData::default());
 
 	// Encode!
