@@ -120,9 +120,8 @@ fn init_picture(source: &TreatedSource) -> Result<(WebPPicture, *mut WebPMemoryW
 	}
 
 	// Check the source dimensions.
-	let (width, height) = source.dimensions();
-	let width = i32::try_from(width).map_err(|_| RefractError::Encode)?;
-	let height = i32::try_from(height).map_err(|_| RefractError::Encode)?;
+	let width = i32::try_from(source.width()).map_err(|_| RefractError::Encode)?;
+	let height = i32::try_from(source.height()).map_err(|_| RefractError::Encode)?;
 	if width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION {
 		return Err(RefractError::Encode);
 	}

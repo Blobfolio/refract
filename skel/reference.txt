@@ -11,14 +11,13 @@
 	Does cats.jpg.PROPOSED.webp look good? [y/N] y
 	Success: Created cats.jpg.webp with quality 49. (Saved 324,547 bytes, 73.09%.)
 [AVIF]
-	Does cats.jpg.PROPOSED.avif look good? [y/N] y
-	Does cats.jpg.PROPOSED.avif look good? [y/N]
-	Does cats.jpg.PROPOSED.avif look good? [y/N]
-	Does cats.jpg.PROPOSED.avif look good? [y/N] y
-	Does cats.jpg.PROPOSED.avif look good? [y/N]
-	Does cats.jpg.PROPOSED.avif look good? [y/N]
-	Does cats.jpg.PROPOSED.avif look good? [y/N]
-	Success: Created cats.jpg.avif with quality 43. (Saved 354,371 bytes, 79.80%.)
+    Does cats.jpg.PROPOSED.avif look good? [y/N] y
+    Does cats.jpg.PROPOSED.avif look good? [y/N]
+    Does cats.jpg.PROPOSED.avif look good? [y/N]
+    Does cats.jpg.PROPOSED.avif look good? [y/N]
+    Does cats.jpg.PROPOSED.avif look good? [y/N] y
+    Does cats.jpg.PROPOSED.avif look good? [y/N] y
+    Success: Created cats.jpg.avif with quantizer 34. (Saved 320,132 bytes, 72.09%.)
 [JPEG XL]
     Does cats.jpg.PROPOSED.jxl look good? [y/N]
     Does cats.jpg.PROPOSED.jxl look good? [y/N]
@@ -43,14 +42,13 @@
 	Does circles.jpg.PROPOSED.webp look good? [y/N] y
 	Success: Created circles.jpg.webp with quality 97. (Saved 38,001 bytes, 51.64%.)
 [AVIF]
-	Does circles.jpg.PROPOSED.avif look good? [y/N]
-	Does circles.jpg.PROPOSED.avif look good? [y/N] y
-	Does circles.jpg.PROPOSED.avif look good? [y/N] y
-	Does circles.jpg.PROPOSED.avif look good? [y/N] y
-	Does circles.jpg.PROPOSED.avif look good? [y/N] y
-	Does circles.jpg.PROPOSED.avif look good? [y/N]
-	Does circles.jpg.PROPOSED.avif look good? [y/N]
-	Success: Created circles.jpg.avif with quality 53. (Saved 62,855 bytes, 85.42%.)
+    Does circles.jpg.PROPOSED.avif look good? [y/N] y
+    Does circles.jpg.PROPOSED.avif look good? [y/N]
+    Does circles.jpg.PROPOSED.avif look good? [y/N]
+    Does circles.jpg.PROPOSED.avif look good? [y/N]
+    Does circles.jpg.PROPOSED.avif look good? [y/N] y
+    Does circles.jpg.PROPOSED.avif look good? [y/N]
+    Success: Created circles.jpg.avif with quantizer 33. (Saved 63,965 bytes, 86.93%.)
 [JPEG XL]
     Does circles.jpg.PROPOSED.jxl look good? [y/N]
     Does circles.jpg.PROPOSED.jxl look good? [y/N]
@@ -74,14 +72,13 @@
 	Does derby.jpg.PROPOSED.webp look good? [y/N]
 	Success: Created derby.jpg.webp with quality 84. (Saved 91,283 bytes, 65.45%.)
 [AVIF]
-	Does derby.jpg.PROPOSED.avif look good? [y/N]
-	Does derby.jpg.PROPOSED.avif look good? [y/N] y
-	Does derby.jpg.PROPOSED.avif look good? [y/N]
-	Does derby.jpg.PROPOSED.avif look good? [y/N] y
-	Does derby.jpg.PROPOSED.avif look good? [y/N] y
-	Does derby.jpg.PROPOSED.avif look good? [y/N]
-	Does derby.jpg.PROPOSED.avif look good? [y/N]
-	Success: Created derby.jpg.avif with quality 65. (Saved 97,664 bytes, 70.03%.)
+    Does derby.jpg.PROPOSED.avif look good? [y/N]
+    Does derby.jpg.PROPOSED.avif look good? [y/N] y
+    Does derby.jpg.PROPOSED.avif look good? [y/N] y
+    Does derby.jpg.PROPOSED.avif look good? [y/N]
+    Does derby.jpg.PROPOSED.avif look good? [y/N]
+    Does derby.jpg.PROPOSED.avif look good? [y/N]
+    Success: Created derby.jpg.avif with quantizer 24. (Saved 95,894 bytes, 68.76%.)
 [JPEG XL]
     Does derby.jpg.PROPOSED.jxl look good? [y/N]
     Does derby.jpg.PROPOSED.jxl look good? [y/N]
@@ -98,14 +95,13 @@
 [WebP]
 	Success: Created mountains-on-mars.png.webp with lossless quality. (Saved 5,882 bytes, 31.56%.)
 [AVIF]
-	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
-	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
-	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] y
-	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
-	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] y
-	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
-	Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
-	Success: Created mountains-on-mars.png.avif with quality 84. (Saved 9,957 bytes, 53.43%.)
+    Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
+    Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
+    Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] y
+    Does mountains-on-mars.png.PROPOSED.avif look good? [y/N]
+    Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] y
+    Does mountains-on-mars.png.PROPOSED.avif look good? [y/N] y
+    Success: Created mountains-on-mars.png.avif with quantizer 11. (Saved 9,388 bytes, 50.38%.)
 [JPEG XL]
     Does mountains-on-mars.png.PROPOSED.jxl look good? [y/N]
     Does mountains-on-mars.png.PROPOSED.jxl look good? [y/N]
@@ -123,14 +119,13 @@
 	Does myrna.png.PROPOSED.webp look good? [y/N] y
 	Success: Created myrna.png.webp with quality 88. (Saved 324,504 bytes, 73.82%.)
 [AVIF]
-	Does myrna.png.PROPOSED.avif look good? [y/N]
-	Does myrna.png.PROPOSED.avif look good? [y/N] y
-	Does myrna.png.PROPOSED.avif look good? [y/N]
-	Does myrna.png.PROPOSED.avif look good? [y/N]
-	Does myrna.png.PROPOSED.avif look good? [y/N] y
-	Does myrna.png.PROPOSED.avif look good? [y/N]
-	Does myrna.png.PROPOSED.avif look good? [y/N]
-	Success: Created myrna.png.avif with quality 71. (Saved 348,193 bytes, 79.21%.)
+    Does myrna.png.PROPOSED.avif look good? [y/N]
+    Does myrna.png.PROPOSED.avif look good? [y/N] y
+    Does myrna.png.PROPOSED.avif look good? [y/N]
+    Does myrna.png.PROPOSED.avif look good? [y/N]
+    Does myrna.png.PROPOSED.avif look good? [y/N] y
+    Does myrna.png.PROPOSED.avif look good? [y/N]
+    Success: Created myrna.png.avif with quantizer 18. (Saved 333,312 bytes, 75.82%.)
 [JPEG XL]
     Does myrna.png.PROPOSED.jxl look good? [y/N]
     Does myrna.png.PROPOSED.jxl look good? [y/N]
@@ -164,14 +159,13 @@
 	Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
 	Success: Created statler_waldorf_cutout.png.webp with quality 82. (Saved 231,613 bytes, 90.37%.)
 [AVIF]
-	Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N]
-	Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
-	Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
-	Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N]
-	Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
-	Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N]
-	Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N]
-	Success: Created statler_waldorf_cutout.png.avif with quality 59. (Saved 237,741 bytes, 92.76%.)
+    Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N]
+    Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+    Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N]
+    Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N]
+    Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+    Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
+    Success: Created statler_waldorf_cutout.png.avif with quantizer 19. (Saved 231,324 bytes, 90.25%.)
 [JPEG XL]
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N]
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N]
@@ -195,13 +189,13 @@
 	Does wolf.jpg.PROPOSED.webp look good? [y/N] y
 	Success: Created wolf.jpg.webp with quality 83. (Saved 656,433 bytes, 90.80%.)
 [AVIF]
-	Does wolf.jpg.PROPOSED.avif look good? [y/N]
-	Does wolf.jpg.PROPOSED.avif look good? [y/N] y
-	Does wolf.jpg.PROPOSED.avif look good? [y/N]
-	Does wolf.jpg.PROPOSED.avif look good? [y/N] y
-	Does wolf.jpg.PROPOSED.avif look good? [y/N] y
-	Does wolf.jpg.PROPOSED.avif look good? [y/N] y
-	Success: Created wolf.jpg.avif with quality 63. (Saved 661,923 bytes, 91.56%.)
+    Does wolf.jpg.PROPOSED.avif look good? [y/N]
+    Does wolf.jpg.PROPOSED.avif look good? [y/N] y
+    Does wolf.jpg.PROPOSED.avif look good? [y/N]
+    Does wolf.jpg.PROPOSED.avif look good? [y/N] y
+    Does wolf.jpg.PROPOSED.avif look good? [y/N] y
+    Does wolf.jpg.PROPOSED.avif look good? [y/N] y
+    Success: Created wolf.jpg.avif with quantizer 23. (Saved 654,266 bytes, 90.50%.)
 [JPEG XL]
     Does wolf.jpg.PROPOSED.jxl look good? [y/N]
     Does wolf.jpg.PROPOSED.jxl look good? [y/N]

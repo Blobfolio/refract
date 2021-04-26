@@ -5,7 +5,6 @@
 use crate::{
 	RefractError,
 	Source,
-	SourceKind,
 	TreatedSource,
 	TreatmentKind,
 };
@@ -236,7 +235,15 @@ impl Output {
 	where P: AsRef<Path> {
 		use std::io::Write;
 
-		tempfile_fast::Sponge::new_for(path.as_ref())
+		// If the file doesn't exist yet, touch it really quick to set sane
+		// starting permissions. (Tempfile doesn't do that.)
+		let path = path.as_ref();
+		if ! path.exists() {
+			std::fs::File::create(&path)
+				.map_err(|_| RefractError::Write)?;
+		}
+
+		tempfile_fast::Sponge::new_for(path)
 			.and_then(|mut out| out.write_all(&self.data).and_then(|_| out.commit()))
 			.map_err(|_| RefractError::Write)
 	}
@@ -297,6 +304,10 @@ impl Output {
 		{
 			Cow::Borrowed("lossless quality")
 		}
+		// Weird AVIF.
+		else if self.kind == OutputKind::Avif {
+			Cow::Owned(format!("quantizer {:.1}", 63 - quality))
+		}
 		// Weird JPEG XL.
 		else if self.kind == OutputKind::Jxl {
 			let f_quality = f32::from(150_u8 - quality) / 10.0;
@@ -334,34 +345,34 @@ impl Output {
 /// to consume the struct and return the best image found, if any.
 ///
 /// See the `refract` CLI crate for example usage.
-pub struct OutputIter<'a> {
+pub struct OutputIter {
 	bottom: NonZeroU8,
 	top: NonZeroU8,
 	tried: HashSet<NonZeroU8>,
 
-	src: TreatedSource<'a>,
+	src: TreatedSource,
 	src_size: NonZeroU64,
 	kind: OutputKind,
 
 	best: Option<Output>,
 }
 
-impl<'a> OutputIter<'a> {
+impl OutputIter {
 	#[must_use]
 	/// # New.
 	///
 	/// Start a new guided encoding iterator from a given source and encoder.
-	pub fn new(src: &'a Source, kind: OutputKind) -> Self {
+	pub fn new(src: &Source, kind: OutputKind) -> Self {
 		match kind {
 			OutputKind::Avif => {
 				Self {
 					bottom: MIN_QUALITY,
-					top: MAX_QUALITY,
+					top: unsafe { NonZeroU8::new_unchecked(63) },
 					tried: HashSet::new(),
 
 					src: TreatedSource::new(
-						ravif::cleared_alpha(src.img_owned()).into(),
-						TreatmentKind::Image
+						crate::clear_alpha(src.img_owned()).as_ref(),
+						TreatmentKind::Full
 					),
 					src_size: src.size(),
 					kind,
@@ -376,8 +387,8 @@ impl<'a> OutputIter<'a> {
 					tried: HashSet::new(),
 
 					src: TreatedSource::new(
-						ravif::cleared_alpha(src.img_owned()).into(),
-						TreatmentKind::BufferUsed
+						crate::clear_alpha(src.img_owned()).as_ref(),
+						TreatmentKind::Compact
 					),
 					src_size: src.size(),
 					kind,
@@ -409,10 +420,7 @@ impl<'a> OutputIter<'a> {
 					top: MAX_QUALITY,
 					tried: HashSet::new(),
 
-					src: TreatedSource::new(
-						src.img().into(),
-						TreatmentKind::BufferFull
-					),
+					src: TreatedSource::new(src.img(), TreatmentKind::Full),
 					src_size: src.size(),
 					kind,
 
@@ -422,16 +430,14 @@ impl<'a> OutputIter<'a> {
 				// Try lossless conversion straight away. It is OK if this
 				// fails, but if it succeeds, we'll use this as a starting
 				// point.
-				if src.kind() == SourceKind::Png {
-					if let Ok(data) = kind.lossless(&out.src) {
-						if let Ok(size) = out.normalize_size(data.len()) {
-							out.best = Some(Output {
-								data,
-								kind,
-								size,
-								quality: MAX_QUALITY,
-							});
-						}
+				if let Ok(data) = kind.lossless(&out.src) {
+					if let Ok(size) = out.normalize_size(data.len()) {
+						out.best = Some(Output {
+							data,
+							kind,
+							size,
+							quality: MAX_QUALITY,
+						});
 					}
 				}
 
@@ -441,7 +447,7 @@ impl<'a> OutputIter<'a> {
 	}
 }
 
-impl<'a> Iterator for OutputIter<'a> {
+impl Iterator for OutputIter {
 	type Item = Output;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -465,7 +471,7 @@ impl<'a> Iterator for OutputIter<'a> {
 }
 
 /// # Iteration Helpers.
-impl<'a> OutputIter<'a> {
+impl OutputIter {
 	/// # Discard Candidate.
 	///
 	/// Use this method to reject a given candidate because e.g. it didn't look
@@ -596,7 +602,7 @@ impl<'a> OutputIter<'a> {
 }
 
 /// # Best Getters.
-impl<'a> OutputIter<'a> {
+impl OutputIter {
 	#[must_use]
 	/// # Best.
 	///

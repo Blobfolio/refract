@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "0.3.0"
+version = "0.3.1"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -13,6 +13,7 @@ publish = false
 imgref = "1.9.*"
 jpeg-decoder = "0.1.*"
 lodepng = "3.4.*"
+loop9 = "0.1.*"
 num_cpus = "1.13.*"
 num-integer = "0.1.*"
 rgb = "0.8.*"
@@ -26,19 +27,19 @@ version = "0.3.7"
 default-features = false
 features = [ "threads" ]
 
-[dependencies.libwebp-sys2]
-version = "0.1.*"
-features = [ "1_1", "static" ]
-
-[dependencies.ravif]
-version = "0.7.*"
+[dependencies.libavif-sys]
+version = "0.9.0"
 default-features = false
+features = [ "codec-rav1e" ]
+
+[dependencies.libwebp-sys2]
+version = "0.1.2"
+features = [ "1_1", "static" ]
 
 [dependencies.tempfile-fast]
 git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
 rev = "7cd84b2"
 
 [features]
-default = [ "asm" ]    # Workaround for Travis. Its version of NASM is too old
-asm = [ "ravif/asm" ]  # to build rav1e (via ravif) with asm enabled.
-menu = [ "argyle" ]    # Passthrough menu errors.
+default = []
+menu = [ "argyle" ] # Passthrough menu errors.

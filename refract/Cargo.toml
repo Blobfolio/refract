@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.3.0"
+version = "0.3.1"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -75,9 +75,4 @@ tag = "v0.7.1"
 
 [dependencies.refract_core]
 path = "../refract_core"
-default-features = false
 features = [ "menu" ]
-
-[features]
-default = [ "asm" ]          # See refract_core for explanation.
-asm = [ "refract_core/asm" ]

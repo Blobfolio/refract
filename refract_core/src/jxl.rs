@@ -44,7 +44,6 @@ use std::{
 
 
 
-#[derive(Debug)]
 /// # Hold the Encoder.
 ///
 /// This wrapper exists solely to help with drop cleanup.
@@ -68,7 +67,6 @@ impl Drop for JxlImageEncoder {
 
 
 
-#[derive(Debug)]
 /// # Hold the Thread Runner.
 ///
 /// This wrapper exists solely to help with drop cleanup.
@@ -138,7 +136,6 @@ fn encode(img: &TreatedSource, quality: Option<NonZeroU8>) -> Result<Vec<u8>, Re
 	// Initialize the encoder.
 	let enc = JxlImageEncoder::new()?;
 
-	let (width, height) = img.dimensions();
 	let color = img.color();
 
 	// Hook in parallelism.
@@ -187,8 +184,8 @@ fn encode(img: &TreatedSource, quality: Option<NonZeroU8>) -> Result<Vec<u8>, Re
 
 	// Set up JPEG XL's "basic info" struct.
 	let mut basic_info = unsafe { JxlBasicInfo::new_uninit().assume_init() };
-	basic_info.xsize = u32::try_from(width).map_err(|_| RefractError::Encode)?;
-	basic_info.ysize = u32::try_from(height).map_err(|_| RefractError::Encode)?;
+	basic_info.xsize = u32::try_from(img.width()).map_err(|_| RefractError::Encode)?;
+	basic_info.ysize = u32::try_from(img.height()).map_err(|_| RefractError::Encode)?;
 	basic_info.uses_original_profile = false as _;
 	basic_info.have_container = false as _;
 

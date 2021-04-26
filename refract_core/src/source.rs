@@ -153,7 +153,7 @@ impl Source {
 	/// acceptable candidate.
 	///
 	/// See [`OutputIter`] for more information.
-	pub fn encode(&self, kind: OutputKind) -> OutputIter<'_> {
+	pub fn encode(&self, kind: OutputKind) -> OutputIter {
 		OutputIter::new(self, kind)
 	}
 }
@@ -200,20 +200,16 @@ impl From<ImgVec<RGBA8>> for TreatedSourceKind<'_> {
 ///
 /// This enum is only used for initializing a [`TreatedSource`].
 pub enum TreatmentKind {
-	/// # Buffer.
+	/// # RGBA.
 	///
 	/// A buffer with 4-channel RGBA data, regardless of whether all those
 	/// channels are used.
-	BufferFull,
-	/// # Buffer (Compact).
+	Full,
+	/// # Variable.
 	///
 	/// A buffer containing only the channels used. It could be anywhere from
 	/// one byte per pixel (greyscale) or four bytes per pixel (RGBA).
-	BufferUsed,
-	/// # An Image.
-	///
-	/// An owned or borrowed `Img`.
-	Image,
+	Compact,
 }
 
 
@@ -222,8 +218,8 @@ pub enum TreatmentKind {
 /// # Treated Source.
 ///
 /// This is the raw image data, pre-treated, ready to feed to an encoder.
-pub struct TreatedSource<'a> {
-	img: TreatedSourceKind<'a>,
+pub struct TreatedSource {
+	img: Box<[u8]>,
 	width: usize,
 	height: usize,
 	stride: usize,
@@ -231,10 +227,10 @@ pub struct TreatedSource<'a> {
 }
 
 /// # Initialization.
-impl<'a> TreatedSource<'a> {
+impl TreatedSource {
 	#[must_use]
 	/// # New.
-	pub fn new(img: Img<Cow<'a, [RGBA8]>>, style: TreatmentKind) -> Self {
+	pub fn new(img: Img<& [RGBA8]>, style: TreatmentKind) -> Self {
 		let color = ColorKind::from(img.as_ref());
 
 		Self {
@@ -242,13 +238,8 @@ impl<'a> TreatedSource<'a> {
 			height: img.height(),
 			stride: img.stride(),
 			img: match style {
-				TreatmentKind::BufferFull => TreatedSourceKind::Buffer(
-					ColorKind::Rgba.to_buf(img.as_ref())
-				),
-				TreatmentKind::BufferUsed => TreatedSourceKind::Buffer(
-					color.to_buf(img.as_ref())
-				),
-				TreatmentKind::Image => TreatedSourceKind::Image(img),
+				TreatmentKind::Full => ColorKind::Rgba.to_buf(img),
+				TreatmentKind::Compact => color.to_buf(img),
 			},
 			color,
 		}
@@ -256,7 +247,7 @@ impl<'a> TreatedSource<'a> {
 }
 
 /// # Getters.
-impl<'a> TreatedSource<'a> {
+impl TreatedSource {
 	#[must_use]
 	/// # Buffer.
 	///
@@ -268,38 +259,19 @@ impl<'a> TreatedSource<'a> {
 	/// [`TreatedSourceKind::Buffer`]. This program doesn't make that mistake,
 	/// but if for some reason you're using this as an external library, make
 	/// sure you call the right getter for the right type.
-	pub fn buffer(&self) -> &[u8] {
-		match &self.img {
-			TreatedSourceKind::Buffer(b) => b,
-			_ => panic!("Invalid format."),
-		}
-	}
+	pub const fn buffer(&self) -> &[u8] { & self.img }
 
 	#[must_use]
 	/// # Color Kind.
 	pub const fn color(&self) -> ColorKind { self.color }
 
 	#[must_use]
-	/// # Dimensions.
-	pub const fn dimensions(&self) -> (usize, usize) { (self.width, self.height) }
+	/// # Width.
+	pub const fn width(&self) -> usize { self.width }
 
 	#[must_use]
-	/// # Buffer.
-	///
-	/// Return the image buffer as a byte slice.
-	///
-	/// ## Panics
-	///
-	/// This will panic if the image is not stored as a
-	/// [`TreatedSourceKind::Image`]. This program doesn't make that mistake,
-	/// but if for some reason you're using this as an external library, make
-	/// sure you call the right getter for the right type.
-	pub fn img_ref(&self) -> Img<&[RGBA8]> {
-		match &self.img {
-			TreatedSourceKind::Image(i) => i.as_ref(),
-			_ => panic!("Invalid format."),
-		}
-	}
+	/// # Height.
+	pub const fn height(&self) -> usize { self.height }
 
 	#[must_use]
 	/// # Stride.

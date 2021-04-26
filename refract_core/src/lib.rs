@@ -24,6 +24,7 @@
 
 #![allow(clippy::module_name_repetitions)]
 
+mod alpha;
 mod color;
 mod error;
 mod output;
@@ -33,6 +34,7 @@ pub(self) mod avif;
 pub(self) mod jxl;
 pub(self) mod webp;
 
+pub(crate) use alpha::clear_alpha;
 pub use color::ColorKind;
 pub use error::RefractError;
 pub use output::{
