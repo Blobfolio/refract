@@ -46,7 +46,9 @@ Refract implements `libavif`, `libjxl`, and `libwebp` directly so has comparable
 | WebP | Lossless | PNG | `cwebp -lossless -z 9 -q 100` |
 | WebP | Lossy | JPEG, PNG | `cwebp -m 6 -pass 10 -q <N>` |
 
-Both AVIF and JPEG XL are CPU-aware and will leverage thread parallelization when encoding. This provides massive — but relative — performance improvements for these famously _slow_ formats. (They're still 4-10x slower than WebP.)
+AVIF encoding is multi-threaded, but not tiled. (It is a _slow_ process no matter what, so we might as well maximize the compression savings!)
+
+JPEG XL encoding is multi-threaded through and through.
 
 **Note:**
  >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.
