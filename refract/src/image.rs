@@ -22,10 +22,6 @@ use std::{
 		Path,
 		PathBuf,
 	},
-	time::{
-		Duration,
-		Instant,
-	},
 };
 
 
@@ -88,28 +84,22 @@ impl<'a> ImageCli<'a> {
 		))
 			.with_indent(1);
 
-		// Keep track of the timings. Could be interesting.
-		let mut time = Duration::from_secs(0);
-		let mut now = Instant::now();
-
 		// Loop it.
 		let mut guide = self.src.encode(self.kind);
 		while let Some(candidate) = guide.next().filter(|c| c.write(&self.tmp).is_ok()) {
-			time += now.elapsed();
 			if prompt.prompt() {
 				guide.keep(candidate);
 			}
 			else {
 				guide.discard(candidate);
 			}
-			now = Instant::now();
 		}
 
 		// Wrap it up!
+		let time = guide.time();
 		self.finish(guide.take());
 
 		// Print the timings.
-		time += now.elapsed();
 		Msg::plain(format!(
 			"\x1b[2mTotal computation time: {}.\x1b[0m\n",
 			NiceElapsed::from(time).as_str(),

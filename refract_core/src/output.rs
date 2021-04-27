@@ -20,6 +20,10 @@ use std::{
 	},
 	os::unix::ffi::OsStrExt,
 	path::Path,
+	time::{
+		Duration,
+		Instant,
+	},
 };
 
 
@@ -379,6 +383,8 @@ pub struct OutputIter {
 	kind: OutputKind,
 
 	best: Option<Output>,
+	time: Duration,
+	done: bool,
 }
 
 impl OutputIter {
@@ -402,6 +408,8 @@ impl OutputIter {
 					kind,
 
 					best: None,
+					time: Duration::from_secs(0),
+					done: false,
 				}
 			},
 			OutputKind::Jxl => {
@@ -418,7 +426,12 @@ impl OutputIter {
 					kind,
 
 					best: None,
+					time: Duration::from_secs(0),
+					done: false,
 				};
+
+				// Time the extra work.
+				let now = Instant::now();
 
 				// This would trigger lossless mode, which we're about to
 				// do right now.
@@ -436,6 +449,9 @@ impl OutputIter {
 					}
 				}
 
+				// Record the time spent.
+				out.time += now.elapsed();
+
 				out
 			},
 			OutputKind::Webp => {
@@ -449,7 +465,12 @@ impl OutputIter {
 					kind,
 
 					best: None,
+					time: Duration::from_secs(0),
+					done: false,
 				};
+
+				// Time the extra work.
+				let now = Instant::now();
 
 				// Try lossless conversion straight away. It is OK if this
 				// fails, but if it succeeds, we'll use this as a starting
@@ -465,6 +486,9 @@ impl OutputIter {
 					}
 				}
 
+				// Record the time spent.
+				out.time += now.elapsed();
+
 				out
 			},
 		}
@@ -475,22 +499,23 @@ impl Iterator for OutputIter {
 	type Item = Output;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		let quality = self.next_quality()?;
-		let data = self.kind.lossy(&self.src, quality).ok()?;
+		// Start a timer.
+		let now = Instant::now();
 
-		match self.normalize_size(data.len()) {
-			Ok(size) => Some(Output {
-				data,
-				kind: self.kind,
-				size,
-				quality,
-			}),
-			Err(RefractError::TooBig) => {
-				self.set_top_minus_one(quality);
-				self.next()
-			},
-			Err(_) => None,
+		// Handle the actual next business.
+		let res = self.next_inner();
+
+		// If we're done, see if it is worth doing one more (silent) pass
+		// against the best found.
+		if res.is_none() && ! self.done {
+			let _res = self.next_final();
 		}
+
+		// Record the time spent.
+		self.time += now.elapsed();
+
+		// Return the result!
+		res
 	}
 }
 
@@ -514,6 +539,69 @@ impl OutputIter {
 	pub fn keep(&mut self, candidate: Output) {
 		self.set_top(candidate.quality);
 		self.best.replace(candidate);
+	}
+
+	#[inline]
+	/// # (True) Next.
+	///
+	/// This is the actual worker method for [`OutputIter::next`]. It is
+	/// offloaded to a separate function to make it easier to track execution
+	/// time.
+	fn next_inner(&mut self) -> Option<Output> {
+		let quality = self.next_quality()?;
+		let data = self.kind.lossy(&self.src, quality).ok()?;
+
+		match self.normalize_size(data.len()) {
+			Ok(size) => Some(Output {
+				data,
+				kind: self.kind,
+				size,
+				quality,
+			}),
+			Err(RefractError::TooBig) => {
+				self.set_top_minus_one(quality);
+				self.next()
+			},
+			Err(_) => None,
+		}
+	}
+
+	/// # One More Time.
+	///
+	/// This potentially takes one more run against the settings used for the
+	/// discovered best candidate using stronger (slower) compression.
+	///
+	/// It is currently only used for AVIF images, as we cheat a little bit
+	/// during iteration by splitting images up into multiple tiles for
+	/// parallel processing. Tiling is great performance boost, but does often
+	/// result in slightly larger files.
+	///
+	/// Anyhoo, for AVIFs, this will run once more without tiling and silently
+	/// replace the best candidate if it winds up smaller.
+	///
+	/// ## Errors
+	///
+	/// This will return an erorr if there is no best candidate, no compression
+	/// gains, etc., but the result is not actually used anywhere. If it works
+	/// it is silently saved, if not, no changes occur.
+	fn next_final(&mut self) -> Result<(), RefractError> {
+		if self.done { return Ok(()); }
+		self.done = true;
+
+		let quality = self.best()
+			.map(|o| o.quality)
+			.ok_or(RefractError::NothingDoing)?;
+		let data = self.kind.lossy_plus(&self.src, quality)?;
+		let size = self.normalize_size(data.len())?;
+
+		self.best.replace(Output {
+			data,
+			kind: self.kind,
+			size,
+			quality,
+		});
+
+		Ok(())
 	}
 
 	/// # Next Quality.
@@ -654,23 +742,14 @@ impl OutputIter {
 	///
 	/// If no candidates were found, an error is returned.
 	pub fn take(self) -> Result<Output, RefractError> {
-		let best = self.best.ok_or(RefractError::Candidate(self.kind))?;
-
-		// Try one final hard pass at the data to see if we can save a bit more
-		// space!
-		if let Ok(data) = self.kind.lossy_plus(&self.src, best.quality) {
-			if let Ok(size) = u64::try_from(data.len()) {
-				if let Some(size) = NonZeroU64::new(size).filter(|s| s < &best.size) {
-					return Ok(Output {
-						data,
-						kind: self.kind,
-						size,
-						quality: best.quality,
-					});
-				}
-			}
-		}
-
-		Ok(best)
+		self.best.ok_or(RefractError::Candidate(self.kind))
 	}
+
+	#[inline]
+	#[must_use]
+	/// # Execution Time.
+	///
+	/// Retrieve the time spent encoding. This is probably only useful to call
+	/// all iteration stages have been exhausted.
+	pub const fn time(&self) -> Duration { self.time }
 }
