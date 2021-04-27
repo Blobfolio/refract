@@ -36,22 +36,33 @@ Only JPEG and PNG input sources are supported. They can have RGB, RGBA, greyscal
 
 Conversion is done at pixel level; gamma and other metadata profile information is not factored or present in the converted copies, so is not supported.
 
-Refract implements `libavif`, `libjxl`, and `libwebp` directly so has comparable performance to each format's official standalone binaries (at similar settings). There is some nuance under-the-hood, but Refract's encoding passes roughly correspond to the following third-party commands:
+Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjxl`](https://gitlab.com/wg1/jpeg-xl), and [`libwebp`](https://chromium.googlesource.com/webm/libwebp/) directly so has comparable performance to each format's official standalone binaries (at similar settings). There is some nuance under-the-hood, but Refract's encoding passes roughly correspond to the following third-party commands:
 
-| Encoding | Mode | Inputs | Comparable To Running |
-| -------- | ---- | ---- | ---- |
-| AVIF | Lossy | JPEG, PNG | `cavif --speed 1 --quality <N>` |
-| JPEG XL | Lossless | JPEG, PNG | `cjxl --speed tortoise --distance 0.0` |
-| JPEG XL | Lossy | JPEG, PNG | `cjxl --speed tortoise --distance <N>` |
-| WebP | Lossless | PNG | `cwebp -lossless -z 9 -q 100` |
-| WebP | Lossy | JPEG, PNG | `cwebp -m 6 -pass 10 -q <N>` |
+| Encoding | Mode | Parallel | Comparable To Running |
+| -------- | ---- | -------- | --------------------- |
+| AVIF | Lossy | Y | `cavif --speed 1 --quality <N>` |
+| JPEG XL | Lossless | Y | `cjxl --speed tortoise --distance 0.0` |
+| JPEG XL | Lossy | Y | `cjxl --speed tortoise --distance <N>` |
+| WebP | Lossless | N | `cwebp -lossless -z 9 -q 100` |
+| WebP | Lossy | N | `cwebp -m 6 -pass 10 -q <N>` |
 
-AVIF encoding is multi-threaded, but not tiled. (It is a _slow_ process no matter what, so we might as well maximize the compression savings!)
+Refract applies lossless encoding first, when supported, then follows by testing lossy compression at various qualities until the "best" overall candidate is found.
 
-JPEG XL encoding is multi-threaded through and through.
+The guided feedback is only required for lossy stages. Lossless, being lossless, is assumed to be fine so long as it results in a smaller image than the source.
+
+### AVIF
+
+AVIF encoding is _slow_.
+
+To make it at all bearable, two concessions are made:
+ * The encoder is run with speed `1` rather than speed `0`;
+ * Images are split into "tiles" that can be processed in parallel;
+
+The latter is compensated for by automatically repeating the chosen "best" encoding one time at the end with tiling optimizations disabled.
 
 **Note:**
  >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.
+
 
 
 ## Usage
