@@ -160,9 +160,20 @@ impl Drop for AvifData {
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
+pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8, tiles: bool) -> Result<Vec<u8>, RefractError> {
 	let image = AvifImage::try_from(img)?;
 	let encoder = AvifEncoder::try_from(quality)?;
+
+	// Configure tiling.
+	if tiles {
+		if let Some((x, y)) = img.tiles() {
+			unsafe {
+				(*encoder.0).tileRowsLog2 = x;
+				(*encoder.0).tileColsLog2 = y;
+			}
+		}
+	}
+
 	let mut data = AvifData(avifRWData::default());
 
 	// Encode!

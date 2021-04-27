@@ -26,6 +26,8 @@ pub enum RefractError {
 	NoImages,
 	/// # Encoder does not support lossless mode.
 	NoLossless,
+	/// # Nothing Doing.
+	NothingDoing,
 	/// # Unable to read source.
 	Read,
 	/// # Invalid image source.
@@ -69,6 +71,7 @@ impl RefractError {
 			Self::NoEncoders => "You've disabled all encoders; there is nothing to do!",
 			Self::NoImages => "No images were found.",
 			Self::NoLossless => "Lossless encoding is not supported.",
+			Self::NothingDoing => "There is nothing more to try.",
 			Self::Read => "Unable to read the source image.",
 			Self::Source => "Invalid image source.",
 			Self::TooBig => "The encoded image was larger than the source.",
