@@ -104,11 +104,12 @@ impl<'a> ImageCli<'a> {
 			}
 			now = Instant::now();
 		}
-		time += now.elapsed();
 
 		// Wrap it up!
 		self.finish(guide.take());
 
+		// Print the timings.
+		time += now.elapsed();
 		Msg::plain(format!(
 			"\x1b[2mTotal computation time: {}.\x1b[0m\n",
 			NiceElapsed::from(time).as_str(),

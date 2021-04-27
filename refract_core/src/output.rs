@@ -123,7 +123,7 @@ impl OutputKind {
 		quality: NonZeroU8
 	) -> Result<Vec<u8>, RefractError> {
 		let out = match self {
-			Self::Avif => crate::avif::make_lossy(img, quality),
+			Self::Avif => crate::avif::make_lossy(img, quality, true),
 			Self::Jxl => crate::jxl::make_lossy(img, quality),
 			Self::Webp => crate::webp::make_lossy(img, quality),
 		}?;
@@ -139,6 +139,30 @@ impl OutputKind {
 		let data_kind = Self::try_from(data.as_slice())?;
 		if self == data_kind { Ok(data) }
 		else { Err(RefractError::Encode) }
+	}
+
+	/// # Once More.
+	///
+	/// This is used to perform one final encoding pass using extreme (slow)
+	/// settings to see if any additional savings can be obtained.
+	///
+	/// At the moment this is only used for AVIF sessions, which save time
+	/// during the main run by using tiling cheats. This pass will skip said
+	/// tiling.
+	///
+	/// ## Errors
+	///
+	/// If the encoder runs into trouble, an error will be returned.
+	fn lossy_plus(
+		self,
+		img: &TreatedSource,
+		quality: NonZeroU8
+	) -> Result<Vec<u8>, RefractError> {
+		let out = match self {
+			Self::Avif => crate::avif::make_lossy(img, quality, false),
+			Self::Jxl | Self::Webp => Err(RefractError::NothingDoing),
+		}?;
+		self.check_kind(out)
 	}
 }
 
@@ -630,6 +654,23 @@ impl OutputIter {
 	///
 	/// If no candidates were found, an error is returned.
 	pub fn take(self) -> Result<Output, RefractError> {
-		self.best.ok_or(RefractError::Candidate(self.kind))
+		let best = self.best.ok_or(RefractError::Candidate(self.kind))?;
+
+		// Try one final hard pass at the data to see if we can save a bit more
+		// space!
+		if let Ok(data) = self.kind.lossy_plus(&self.src, best.quality) {
+			if let Ok(size) = u64::try_from(data.len()) {
+				if let Some(size) = NonZeroU64::new(size).filter(|s| s < &best.size) {
+					return Ok(Output {
+						data,
+						kind: self.kind,
+						size,
+						quality: best.quality,
+					});
+				}
+			}
+		}
+
+		Ok(best)
 	}
 }
