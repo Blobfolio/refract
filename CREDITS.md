@@ -248,7 +248,7 @@ limitations under the License.
 * [itertools 0.10.0](https://github.com/bluss/rust-itertools)
 * [jpeg-decoder 0.1.22](https://github.com/image-rs/jpeg-decoder)
 * [lazy_static 1.4.0](https://github.com/rust-lang-nursery/lazy-static.rs)
-* [libc 0.2.93](https://github.com/rust-lang/libc)
+* [libc 0.2.94](https://github.com/rust-lang/libc)
 * [num-derive 0.3.3](https://github.com/rust-num/num-derive)
 * [num-integer 0.1.44](https://github.com/rust-num/num-integer)
 * [num-traits 0.2.14](https://github.com/rust-num/num-traits)
@@ -2553,8 +2553,8 @@ SOFTWARE.
 * [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
 * [dowser 0.2.2](https://github.com/Blobfolio/dowser)
 * [fyi_msg 0.7.1](https://github.com/Blobfolio/fyi)
-* [refract 0.3.1](https://github.com/Blobfolio/refract)
-* [refract_core 0.3.1](https://github.com/Blobfolio/refract)
+* [refract 0.3.2](https://github.com/Blobfolio/refract)
+* [refract_core 0.3.2](https://github.com/Blobfolio/refract)
 
 
 ```
