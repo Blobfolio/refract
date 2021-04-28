@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "0.3.2"
+version = "0.3.3"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -35,10 +35,6 @@ features = [ "codec-rav1e" ]
 [dependencies.libwebp-sys2]
 version = "0.1.2"
 features = [ "1_1", "static" ]
-
-[dependencies.tempfile-fast]
-git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
-rev = "7cd84b2"
 
 [features]
 default = []

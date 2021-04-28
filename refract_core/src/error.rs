@@ -2,8 +2,8 @@
 # `Refract` - Error
 */
 
-use crate::OutputKind;
 #[cfg(feature = "menu")] use argyle::ArgyleError;
+use crate::OutputKind;
 use std::{
 	error::Error,
 	fmt,
@@ -11,30 +11,22 @@ use std::{
 
 
 
+#[allow(missing_docs)]
 #[derive(Debug, Copy, Clone)]
 /// # Error.
 pub enum RefractError {
-	/// # No candidate found.
-	Candidate(OutputKind),
-	/// # Encoding error.
+	Color,
 	Encode,
-	/// # Wrong Format.
-	Format,
-	/// # No Encoders.
+	NoBest(OutputKind),
 	NoEncoders,
-	/// # No Images.
 	NoImages,
-	/// # Encoder does not support lossless mode.
 	NoLossless,
-	/// # Nothing Doing.
 	NothingDoing,
-	/// # Unable to read source.
+	Output,
+	Overflow,
 	Read,
-	/// # Invalid image source.
 	Source,
-	/// # Candidate too big.
 	TooBig,
-	/// # Unable to write to file.
 	Write,
 
 	#[cfg(feature = "menu")]
@@ -45,10 +37,12 @@ pub enum RefractError {
 impl Error for RefractError {}
 
 impl AsRef<str> for RefractError {
+	#[inline]
 	fn as_ref(&self) -> &str { self.as_str() }
 }
 
 impl fmt::Display for RefractError {
+	#[inline]
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		f.write_str(self.as_str())
 	}
@@ -61,21 +55,23 @@ impl RefractError {
 	/// Return the error as an English string slice.
 	pub const fn as_str(self) -> &'static str {
 		match self {
-			Self::Candidate(kind) => match kind {
+			Self::Color => "Unsupported color encoding.",
+			Self::Encode => "Unable to encode the image.",
+			Self::NoBest(k) => match k {
 				OutputKind::Avif => "No acceptable AVIF candidate was found.",
 				OutputKind::Jxl => "No acceptable JPEG XL candidate was found.",
 				OutputKind::Webp => "No acceptable WebP candidate was found.",
 			},
-			Self::Encode => "Errors were encountered while trying to encode the image.",
-			Self::Format => "The image cannot be returned in the desired.",
-			Self::NoEncoders => "You've disabled all encoders; there is nothing to do!",
+			Self::NoEncoders => "No encoders were selected.",
 			Self::NoImages => "No images were found.",
-			Self::NoLossless => "Lossless encoding is not supported.",
-			Self::NothingDoing => "There is nothing more to try.",
-			Self::Read => "Unable to read the source image.",
-			Self::Source => "Invalid image source.",
-			Self::TooBig => "The encoded image was larger than the source.",
-			Self::Write => "Unable to save the image.",
+			Self::NoLossless => "Lossless compression is not supported.",
+			Self::NothingDoing => "There is nothing else to do.",
+			Self::Output => "Invalid output format.",
+			Self::Overflow => "The numeric value is out of range.",
+			Self::Read => "Unable to read the source file.",
+			Self::Source => "Invalid source image.",
+			Self::TooBig => "The encoded image was too big.",
+			Self::Write => "Unable to save the file.",
 
 			#[cfg(feature = "menu")]
 			Self::Menu(e) => e.as_str(),

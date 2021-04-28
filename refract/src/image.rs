@@ -33,7 +33,7 @@ use std::{
 /// conversion process. It is initialized with [`ImageCli::new`] and run with
 /// [`ImageCli::encode`].
 pub(super) struct ImageCli<'a> {
-	src: &'a Source,
+	src: &'a Source<'a>,
 	kind: OutputKind,
 	tmp: PathBuf,
 	dst: PathBuf,
@@ -86,7 +86,7 @@ impl<'a> ImageCli<'a> {
 
 		// Loop it.
 		let mut guide = self.src.encode(self.kind);
-		while let Some(candidate) = guide.next().filter(|c| c.write(&self.tmp).is_ok()) {
+		while let Some(candidate) = guide.next().filter(|c| save_image(&self.tmp, c).is_ok()) {
 			if prompt.prompt() {
 				guide.keep(candidate);
 			}
@@ -112,7 +112,7 @@ impl<'a> ImageCli<'a> {
 	fn finish(self, result: Result<Output, RefractError>) {
 		// Handle results.
 		match result {
-			Ok(result) => match result.write(&self.dst) {
+			Ok(result) => match save_image(&self.dst, &result) {
 				Ok(_) => print_success(self.src.size().get(), &result, &self.dst),
 				Err(e) => print_error(e),
 			},
@@ -185,4 +185,20 @@ fn print_success(src_size: u64, output: &Output, dst_path: &Path) {
 			}
 		)
 		.print();
+}
+
+/// # Write Result.
+fn save_image(path: &Path, data: &[u8]) -> Result<(), RefractError> {
+	use std::io::Write;
+
+	// If the file doesn't exist yet, touch it really quick to set sane
+	// starting permissions. (Tempfile doesn't do that.)
+	if ! path.exists() {
+		std::fs::File::create(path)
+			.map_err(|_| RefractError::Write)?;
+	}
+
+	tempfile_fast::Sponge::new_for(path)
+		.and_then(|mut out| out.write_all(data).and_then(|_| out.commit()))
+		.map_err(|_| RefractError::Write)
 }
