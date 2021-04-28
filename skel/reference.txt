@@ -147,6 +147,17 @@
 [JPEG XL]
     Warning: No acceptable JPEG XL candidate was found.
 
++--------------------------+
+| /share/skel/assets/r.png |
++--------------------------+
+[WebP]
+    Success: Created r.png.webp with lossless quality. (Saved 256 bytes, 42.24%.)
+[AVIF]
+    Does r.png.PROPOSED.avif look good? [y/N]
+    Warning: No acceptable AVIF candidate was found.
+[JPEG XL]
+    Success: Created r.png.jxl with lossless quality. (Saved 212 bytes, 34.98%.)
+
 +-----------------------------------------------+
 | /share/skel/assets/statler_waldorf_cutout.png |
 +-----------------------------------------------+
@@ -157,7 +168,7 @@
 	Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N]
 	Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
 	Does statler_waldorf_cutout.png.PROPOSED.webp look good? [y/N] y
-	Success: Created statler_waldorf_cutout.png.webp with quality 82. (Saved 231,613 bytes, 90.37%.)
+	Success: Created statler_waldorf_cutout.png.webp with quality 82. (Saved 232,313 bytes, 90.64%.)
 [AVIF]
     Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N]
     Does statler_waldorf_cutout.png.PROPOSED.avif look good? [y/N] y
@@ -174,7 +185,7 @@
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N] y
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N] y
     Does statler_waldorf_cutout.png.PROPOSED.jxl look good? [y/N] y
-    Success: Created statler_waldorf_cutout.png.jxl with quality 1.8. (Saved 219,234 bytes, 85.54%.)
+    Success: Created statler_waldorf_cutout.png.jxl with quality 1.8. (Saved 220,390 bytes, 85.99%.)
 
 +-----------------------------+
 | /share/skel/assets/wolf.jpg |
