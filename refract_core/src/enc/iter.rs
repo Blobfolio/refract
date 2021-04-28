@@ -31,7 +31,7 @@ use std::{
 /// If the encoder supports lossless encoding, that is attempted first, right
 /// out the gate.
 ///
-/// From there, the `Iterator` [`EncoderIter::next`] can be repeatedly called
+/// From there, the `Iterator` [`EncodeIter::next`] can be repeatedly called
 /// to produce candidate images at various encoding qualities. Each result
 /// should be expected for Quality Assurance and passed to either
 /// [`EncodeIter::keep`] if it is good or [`EncodeIter::discard`] if it sucks.
