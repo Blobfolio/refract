@@ -166,3 +166,123 @@ impl Source<'_> {
 		EncodeIter::new(self, enc)
 	}
 }
+
+
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::ColorKind;
+	use crate::PixelKind;
+
+	#[test]
+	/// Greyscale Image.
+	fn t_myrna() {
+		let image = std::fs::canonicalize(
+			concat!(env!("CARGO_MANIFEST_DIR"), "/../skel/assets/myrna.png")
+		).expect("Missing myrna.png test image.");
+
+		let source = Source::try_from(image).expect("Unable to create Source.");
+		assert_eq!(source.kind(), SourceKind::Png);
+
+		// Check out the RGBA image.
+		{
+			let img = source.img();
+
+			let color = img.color_kind();
+			assert_eq!(color, ColorKind::Grey);
+
+			let pixel = img.pixel_kind();
+			assert_eq!(pixel, PixelKind::Full);
+
+			assert_eq!((&*img).len(), img.width() * img.height() * 4);
+		}
+
+		// Check out the compact version.
+		{
+			let img = source.img_compact();
+
+			let color = img.color_kind();
+			assert_eq!(color, ColorKind::Grey);
+
+			let pixel = img.pixel_kind();
+			assert_eq!(pixel, PixelKind::Compact);
+
+			assert_eq!((&*img).len(), img.width() * img.height());
+		}
+	}
+
+	#[test]
+	/// RGB Image.
+	fn t_cats() {
+		let image = std::fs::canonicalize(
+			concat!(env!("CARGO_MANIFEST_DIR"), "/../skel/assets/cats.jpg")
+		).expect("Missing cats.jpg test image.");
+
+		let source = Source::try_from(image).expect("Unable to create Source.");
+		assert_eq!(source.kind(), SourceKind::Jpeg);
+
+		// Check out the RGBA image.
+		{
+			let img = source.img();
+
+			let color = img.color_kind();
+			assert_eq!(color, ColorKind::Rgb);
+
+			let pixel = img.pixel_kind();
+			assert_eq!(pixel, PixelKind::Full);
+
+			assert_eq!((&*img).len(), img.width() * img.height() * 4);
+		}
+
+		// Check out the compact version.
+		{
+			let img = source.img_compact();
+
+			let color = img.color_kind();
+			assert_eq!(color, ColorKind::Rgb);
+
+			let pixel = img.pixel_kind();
+			assert_eq!(pixel, PixelKind::Compact);
+
+			assert_eq!((&*img).len(), img.width() * img.height() * 3);
+		}
+	}
+
+	#[test]
+	/// RGBA Image.
+	fn t_r() {
+		let image = std::fs::canonicalize(
+			concat!(env!("CARGO_MANIFEST_DIR"), "/../skel/assets/r.png")
+		).expect("Missing r.png test image.");
+
+		let source = Source::try_from(image).expect("Unable to create Source.");
+		assert_eq!(source.kind(), SourceKind::Png);
+
+		// Check out the RGBA image.
+		{
+			let img = source.img();
+
+			let color = img.color_kind();
+			assert_eq!(color, ColorKind::Rgba);
+
+			let pixel = img.pixel_kind();
+			assert_eq!(pixel, PixelKind::Full);
+
+			assert_eq!((&*img).len(), img.width() * img.height() * 4);
+		}
+
+		// Check out the compact version, which should match the full version.
+		{
+			let img = source.img();
+			let img2 = source.img_compact();
+
+			assert_eq!(&*img, &*img2);
+			assert_eq!(img.color_kind(), img2.color_kind());
+			assert_eq!(img.pixel_kind(), img2.pixel_kind());
+			assert_eq!(img.width(), img2.width());
+			assert_eq!(img.height(), img2.height());
+			assert_eq!(img.stride(), img2.stride());
+		}
+	}
+}
