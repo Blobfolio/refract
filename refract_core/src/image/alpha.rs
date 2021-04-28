@@ -2,9 +2,7 @@
 # `Refract` - Alpha Operations.
 
 This is a re-implementation of `ravif`'s [dirtalpha](https://github.com/kornelski/cavif-rs/blob/main/ravif/src/dirtyalpha.rs)
-module. We have to implement it manually because `libavif` and `ravif`
-dependencies conflict with each other, and we don't need anything else from
-`ravif`.
+module, which cannot be imported as a library due to dependency conflicts. :(
 */
 
 use imgref::{
@@ -23,12 +21,11 @@ use rgb::{
 /// # Clear Alpha Channels.
 ///
 /// This removes fully transparent pixels from RGB components to make them
-/// cheaper to encode with AV1.
+/// cheaper to encode, particularly with AV1.
 ///
-/// This is applied while pretreating sources for both AVIF and JPEG XL
-/// output.
+/// This is applied to each imported image source.
 pub(super) fn clear_alpha(mut img: Img<Vec<RGBA8>>) -> Img<Vec<RGBA8>> {
-	// get dominant visible transparent color (excluding opaque pixels)
+	// Get the dominant visible transparent color (excluding opaque pixels).
 	let mut sum = RGB::new(0, 0, 0);
 	let mut weights = 0;
 
@@ -198,12 +195,12 @@ mod tests {
 
 	#[test]
 	fn preminmax() {
-		assert_eq!((100,100), premultiplied_minmax(100, 255));
-		assert_eq!((78,100), premultiplied_minmax(100, 10));
-		assert_eq!(100*10/255, 78*10/255);
-		assert_eq!(100*10/255, 100*10/255);
-		assert_eq!((8,119), premultiplied_minmax(100, 2));
-		assert_eq!((16,239), premultiplied_minmax(100, 1));
-		assert_eq!((15,255), premultiplied_minmax(255, 1));
+		assert_eq!((100, 100), premultiplied_minmax(100, 255));
+		assert_eq!((78, 100), premultiplied_minmax(100, 10));
+		assert_eq!(100 * 10 / 255, 78 * 10 / 255);
+		assert_eq!(100 * 10 / 255, 100 * 10 / 255);
+		assert_eq!((8, 119), premultiplied_minmax(100, 2));
+		assert_eq!((16, 239), premultiplied_minmax(100, 1));
+		assert_eq!((15, 255), premultiplied_minmax(255, 1));
 	}
 }

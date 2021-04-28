@@ -76,3 +76,7 @@ tag = "v0.7.1"
 [dependencies.refract_core]
 path = "../refract_core"
 features = [ "menu" ]
+
+[dependencies.tempfile-fast]
+git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
+rev = "7cd84b2"

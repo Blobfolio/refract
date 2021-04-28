@@ -3,8 +3,10 @@
 */
 
 use crate::{
+	Image,
+	Output,
+	OutputKind,
 	RefractError,
-	TreatedSource,
 };
 use jpegxl_sys::{
 	JxlBasicInfo,
@@ -56,6 +58,66 @@ impl JxlImageEncoder {
 		if enc.is_null() { Err(RefractError::Encode) }
 		else { Ok(Self(enc)) }
 	}
+
+	/// # Set Basic Info.
+	fn set_basic_info(&self, width: u32, height: u32, alpha: bool) -> Result<(), RefractError> {
+		// Set up JPEG XL's "basic info" struct.
+		let mut basic_info = unsafe { JxlBasicInfo::new_uninit().assume_init() };
+		basic_info.xsize = width;
+		basic_info.ysize = height;
+		basic_info.uses_original_profile = false as _;
+		basic_info.have_container = false as _;
+
+		basic_info.bits_per_sample = 8;
+		basic_info.exponent_bits_per_sample = 0;
+		basic_info.alpha_premultiplied = false as _;
+		basic_info.alpha_exponent_bits = 0;
+
+		if alpha {
+			basic_info.num_extra_channels = 1;
+			basic_info.alpha_bits = 8;
+		}
+		else {
+			basic_info.num_extra_channels = 0;
+			basic_info.alpha_bits = 0;
+		}
+
+		maybe_die(&unsafe { JxlEncoderSetBasicInfo(self.0, &basic_info) })
+	}
+
+	/// # Write.
+	fn write(&self) -> Result<Box<[u8]>, RefractError> {
+		// Set up a write buffer, starting with 1MB.
+		const CHUNK_SIZE: usize = 1024 * 1024;
+		let mut buffer = vec![0; CHUNK_SIZE];
+		let mut next_out = buffer.as_mut_ptr().cast();
+		let mut avail_out = CHUNK_SIZE;
+
+		// Process the output.
+		let mut status;
+		loop {
+			status = unsafe {
+				JxlEncoderProcessOutput(self.0, &mut next_out, &mut avail_out)
+			};
+			if status != JxlEncoderStatus::NeedMoreOutput {
+				break;
+			}
+
+			unsafe {
+				let offset = next_out.offset_from(buffer.as_ptr());
+				buffer.resize(buffer.len() * 2, 0);
+				next_out = (buffer.as_mut_ptr()).offset(offset);
+				avail_out = buffer.len() - usize::try_from(offset).map_err(|_| RefractError::Encode)?;
+			}
+		}
+		maybe_die(&status)?;
+
+		// Adjust the buffer accordingly.
+		let len: usize = usize::try_from(unsafe { next_out.offset_from(buffer.as_ptr()) })
+			.map_err(|_| RefractError::Encode)?;
+		buffer.truncate(len);
+		Ok(buffer.into_boxed_slice())
+	}
 }
 
 impl Drop for JxlImageEncoder {
@@ -92,17 +154,6 @@ impl Drop for JxlImageEncoderThreads {
 
 
 
-/// # Verify Encoder Status.
-///
-/// Most `JPEG XL` API methods return a status; this converts unsuccessful
-/// statuses to a proper Rust error.
-const fn maybe_die(res: &JxlEncoderStatus) -> Result<(), RefractError> {
-	match res {
-		JxlEncoderStatus::Success => Ok(()),
-		_ => Err(RefractError::Encode),
-	}
-}
-
 #[inline]
 /// # Make Lossy.
 ///
@@ -113,7 +164,7 @@ const fn maybe_die(res: &JxlEncoderStatus) -> Result<(), RefractError> {
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8) -> Result<Vec<u8>, RefractError> {
+pub(super) fn make_lossy(img: &Image, quality: NonZeroU8) -> Result<Output, RefractError> {
 	encode(img, Some(quality))
 }
 
@@ -127,16 +178,19 @@ pub(super) fn make_lossy(img: &TreatedSource, quality: NonZeroU8) -> Result<Vec<
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossless(img: &TreatedSource) -> Result<Vec<u8>, RefractError> {
+pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
 	encode(img, None)
 }
 
 /// # Encode.
-fn encode(img: &TreatedSource, quality: Option<NonZeroU8>) -> Result<Vec<u8>, RefractError> {
+///
+/// This stitches all the pieces together. Who would have thought a
+/// convoluted format like JPEG XL would require so many steps to produce?!
+fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractError> {
 	// Initialize the encoder.
 	let enc = JxlImageEncoder::new()?;
 
-	let color = img.color();
+	let color = img.color_kind();
 
 	// Hook in parallelism.
 	let runner = JxlImageEncoderThreads::new()?;
@@ -183,27 +237,11 @@ fn encode(img: &TreatedSource, quality: Option<NonZeroU8>) -> Result<Vec<u8>, Re
 	maybe_die(&unsafe { JxlEncoderOptionsSetDecodingSpeed(options, 0) })?;
 
 	// Set up JPEG XL's "basic info" struct.
-	let mut basic_info = unsafe { JxlBasicInfo::new_uninit().assume_init() };
-	basic_info.xsize = u32::try_from(img.width()).map_err(|_| RefractError::Encode)?;
-	basic_info.ysize = u32::try_from(img.height()).map_err(|_| RefractError::Encode)?;
-	basic_info.uses_original_profile = false as _;
-	basic_info.have_container = false as _;
-
-	basic_info.bits_per_sample = 8;
-	basic_info.exponent_bits_per_sample = 0;
-	basic_info.alpha_premultiplied = false as _;
-	basic_info.alpha_exponent_bits = 0;
-
-	if color.has_alpha() {
-		basic_info.num_extra_channels = 1;
-		basic_info.alpha_bits = 8;
-	}
-	else {
-		basic_info.num_extra_channels = 0;
-		basic_info.alpha_bits = 0;
-	}
-
-	maybe_die(&unsafe { JxlEncoderSetBasicInfo(enc.0, &basic_info) })?;
+	enc.set_basic_info(
+		u32::try_from(img.width()).map_err(|_| RefractError::Encode)?,
+		u32::try_from(img.height()).map_err(|_| RefractError::Encode)?,
+		color.has_alpha(),
+	)?;
 
 	// Set up a "frame".
 	let pixel_format = JxlPixelFormat {
@@ -213,7 +251,7 @@ fn encode(img: &TreatedSource, quality: Option<NonZeroU8>) -> Result<Vec<u8>, Re
 		align: 0,
 	};
 
-	let data: &[u8] = img.buffer();
+	let data: &[u8] = &*img;
 	maybe_die(&unsafe {
 		JxlEncoderAddImageFrame(
 			options,
@@ -226,37 +264,20 @@ fn encode(img: &TreatedSource, quality: Option<NonZeroU8>) -> Result<Vec<u8>, Re
 	// Finalize the encoder.
 	unsafe { JxlEncoderCloseInput(enc.0) };
 
-	// Set up a write buffer, starting with 1MB.
-	let chunk_size = 1024 * 1024;
-	let mut buffer = vec![0; chunk_size];
-	let mut next_out = buffer.as_mut_ptr().cast();
-	let mut avail_out = chunk_size;
-
-	// Process the output.
-	let mut status;
-	loop {
-		status = unsafe {
-			JxlEncoderProcessOutput(enc.0, &mut next_out, &mut avail_out)
-		};
-		if status != JxlEncoderStatus::NeedMoreOutput {
-			break;
-		}
-
-		unsafe {
-			let offset = next_out.offset_from(buffer.as_ptr());
-			buffer.resize(buffer.len() * 2, 0);
-			next_out = (buffer.as_mut_ptr()).offset(offset);
-			avail_out = buffer.len() - usize::try_from(offset).map_err(|_| RefractError::Encode)?;
-		}
-	}
-	maybe_die(&status)?;
-
-	// Adjust the buffer accordingly.
-	let len: usize = usize::try_from(unsafe { next_out.offset_from(buffer.as_ptr()) })
-		.map_err(|_| RefractError::Encode)?;
-	buffer.truncate(len);
-
 	// Done!
-	if buffer.is_empty() { Err(RefractError::Encode) }
-	else { Ok(buffer) }
+	Output::new(
+		enc.write()?,
+		quality.unwrap_or_else(|| OutputKind::Jxl.lossless_quality())
+	)
+}
+
+/// # Verify Encoder Status.
+///
+/// Most `JPEG XL` API methods return a status; this converts unsuccessful
+/// statuses to a proper Rust error.
+const fn maybe_die(res: &JxlEncoderStatus) -> Result<(), RefractError> {
+	match res {
+		JxlEncoderStatus::Success => Ok(()),
+		_ => Err(RefractError::Encode),
+	}
 }

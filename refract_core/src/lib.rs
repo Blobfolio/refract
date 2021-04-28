@@ -24,29 +24,26 @@
 
 #![allow(clippy::module_name_repetitions)]
 
-mod alpha;
-mod color;
+
+
+mod enc;
 mod error;
-mod output;
+mod image;
 mod source;
 
-pub(self) mod avif;
-pub(self) mod jxl;
-pub(self) mod webp;
 
-pub(crate) use alpha::clear_alpha;
-pub use color::ColorKind;
+pub use enc::{
+	iter::EncodeIter,
+	kind::OutputKind,
+	output::Output,
+};
 pub use error::RefractError;
-pub use output::{
-	MIN_QUALITY,
-	MAX_QUALITY,
-	Output,
-	OutputIter,
-	OutputKind,
+pub use image::{
+	color::ColorKind,
+	Image,
+	pixel::PixelKind,
 };
 pub use source::{
 	Source,
 	SourceKind,
-	TreatedSource,
-	TreatmentKind,
 };

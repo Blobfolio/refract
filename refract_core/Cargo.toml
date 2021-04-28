@@ -36,10 +36,6 @@ features = [ "codec-rav1e" ]
 version = "0.1.2"
 features = [ "1_1", "static" ]
 
-[dependencies.tempfile-fast]
-git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
-rev = "7cd84b2"
-
 [features]
 default = []
 menu = [ "argyle" ] # Passthrough menu errors.
