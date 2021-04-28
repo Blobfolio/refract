@@ -159,7 +159,7 @@ fn clamp(px: u8, (min, max): (u8, u8)) -> u8 {
 /// with high transparency tolerate more variation.
 fn premultiplied_minmax(px: u8, alpha: u8) -> (u8, u8) {
 	let alpha = u16::from(alpha);
-	let rounded = u16::from(px) * num_integer::div_floor(alpha, 255) * 255;
+	let rounded = num_integer::div_floor(u16::from(px) * alpha, 255) * 255;
 
 	// Leave some spare room for rounding.
 	let low = num_integer::div_floor(rounded + 16, alpha) as u8;
