@@ -67,16 +67,17 @@ impl TryFrom<&Image<'_>> for TmpPicture {
 		// Fill the pixel buffers.
 		unsafe {
 			let mut pixel_data = (&*img).to_vec();
-			let status = WebPPictureImportRGBA(
+			if 0 == WebPPictureImportRGBA(
 				&mut out.0,
 				pixel_data.as_mut_ptr(),
 				argb_stride * 4,
-			);
+			) {
+				return Err(RefractError::Encode);
+			}
 
 			// A few additional sanity checks.
 			let expected_size = argb_stride * height * 4;
 			if
-				status == 0 ||
 				expected_size == 0 ||
 				i32::try_from(pixel_data.len()).unwrap_or(0) != expected_size
 			{
@@ -152,7 +153,7 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	}
 
 	// Initialize configuration and quality.
-	let config = quality.map_or_else(init_lossless_config, init_config);
+	let config = quality.map_or_else(init_lossless_config, init_config)?;
 	let mut picture = TmpPicture::try_from(img)?;
 
 	// Hook in the writer.
@@ -197,16 +198,17 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 /// ```bash
 /// cwebp -m 6 -pass 10 -q {QUALITY}
 /// ```
-fn init_config(quality: NonZeroU8) -> WebPConfig {
+fn init_config(quality: NonZeroU8) -> Result<WebPConfig, RefractError> {
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
 	unsafe {
-		WebPConfigInit(&mut config);
-		WebPValidateConfig(&config);
+		if 0 == WebPConfigInit(&mut config) || 0 == WebPValidateConfig(&config) {
+			return Err(RefractError::Encode);
+		}
 	};
 	config.quality = f32::from(quality.get());
 	config.method = 6;
 	config.pass = 10;
-	config
+	Ok(config)
 }
 
 /// # Initialize `WebP` Lossless Configuration.
@@ -216,14 +218,18 @@ fn init_config(quality: NonZeroU8) -> WebPConfig {
 /// ```bash
 /// cwebp -lossless -z 9 -q 100
 /// ```
-fn init_lossless_config() -> WebPConfig {
+fn init_lossless_config() -> Result<WebPConfig, RefractError> {
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
 	unsafe {
-		WebPConfigInit(&mut config);
-		WebPValidateConfig(&config);
-		WebPConfigLosslessPreset(&mut config, 9);
+		if
+			0 == WebPConfigInit(&mut config) ||
+			0 == WebPValidateConfig(&config) ||
+			0 == WebPConfigLosslessPreset(&mut config, 9)
+		{
+			return Err(RefractError::Encode);
+		}
 	}
 	config.lossless = 1;
 	config.quality = 100.0;
-	config
+	Ok(config)
 }
