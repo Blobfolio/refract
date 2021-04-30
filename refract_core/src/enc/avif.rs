@@ -59,10 +59,8 @@ impl TryFrom<&Image<'_>> for AvifImage {
 		let width = u32::try_from(src.width()).map_err(|_| RefractError::Overflow)?;
 		let height = u32::try_from(src.height()).map_err(|_| RefractError::Overflow)?;
 
-		// Grab the buffer.
+		// Make an "avifRGBImage" from our buffer.
 		let raw: &[u8] = &*src;
-
-		// Make an "avifRGBImage" with that buffer.
 		let rgb = avifRGBImage {
 			width,
 			height,
@@ -75,7 +73,7 @@ impl TryFrom<&Image<'_>> for AvifImage {
 			rowBytes: 4 * width,
 		};
 
-		// Make a YUV version of the same.
+		// And convert it to YUV.
 		let yuv = unsafe {
 			let tmp = avifImageCreate(
 				i32::try_from(width).map_err(|_| RefractError::Overflow)?,
