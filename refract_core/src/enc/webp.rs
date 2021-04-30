@@ -53,9 +53,7 @@ impl TryFrom<&Image<'_>> for TmpPicture {
 
 		// Set up the picture struct.
 		let mut out = Self(unsafe { std::mem::zeroed() });
-		if unsafe { WebPPictureInit(&mut out.0) } == 0 {
-			return Err(RefractError::Encode);
-		}
+		maybe_die(unsafe { WebPPictureInit(&mut out.0) })?;
 
 		let argb_stride = i32::try_from(img.stride())
 			.map_err(|_| RefractError::Encode)?;
@@ -67,13 +65,11 @@ impl TryFrom<&Image<'_>> for TmpPicture {
 		// Fill the pixel buffers.
 		unsafe {
 			let mut pixel_data = (&*img).to_vec();
-			if 0 == WebPPictureImportRGBA(
+			maybe_die(WebPPictureImportRGBA(
 				&mut out.0,
 				pixel_data.as_mut_ptr(),
 				argb_stride * 4,
-			) {
-				return Err(RefractError::Encode);
-			}
+			))?;
 
 			// A few additional sanity checks.
 			let expected_size = argb_stride * height * 4;
@@ -168,9 +164,7 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	picture.0.custom_ptr = writer.cast::<std::ffi::c_void>();
 
 	// Encode!
-	if unsafe { WebPEncode(&config, &mut picture.0) } == 0 {
-		return Err(RefractError::Encode);
-	}
+	maybe_die(unsafe { WebPEncode(&config, &mut picture.0) })?;
 
 	// Copy output.
 	let data = unsafe { Box::from_raw(writer) };
@@ -200,11 +194,8 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 /// ```
 fn init_config(quality: NonZeroU8) -> Result<WebPConfig, RefractError> {
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
-	unsafe {
-		if 0 == WebPConfigInit(&mut config) || 0 == WebPValidateConfig(&config) {
-			return Err(RefractError::Encode);
-		}
-	};
+	maybe_die(unsafe { WebPConfigInit(&mut config) })?;
+	maybe_die(unsafe { WebPValidateConfig(&config) })?;
 	config.quality = f32::from(quality.get());
 	config.method = 6;
 	config.pass = 10;
@@ -220,16 +211,20 @@ fn init_config(quality: NonZeroU8) -> Result<WebPConfig, RefractError> {
 /// ```
 fn init_lossless_config() -> Result<WebPConfig, RefractError> {
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
-	unsafe {
-		if
-			0 == WebPConfigInit(&mut config) ||
-			0 == WebPValidateConfig(&config) ||
-			0 == WebPConfigLosslessPreset(&mut config, 9)
-		{
-			return Err(RefractError::Encode);
-		}
-	}
+	maybe_die(unsafe { WebPConfigInit(&mut config) })?;
+	maybe_die(unsafe { WebPValidateConfig(&config) })?;
+	maybe_die(unsafe { WebPConfigLosslessPreset(&mut config, 9) })?;
 	config.lossless = 1;
 	config.quality = 100.0;
 	Ok(config)
+}
+
+#[inline]
+/// # Verify Encoder Status.
+///
+/// This converts unsuccessful AVIF system function results into proper Rust
+/// errors.
+const fn maybe_die(res: std::os::raw::c_int) -> Result<(), RefractError> {
+	if 0 == res { Err(RefractError::Encode) }
+	else { Ok(()) }
 }
