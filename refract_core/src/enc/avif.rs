@@ -22,6 +22,7 @@ use libavif_sys::{
 	avifImageCreate,
 	avifImageDestroy,
 	avifImageRGBToYUV,
+	avifResult,
 	avifRGBImage,
 	avifRWData,
 	avifRWDataFree,
@@ -83,7 +84,7 @@ impl TryFrom<&Image<'_>> for AvifImage {
 				1, // YUV444 = 1_i32
 			);
 			avifImageAllocatePlanes(tmp, AVIF_PLANES_YUV as _);
-			avifImageRGBToYUV(tmp, &rgb);
+			maybe_die(avifImageRGBToYUV(tmp, &rgb))?;
 			tmp
 		};
 
@@ -113,7 +114,9 @@ impl TryFrom<NonZeroU8> for AvifEncoder {
 		let (q, aq) = quality_to_quantizers(quality);
 
 		// Total threads.
-		let threads = i32::try_from(num_cpus::get()).map_err(|_| RefractError::Encode)?;
+		let threads = i32::try_from(num_cpus::get())
+			.unwrap_or(1)
+			.max(1);
 
 		// Start up the encoder!
 		let encoder = unsafe { avifEncoderCreate() };
@@ -280,12 +283,9 @@ pub(super) fn make_lossy(
 		}
 	}
 
-	let mut data = AvifData(avifRWData::default());
-
 	// Encode!
-	if AVIF_RESULT_OK != unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) } {
-		return Err(RefractError::Encode);
-	}
+	let mut data = AvifData(avifRWData::default());
+	maybe_die(unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) })?;
 
 	// Grab the output.
 	let raw: Box<[u8]> = unsafe {
@@ -308,6 +308,16 @@ const fn ceil_log2(a: usize, n: usize) -> usize { floor_log2(a + (1 << n) - 1, n
 #[inline]
 /// # Floored Log2.
 const fn floor_log2(a: usize, n: usize) -> usize { a & !((1 << n) - 1) }
+
+#[inline]
+/// # Verify Encoder Status.
+///
+/// This converts unsuccessful AVIF system function results into proper Rust
+/// errors.
+const fn maybe_die(res: avifResult) -> Result<(), RefractError> {
+	if AVIF_RESULT_OK == res { Ok(()) }
+	else { Err(RefractError::Encode) }
+}
 
 #[allow(clippy::cast_sign_loss)]
 #[allow(clippy::cast_possible_truncation)]
