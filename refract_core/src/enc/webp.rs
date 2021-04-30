@@ -156,7 +156,7 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	let mut picture = TmpPicture::try_from(img)?;
 
 	// Hook in the writer.
-	let writer_ptr = unsafe {
+	let writer = unsafe {
 		let mut writer: WebPMemoryWriter = std::mem::zeroed();
 		WebPMemoryWriterInit(&mut writer);
 		Box::into_raw(Box::new(writer))
@@ -164,7 +164,7 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 
 	// Attach the writer to the picture.
 	picture.0.writer = Some(on_write);
-	picture.0.custom_ptr = writer_ptr.cast::<std::ffi::c_void>();
+	picture.0.custom_ptr = writer.cast::<std::ffi::c_void>();
 
 	// Encode!
 	if unsafe { WebPEncode(&config, &mut picture.0) } == 0 {
@@ -172,9 +172,9 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	}
 
 	// Copy output.
-	let writer = unsafe { Box::from_raw(writer_ptr) };
+	let data = unsafe { Box::from_raw(writer) };
 	let raw: Box<[u8]> = unsafe {
-		std::slice::from_raw_parts_mut(writer.mem, writer.size)
+		std::slice::from_raw_parts_mut(data.mem, data.size)
 	}
 		.to_vec()
 		.into_boxed_slice();
@@ -182,8 +182,8 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	// Clean-up.
 	drop(picture);
 	unsafe {
-		WebPMemoryWriterClear(writer_ptr);
-		std::mem::drop(writer);
+		WebPMemoryWriterClear(writer);
+		std::mem::drop(data);
 	}
 
 	// Send the output.
