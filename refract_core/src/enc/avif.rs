@@ -323,10 +323,10 @@ const fn maybe_die(res: avifResult) -> Result<(), RefractError> {
 #[allow(clippy::cast_possible_truncation)]
 /// # Quality to Quantizer(s).
 ///
-/// This converts the quality stepping from [`OutputIter`] into appropriate
+/// This converts the quality stepping from [`EncodeIter`] into appropriate
 /// `libavif` quantizers.
 ///
-/// The first step is to flip the provided value as [`OutputIter`] and
+/// The first step is to flip the provided value as [`EncodeIter`] and
 /// `libavif` work backward relative to one another. (Or best is their worst.)
 ///
 /// AVIF separates out color and alpha values. For the latter, we apply the
