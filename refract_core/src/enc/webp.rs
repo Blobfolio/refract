@@ -6,9 +6,8 @@ This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Go
 */
 
 use crate::{
-	Output,
+	Candidate,
 	Image,
-	OutputKind,
 	RefractError,
 };
 use libwebp_sys::{
@@ -142,8 +141,12 @@ impl Drop for LibWebpWriter {
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossy(img: &Image, quality: NonZeroU8) -> Result<Output, RefractError> {
-	encode(img, Some(quality))
+pub(super) fn make_lossy(
+	img: &Image,
+	candidate: &mut Candidate,
+	quality: NonZeroU8,
+) -> Result<(), RefractError> {
+	encode(img, candidate, Some(quality))
 }
 
 #[inline]
@@ -157,8 +160,8 @@ pub(super) fn make_lossy(img: &Image, quality: NonZeroU8) -> Result<Output, Refr
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
-	encode(img, None)
+pub(super) fn make_lossless(img: &Image, candidate: &mut Candidate) -> Result<(), RefractError> {
+	encode(img, candidate, None)
 }
 
 
@@ -172,7 +175,11 @@ pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
 ///
 /// This will return an error if there are any problems along the way or if
 /// the resulting image is empty (for some reason).
-fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractError> {
+fn encode(
+	img: &Image,
+	candidate: &mut Candidate,
+	quality: Option<NonZeroU8>,
+) -> Result<(), RefractError> {
 	// Setup.
 	let config = make_config(quality)?;
 	let mut picture = LibWebpPicture::try_from(img)?;
@@ -183,19 +190,16 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 
 	// Copy output.
 	let data = unsafe { Box::from_raw(writer.0) };
-	let raw: Box<[u8]> = unsafe {
+	candidate.set_slice(unsafe {
 		std::slice::from_raw_parts_mut(data.mem, data.size)
-	}
-		.to_vec()
-		.into_boxed_slice();
+	});
 
 	// Clean-up.
 	drop(picture);
 	drop(writer);
 	drop(data);
 
-	// Send the output.
-	Output::new(raw, quality.unwrap_or_else(|| OutputKind::Webp.lossless_quality()))
+	Ok(())
 }
 
 /// # Make Config.

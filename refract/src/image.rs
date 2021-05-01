@@ -86,12 +86,16 @@ impl<'a> ImageCli<'a> {
 
 		// Loop it.
 		let mut guide = self.src.encode(self.kind);
-		while let Some(candidate) = guide.next().filter(|c| save_image(&self.tmp, c).is_ok()) {
+		while guide.next()
+			.and_then(|_| guide.candidate())
+			.and_then(|data| save_image(&self.tmp, data).ok())
+			.is_some()
+		{
 			if prompt.prompt() {
-				guide.keep(candidate);
+				guide.keep();
 			}
 			else {
-				guide.discard(candidate);
+				guide.discard();
 			}
 		}
 

@@ -3,9 +3,8 @@
 */
 
 use crate::{
+	Candidate,
 	Image,
-	Output,
-	OutputKind,
 	RefractError,
 };
 use jpegxl_sys::{
@@ -86,37 +85,47 @@ impl LibJxlEncoder {
 	}
 
 	/// # Write.
-	fn write(&self) -> Result<Box<[u8]>, RefractError> {
-		// Set up a write buf, starting with 1MB.
-		const CHUNK_SIZE: usize = 1024 * 1024;
-		let mut buf = vec![0; CHUNK_SIZE];
-		let mut next_out = buf.as_mut_ptr().cast();
-		let mut avail_out = CHUNK_SIZE;
+	fn write(&self, candidate: &mut Candidate) -> Result<(), RefractError> {
+		// Grab the buffer.
+		let buf = candidate.as_mut_vec();
 
 		// Process the output.
-		let mut status;
 		loop {
-			status = unsafe {
+			let mut len: usize = buf.len();
+			let mut avail_out = buf.capacity() - len;
+
+			// Make sure we can write at least 64KiB to the buffer.
+			if avail_out < 65_536 {
+				buf.reserve(65_536);
+				avail_out = buf.capacity() - len;
+			}
+
+			// Let JPEG XL do its thing.
+			let mut next_out = unsafe { buf.as_mut_ptr().add(len).cast() };
+			let res = unsafe {
 				JxlEncoderProcessOutput(self.0, &mut next_out, &mut avail_out)
 			};
-			if status != JxlEncoderStatus::NeedMoreOutput {
-				break;
+
+			// Abort on error.
+			if res != JxlEncoderStatus::Success && res != JxlEncoderStatus::NeedMoreOutput {
+				return Err(RefractError::Encode);
 			}
 
-			unsafe {
-				let offset = next_out.offset_from(buf.as_ptr());
-				buf.resize(buf.len() * 2, 0);
-				next_out = (buf.as_mut_ptr()).offset(offset);
-				avail_out = buf.len() - usize::try_from(offset).map_err(|_| RefractError::Encode)?;
-			}
+			// The new next offset is how far from the beginning?
+			len = usize::try_from(unsafe { next_out.offset_from(buf.as_ptr()) })
+				.map_err(|_| RefractError::Overflow)?;
+
+			// Adjust the buffer length to match.
+			unsafe { buf.set_len(len); }
+
+			// We're done!
+			if JxlEncoderStatus::Success == res { break; }
 		}
-		maybe_die(&status)?;
 
-		// Adjust the buf accordingly.
-		let len = usize::try_from(unsafe { next_out.offset_from(buf.as_ptr()) })
-			.map_err(|_| RefractError::Encode)?;
-		buf.truncate(len);
-		Ok(buf.into_boxed_slice())
+		// Let the candidate know we finished.
+		candidate.finish_mut_vec();
+
+		Ok(())
 	}
 }
 
@@ -162,8 +171,12 @@ impl Drop for LibJxlThreadParallelRunner {
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossy(img: &Image, quality: NonZeroU8) -> Result<Output, RefractError> {
-	encode(img, Some(quality))
+pub(super) fn make_lossy(
+	img: &Image,
+	candidate: &mut Candidate,
+	quality: NonZeroU8
+) -> Result<(), RefractError> {
+	encode(img, candidate, Some(quality))
 }
 
 #[inline]
@@ -176,8 +189,8 @@ pub(super) fn make_lossy(img: &Image, quality: NonZeroU8) -> Result<Output, Refr
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
-	encode(img, None)
+pub(super) fn make_lossless(img: &Image, candidate: &mut Candidate) -> Result<(), RefractError> {
+	encode(img, candidate, None)
 }
 
 
@@ -186,7 +199,11 @@ pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
 ///
 /// This stitches all the pieces together. Who would have thought a
 /// convoluted format like JPEG XL would require so many steps to produce?!
-fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractError> {
+fn encode(
+	img: &Image,
+	candidate: &mut Candidate,
+	quality: Option<NonZeroU8>
+) -> Result<(), RefractError> {
 	// Initialize the encoder.
 	let enc = LibJxlEncoder::new()?;
 
@@ -260,11 +277,7 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	// Finalize the encoder.
 	unsafe { JxlEncoderCloseInput(enc.0) };
 
-	// Done!
-	Output::new(
-		enc.write()?,
-		quality.unwrap_or_else(|| OutputKind::Jxl.lossless_quality())
-	)
+	enc.write(candidate)
 }
 
 /// # Verify Encoder Status.

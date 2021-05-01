@@ -3,8 +3,8 @@
 */
 
 use crate::{
+	Candidate,
 	Image,
-	Output,
 	RefractError,
 };
 use libavif_sys::{
@@ -266,9 +266,10 @@ impl LibAvifTiles {
 /// encountered during encoding or saving.
 pub(super) fn make_lossy(
 	img: &Image,
+	candidate: &mut Candidate,
 	quality: NonZeroU8,
 	tiling: bool
-) -> Result<Output, RefractError> {
+) -> Result<(), RefractError> {
 	let image = LibAvifImage::try_from(img)?;
 	let encoder = LibAvifEncoder::try_from(quality)?;
 
@@ -287,13 +288,15 @@ pub(super) fn make_lossy(
 	maybe_die(unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) })?;
 
 	// Grab the output.
-	let raw: Box<[u8]> = unsafe {
+	candidate.set_slice(unsafe {
 		std::slice::from_raw_parts(data.0.data, data.0.size)
-			.to_vec()
-			.into_boxed_slice()
-	};
+	});
 
-	Output::new(raw, quality)
+	drop(data);
+	drop(encoder);
+	drop(image);
+
+	Ok(())
 }
 
 

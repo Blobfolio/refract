@@ -3,6 +3,7 @@
 */
 
 use crate::{
+	Candidate,
 	Image,
 	Output,
 	OutputKind,
@@ -11,6 +12,7 @@ use crate::{
 };
 use std::{
 	collections::HashSet,
+	convert::TryFrom,
 	num::{
 		NonZeroU64,
 		NonZeroU8,
@@ -49,16 +51,18 @@ pub struct EncodeIter<'a> {
 	tried: HashSet<NonZeroU8>,
 
 	src: Image<'a>,
-	best: Option<Output>,
 	size: NonZeroU64,
 	kind: OutputKind,
+
+	best: Option<Output>,
+	candidate: Candidate,
 
 	time: Duration,
 	done: bool,
 }
 
 impl Iterator for EncodeIter<'_> {
-	type Item = Output;
+	type Item = ();
 
 	fn next(&mut self) -> Option<Self::Item> {
 		// Start a timer.
@@ -100,9 +104,11 @@ impl<'a> EncodeIter<'a> {
 				// AVIF and WebP both work from RGBA.
 				OutputKind::Avif | OutputKind::Webp => src.img(),
 			},
-			best: None,
 			size: src.size(),
 			kind,
+
+			best: None,
+			candidate: Candidate::new(kind),
 
 			time: Duration::from_secs(0),
 			done: false,
@@ -111,9 +117,8 @@ impl<'a> EncodeIter<'a> {
 		// Try lossless compression.
 		let now = Instant::now();
 		out.tried.insert(out.kind.lossless_quality());
-		if let Ok(res) = out.lossless() {
-			out.size = res.size();
-			out.best.replace(res);
+		if out.lossless().is_ok() {
+			out.keep_candidate();
 		}
 		out.time += now.elapsed();
 
@@ -124,23 +129,6 @@ impl<'a> EncodeIter<'a> {
 
 /// ## Encoding.
 impl EncodeIter<'_> {
-	/// # Check Output.
-	///
-	/// This makes sure the output is smaller than the current best size and is
-	/// in the expected format.
-	///
-	/// ## Errors
-	///
-	/// This will return an error if the file is larger than what we found
-	/// previously, or if there is a type mismatch.
-	fn check_output(&self, result: Output) -> Result<Output, RefractError> {
-		if result.kind() == self.kind {
-			if result.size() < self.size { Ok(result) }
-			else { Err(RefractError::TooBig) }
-		}
-		else { Err(RefractError::Encode) }
-	}
-
 	/// # Lossless encoding.
 	///
 	/// Attempt to losslessly encode the image.
@@ -150,14 +138,16 @@ impl EncodeIter<'_> {
 	/// This will return an error if the encoder does not support lossless
 	/// encoding, if there are errors during encoding, or if the resulting
 	/// file offers no savings over the original.
-	fn lossless(&self) -> Result<Output, RefractError> {
-		let out = match self.kind {
+	fn lossless(&mut self) -> Result<(), RefractError> {
+		self.candidate.set_quality(None);
+
+		match self.kind {
 			OutputKind::Avif => Err(RefractError::NoLossless),
-			OutputKind::Jxl => super::jxl::make_lossless(&self.src),
-			OutputKind::Webp => super::webp::make_lossless(&self.src),
+			OutputKind::Jxl => super::jxl::make_lossless(&self.src, &mut self.candidate),
+			OutputKind::Webp => super::webp::make_lossless(&self.src, &mut self.candidate),
 		}?;
 
-		self.check_output(out)
+		self.candidate.verify(self.size)
 	}
 
 	/// # Lossy encoding.
@@ -175,15 +165,30 @@ impl EncodeIter<'_> {
 	///
 	/// When `main == false`, this will also return an error if the encoder
 	/// does not require a final pass.
-	fn lossy(&self, quality: NonZeroU8, main: bool) -> Result<Output, RefractError> {
-		let out = match self.kind {
-			OutputKind::Avif => super::avif::make_lossy(&self.src, quality, main),
-			OutputKind::Jxl if main => super::jxl::make_lossy(&self.src, quality),
-			OutputKind::Webp if main => super::webp::make_lossy(&self.src, quality),
+	fn lossy(&mut self, quality: NonZeroU8, main: bool) -> Result<(), RefractError> {
+		self.candidate.set_quality(Some(quality));
+
+		match self.kind {
+			OutputKind::Avif => super::avif::make_lossy(
+				&self.src,
+				&mut self.candidate,
+				quality,
+				main,
+			),
+			OutputKind::Jxl if main => super::jxl::make_lossy(
+				&self.src,
+				&mut self.candidate,
+				quality,
+			),
+			OutputKind::Webp if main => super::webp::make_lossy(
+				&self.src,
+				&mut self.candidate,
+				quality,
+			),
 			_ => Err(RefractError::NothingDoing),
 		}?;
 
-		self.check_output(out)
+		self.candidate.verify(self.size)
 	}
 }
 
@@ -194,9 +199,8 @@ impl EncodeIter<'_> {
 	/// Use this method to reject a given candidate because e.g. it didn't look
 	/// good enough. This will in turn raise the floor of the range so that the
 	/// next iteration will test a higher quality.
-	pub fn discard(&mut self, candidate: Output) {
-		self.set_bottom(candidate.quality());
-		drop(candidate);
+	pub fn discard(&mut self) {
+		self.set_bottom(self.candidate.quality());
 	}
 
 	/// # Keep Candidate.
@@ -204,10 +208,27 @@ impl EncodeIter<'_> {
 	/// Use this method to store a given candidate as the current best. This
 	/// will lower the ceiling of the range so that the next iteration will
 	/// test a lower quality.
-	pub fn keep(&mut self, candidate: Output) {
-		self.set_top(candidate.quality());
-		self.size = candidate.size();
-		self.best.replace(candidate);
+	pub fn keep(&mut self) {
+		self.set_top(self.candidate.quality());
+		self.keep_candidate();
+	}
+
+	/// # Keep Candidate.
+	fn keep_candidate(&mut self) {
+		if self.candidate.is_verified() {
+			// Replace the existing best.
+			if let Some(mut output) = self.best.take() {
+				if output.update(&self.candidate).is_ok() {
+					self.size = output.size();
+					self.best.replace(output);
+				}
+			}
+			// Insert a first best.
+			else if let Ok(output) = Output::try_from(&self.candidate) {
+				self.size = output.size();
+				self.best.replace(output);
+			}
+		}
 	}
 
 	#[inline]
@@ -216,10 +237,10 @@ impl EncodeIter<'_> {
 	/// This is the actual worker method for [`EncodeIter::next`]. It is
 	/// offloaded to a separate function to make it easier to track execution
 	/// time.
-	fn next_inner(&mut self) -> Option<Output> {
+	fn next_inner(&mut self) -> Option<()> {
 		let quality = self.next_quality()?;
 		match self.lossy(quality, true) {
-			Ok(res) => Some(res),
+			Ok(_) => Some(()),
 			Err(RefractError::TooBig) => {
 				// Recurse to see if the next quality works out OK.
 				self.set_top_minus_one(quality);
@@ -256,11 +277,8 @@ impl EncodeIter<'_> {
 			.map(Output::quality)
 			.ok_or(RefractError::NothingDoing)?;
 
-		let data = self.lossy(quality, false)?;
-
-		// It worked! Replace our best.
-		self.size = data.size();
-		self.best.replace(data);
+		self.lossy(quality, false)?;
+		self.keep_candidate();
 
 		Ok(())
 	}
@@ -348,6 +366,12 @@ impl EncodeIter<'_> {
 
 /// ## Getters.
 impl EncodeIter<'_> {
+	#[must_use]
+	/// # Candidate Slice.
+	///
+	/// Get the candidate as a slice.
+	pub fn candidate(&self) -> Option<&[u8]> { self.candidate.as_slice().ok() }
+
 	#[must_use]
 	/// # Computation Time.
 	///

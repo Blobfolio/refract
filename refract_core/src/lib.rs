@@ -33,6 +33,7 @@ mod source;
 
 
 pub use enc::{
+	candidate::Candidate,
 	iter::EncodeIter,
 	kind::OutputKind,
 	output::Output,
