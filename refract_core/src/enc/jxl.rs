@@ -49,9 +49,9 @@ use std::{
 /// # Hold the Encoder.
 ///
 /// This wrapper exists solely to help with drop cleanup.
-struct JxlImageEncoder(*mut JxlEncoder);
+struct LibJxlEncoder(*mut JxlEncoder);
 
-impl JxlImageEncoder {
+impl LibJxlEncoder {
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		let enc = unsafe { JxlEncoderCreate(std::ptr::null()) };
@@ -87,10 +87,10 @@ impl JxlImageEncoder {
 
 	/// # Write.
 	fn write(&self) -> Result<Box<[u8]>, RefractError> {
-		// Set up a write buffer, starting with 1MB.
+		// Set up a write buf, starting with 1MB.
 		const CHUNK_SIZE: usize = 1024 * 1024;
-		let mut buffer = vec![0; CHUNK_SIZE];
-		let mut next_out = buffer.as_mut_ptr().cast();
+		let mut buf = vec![0; CHUNK_SIZE];
+		let mut next_out = buf.as_mut_ptr().cast();
 		let mut avail_out = CHUNK_SIZE;
 
 		// Process the output.
@@ -104,27 +104,25 @@ impl JxlImageEncoder {
 			}
 
 			unsafe {
-				let offset = next_out.offset_from(buffer.as_ptr());
-				buffer.resize(buffer.len() * 2, 0);
-				next_out = (buffer.as_mut_ptr()).offset(offset);
-				avail_out = buffer.len() - usize::try_from(offset).map_err(|_| RefractError::Encode)?;
+				let offset = next_out.offset_from(buf.as_ptr());
+				buf.resize(buf.len() * 2, 0);
+				next_out = (buf.as_mut_ptr()).offset(offset);
+				avail_out = buf.len() - usize::try_from(offset).map_err(|_| RefractError::Encode)?;
 			}
 		}
 		maybe_die(&status)?;
 
-		// Adjust the buffer accordingly.
-		let len: usize = usize::try_from(unsafe { next_out.offset_from(buffer.as_ptr()) })
+		// Adjust the buf accordingly.
+		let len = usize::try_from(unsafe { next_out.offset_from(buf.as_ptr()) })
 			.map_err(|_| RefractError::Encode)?;
-		buffer.truncate(len);
-		Ok(buffer.into_boxed_slice())
+		buf.truncate(len);
+		Ok(buf.into_boxed_slice())
 	}
 }
 
-impl Drop for JxlImageEncoder {
+impl Drop for LibJxlEncoder {
 	#[inline]
-	fn drop(&mut self) {
-		unsafe { JxlEncoderDestroy(self.0) };
-	}
+	fn drop(&mut self) { unsafe { JxlEncoderDestroy(self.0) }; }
 }
 
 
@@ -132,9 +130,9 @@ impl Drop for JxlImageEncoder {
 /// # Hold the Thread Runner.
 ///
 /// This wrapper exists solely to help with drop cleanup.
-struct JxlImageEncoderThreads(*mut c_void);
+struct LibJxlThreadParallelRunner(*mut c_void);
 
-impl JxlImageEncoderThreads {
+impl LibJxlThreadParallelRunner {
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		let threads = unsafe {
@@ -145,7 +143,7 @@ impl JxlImageEncoderThreads {
 	}
 }
 
-impl Drop for JxlImageEncoderThreads {
+impl Drop for LibJxlThreadParallelRunner {
 	#[inline]
 	fn drop(&mut self) {
 		unsafe { JxlThreadParallelRunnerDestroy(self.0) };
@@ -182,18 +180,20 @@ pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
 	encode(img, None)
 }
 
+
+
 /// # Encode.
 ///
 /// This stitches all the pieces together. Who would have thought a
 /// convoluted format like JPEG XL would require so many steps to produce?!
 fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractError> {
 	// Initialize the encoder.
-	let enc = JxlImageEncoder::new()?;
+	let enc = LibJxlEncoder::new()?;
 
 	let color = img.color_kind();
 
 	// Hook in parallelism.
-	let runner = JxlImageEncoderThreads::new()?;
+	let runner = LibJxlThreadParallelRunner::new()?;
 	maybe_die(unsafe {
 		&JxlEncoderSetParallelRunner(
 			enc.0,
@@ -237,11 +237,7 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	maybe_die(&unsafe { JxlEncoderOptionsSetDecodingSpeed(options, 0) })?;
 
 	// Set up JPEG XL's "basic info" struct.
-	enc.set_basic_info(
-		u32::try_from(img.width()).map_err(|_| RefractError::Encode)?,
-		u32::try_from(img.height()).map_err(|_| RefractError::Encode)?,
-		color.has_alpha(),
-	)?;
+	enc.set_basic_info(img.width_u32()?, img.height_u32()?, color.has_alpha())?;
 
 	// Set up a "frame".
 	let pixel_format = JxlPixelFormat {

@@ -36,17 +36,17 @@ use std::{
 
 /// # Picture Wrapper.
 ///
-/// This exists solely to help with garbage cleanup, and, well, I suppose it
-/// provides a place to handle the tedious initialization process. Haha.
-struct TmpPicture(WebPPicture);
+/// This `C` struct is Rust-wrapped to help with garbage cleanup, but while
+/// we're here, may as well provide initialization code too.
+struct LibWebpPicture(WebPPicture);
 
-impl TryFrom<&Image<'_>> for TmpPicture {
+impl TryFrom<&Image<'_>> for LibWebpPicture {
 	type Error = RefractError;
 
 	fn try_from(img: &Image) -> Result<Self, Self::Error> {
 		// Check the source dimensions.
-		let width = i32::try_from(img.width()).map_err(|_| RefractError::Overflow)?;
-		let height = i32::try_from(img.height()).map_err(|_| RefractError::Overflow)?;
+		let width = img.width_i32()?;
+		let height = img.height_i32()?;
 		if width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION {
 			return Err(RefractError::Overflow);
 		}
@@ -55,8 +55,7 @@ impl TryFrom<&Image<'_>> for TmpPicture {
 		let mut out = Self(unsafe { std::mem::zeroed() });
 		maybe_die(unsafe { WebPPictureInit(&mut out.0) })?;
 
-		let argb_stride = i32::try_from(img.stride())
-			.map_err(|_| RefractError::Encode)?;
+		let argb_stride = img.stride_i32()?;
 		out.0.use_argb = 1;
 		out.0.width = width;
 		out.0.height = height;
@@ -64,24 +63,19 @@ impl TryFrom<&Image<'_>> for TmpPicture {
 
 		// Fill the pixel buffers.
 		unsafe {
-			let mut pixel_data = (&*img).to_vec();
+			let raw: &[u8] = &*img;
 			maybe_die(WebPPictureImportRGBA(
 				&mut out.0,
-				pixel_data.as_mut_ptr(),
+				raw.as_ptr().cast(), // This doesn't actually mutate.
 				argb_stride * 4,
 			))?;
 
 			// A few additional sanity checks.
+			let len = i32::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
 			let expected_size = argb_stride * height * 4;
-			if
-				expected_size == 0 ||
-				i32::try_from(pixel_data.len()).unwrap_or(0) != expected_size
-			{
+			if expected_size == 0 || expected_size != len {
 				return Err(RefractError::Encode);
 			}
-
-			// Clean-up.
-			std::mem::drop(pixel_data);
 		}
 
 		// A few more sanity checks.
@@ -93,9 +87,47 @@ impl TryFrom<&Image<'_>> for TmpPicture {
 	}
 }
 
-impl Drop for TmpPicture {
+impl Drop for LibWebpPicture {
 	#[inline]
 	fn drop(&mut self) { unsafe { WebPPictureFree(&mut self.0) } }
+}
+
+
+
+/// # Writer Wrapper.
+///
+/// This `C` struct is Rust-wrapped to help with garbage cleanup, but while
+/// we're here, may as well provide initialization code too.
+struct LibWebpWriter(*mut WebPMemoryWriter);
+
+impl From<&mut WebPPicture> for LibWebpWriter {
+	fn from(picture: &mut WebPPicture) -> Self {
+		// A Writer wrapper function. (It has to be "safe".)
+		extern "C" fn on_write(
+			data: *const u8,
+			data_size: usize,
+			picture: *const WebPPicture,
+		) -> std::os::raw::c_int {
+			unsafe { WebPMemoryWrite(data, data_size, picture) }
+		}
+
+		// Hook in the writer.
+		let writer = Self(unsafe {
+			let mut writer: WebPMemoryWriter = std::mem::zeroed();
+			WebPMemoryWriterInit(&mut writer);
+			Box::into_raw(Box::new(writer))
+		});
+
+		picture.writer = Some(on_write);
+		picture.custom_ptr = writer.0.cast::<std::ffi::c_void>();
+
+		writer
+	}
+}
+
+impl Drop for LibWebpWriter {
+	#[inline]
+	fn drop(&mut self) { unsafe { WebPMemoryWriterClear(self.0); } }
 }
 
 
@@ -129,6 +161,8 @@ pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
 	encode(img, None)
 }
 
+
+
 /// # Encode `WebP`.
 ///
 /// This encodes a raw image source as a `WebP` using the provided
@@ -139,35 +173,16 @@ pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
 /// This will return an error if there are any problems along the way or if
 /// the resulting image is empty (for some reason).
 fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractError> {
-	// A Writer wrapper function. (It has to be "safe".)
-	extern "C" fn on_write(
-		data: *const u8,
-		data_size: usize,
-		picture: *const WebPPicture,
-	) -> std::os::raw::c_int {
-		unsafe { WebPMemoryWrite(data, data_size, picture) }
-	}
-
-	// Initialize configuration and quality.
-	let config = quality.map_or_else(init_lossless_config, init_config)?;
-	let mut picture = TmpPicture::try_from(img)?;
-
-	// Hook in the writer.
-	let writer = unsafe {
-		let mut writer: WebPMemoryWriter = std::mem::zeroed();
-		WebPMemoryWriterInit(&mut writer);
-		Box::into_raw(Box::new(writer))
-	};
-
-	// Attach the writer to the picture.
-	picture.0.writer = Some(on_write);
-	picture.0.custom_ptr = writer.cast::<std::ffi::c_void>();
+	// Setup.
+	let config = make_config(quality)?;
+	let mut picture = LibWebpPicture::try_from(img)?;
+	let writer = LibWebpWriter::from(&mut picture.0);
 
 	// Encode!
 	maybe_die(unsafe { WebPEncode(&config, &mut picture.0) })?;
 
 	// Copy output.
-	let data = unsafe { Box::from_raw(writer) };
+	let data = unsafe { Box::from_raw(writer.0) };
 	let raw: Box<[u8]> = unsafe {
 		std::slice::from_raw_parts_mut(data.mem, data.size)
 	}
@@ -176,46 +191,46 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 
 	// Clean-up.
 	drop(picture);
-	unsafe {
-		WebPMemoryWriterClear(writer);
-		std::mem::drop(data);
-	}
+	drop(writer);
+	drop(data);
 
 	// Send the output.
 	Output::new(raw, quality.unwrap_or_else(|| OutputKind::Webp.lossless_quality()))
 }
 
-/// # Initialize `WebP` Lossy Configuration.
+/// # Make Config.
 ///
-/// This generates an encoder configuration profile roughly equivalent to:
+/// This generates an encoder configuration profile.
+///
+/// For lossy (with quality), this is roughly equivalent to:
 ///
 /// ```bash
 /// cwebp -m 6 -pass 10 -q {QUALITY}
 /// ```
-fn init_config(quality: NonZeroU8) -> Result<WebPConfig, RefractError> {
-	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
-	maybe_die(unsafe { WebPConfigInit(&mut config) })?;
-	maybe_die(unsafe { WebPValidateConfig(&config) })?;
-	config.quality = f32::from(quality.get());
-	config.method = 6;
-	config.pass = 10;
-	Ok(config)
-}
-
-/// # Initialize `WebP` Lossless Configuration.
 ///
-/// This generates an encoder configuration profile roughly equivalent to:
+/// For lossless (no quality), this is instead like:
 ///
 /// ```bash
 /// cwebp -lossless -z 9 -q 100
 /// ```
-fn init_lossless_config() -> Result<WebPConfig, RefractError> {
+fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
 	maybe_die(unsafe { WebPConfigInit(&mut config) })?;
 	maybe_die(unsafe { WebPValidateConfig(&config) })?;
-	maybe_die(unsafe { WebPConfigLosslessPreset(&mut config, 9) })?;
-	config.lossless = 1;
-	config.quality = 100.0;
+
+	// Lossy bits.
+	if let Some(quality) = quality {
+		config.quality = f32::from(quality.get());
+		config.method = 6;
+		config.pass = 10;
+	}
+	// Lossless bits.
+	else {
+		maybe_die(unsafe { WebPConfigLosslessPreset(&mut config, 9) })?;
+		config.lossless = 1;
+		config.quality = 100.0;
+	}
+
 	Ok(config)
 }
 
