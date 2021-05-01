@@ -193,6 +193,84 @@ impl<'a> Image<'a> {
 	pub const fn width(&self) -> usize { self.width.get() }
 }
 
+/// ## I32 Helpers.
+impl Image<'_> {
+	/// # Height.
+	///
+	/// Return the image height.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the `usize` value doesn't fit.
+	pub fn height_i32(&self) -> Result<i32, RefractError> {
+		i32::try_from(self.height.get())
+			.map_err(|_| RefractError::Overflow)
+	}
+
+	/// # Stride.
+	///
+	/// Return the image stride.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the `usize` value doesn't fit.
+	pub fn stride_i32(&self) -> Result<i32, RefractError> {
+		i32::try_from(self.stride.get())
+			.map_err(|_| RefractError::Overflow)
+	}
+
+	/// # Width.
+	///
+	/// Return the image width.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the `usize` value doesn't fit.
+	pub fn width_i32(&self) -> Result<i32, RefractError> {
+		i32::try_from(self.width.get())
+			.map_err(|_| RefractError::Overflow)
+	}
+}
+
+/// ## U32 Helpers.
+impl Image<'_> {
+	/// # Height.
+	///
+	/// Return the image height.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the `usize` value doesn't fit.
+	pub fn height_u32(&self) -> Result<u32, RefractError> {
+		u32::try_from(self.height.get())
+			.map_err(|_| RefractError::Overflow)
+	}
+
+	/// # Stride.
+	///
+	/// Return the image stride.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the `usize` value doesn't fit.
+	pub fn stride_u32(&self) -> Result<u32, RefractError> {
+		u32::try_from(self.stride.get())
+			.map_err(|_| RefractError::Overflow)
+	}
+
+	/// # Width.
+	///
+	/// Return the image width.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the `usize` value doesn't fit.
+	pub fn width_u32(&self) -> Result<u32, RefractError> {
+		u32::try_from(self.width.get())
+			.map_err(|_| RefractError::Overflow)
+	}
+}
+
 /// ## Conversion.
 impl<'a> Image<'a> {
 	#[must_use]
