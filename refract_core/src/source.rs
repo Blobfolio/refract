@@ -142,12 +142,6 @@ impl Source<'_> {
 	pub fn img_compact(&self) -> Image<'_> { self.img.as_compact() }
 
 	#[must_use]
-	/// # YUV Image (reference).
-	///
-	/// Return an image buffer converted to YUV.
-	pub(crate) fn img_yuv(&self) -> Image<'_> { self.img.as_yuv() }
-
-	#[must_use]
 	/// # Path.
 	///
 	/// Return a reference to the original path.
