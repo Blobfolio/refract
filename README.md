@@ -54,11 +54,12 @@ The guided feedback is only required for lossy stages. Lossless, being lossless,
 
 AVIF encoding is _slow_.
 
-To make it at all bearable, two concessions are made:
+To make it at all bearable, three concessions are made:
+ * Lossless encoding is unsupported (it isn't competitive anyway);
  * The encoder is run with speed `1` rather than speed `0`;
  * Images are split into "tiles" that can be processed in parallel;
 
-The latter is compensated for by automatically repeating the chosen "best" encoding one time at the end with tiling optimizations disabled.
+That last item is compensated for by automatically repeating the chosen "best" encoding one time at the end with tiling optimizations disabled.
 
 **Note:**
  >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.
@@ -108,9 +109,14 @@ If your answers and the file sizes work out right, a final best-case copy of eac
 
 Pre-built `.deb` packages are added to each [release](https://github.com/Blobfolio/refract/releases/latest) for Debian and Ubuntu users (or in a Docker container, etc.).
 
-It is written in [Rust](https://www.rust-lang.org/) and so can be built from source using [Cargo](https://github.com/rust-lang/cargo) on other x86-64 Unix platforms (Mac, etc.).
+The program is written in [Rust](https://www.rust-lang.org/) and so can be built from source using [Cargo](https://github.com/rust-lang/cargo) on most other x86-64 Unix platforms (Mac, etc.).
 
-Note that if building from source, you'll need to have the build dependencies for `libavif`, `libjxl`, and `libwebp` installed, including modern Clang, GCC, NASM, Ninja. (Damn the convoluted development ecosystem!)
+```bash
+# Compile it. You can specify additional flags as desired.
+cargo build --release
+```
+
+Cargo _will_ take care of the entire build for you, but your system will need modern versions of Clang, GCC, NASM, and Ninja installed to make it through `build.rs` hell. (Who would have thought kitchen sink image formats would have so many build dependencies?)
 
 
 
