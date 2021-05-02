@@ -101,8 +101,10 @@ impl<'a> EncodeIter<'a> {
 			src: match kind {
 				// JPEG XL takes a compacted source.
 				OutputKind::Jxl => src.img_compact(),
-				// AVIF and WebP both work from RGBA.
-				OutputKind::Avif | OutputKind::Webp => src.img(),
+				// AVIF wants YUV.
+				OutputKind::Avif => src.img_yuv(),
+				// WebP is happy with the full source.
+				OutputKind::Webp => src.img(),
 			},
 			size: src.size(),
 			kind,
