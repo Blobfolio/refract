@@ -284,7 +284,7 @@ impl<'a> Image<'a> {
 	/// created.
 	pub fn as_compact(&'a self) -> Self {
 		match self.pixel {
-			PixelKind::Compact | PixelKind::Yuv => self.as_ref(),
+			PixelKind::Compact => self.as_ref(),
 			PixelKind::Full => {
 				let buf: Vec<u8> = match self.color {
 					ColorKind::Rgba => return self.as_ref(),
@@ -331,103 +331,5 @@ impl<'a> Image<'a> {
 			height: self.height,
 			stride: self.stride,
 		}
-	}
-}
-
-/// # YUV.
-impl<'a> Image<'a> {
-	#[allow(clippy::cast_possible_truncation)] // Values are clamped.
-	#[allow(clippy::cast_sign_loss)] // Values are clamped.
-	#[allow(clippy::many_single_char_names)] // Judgey!
-	#[must_use]
-	/// # As YUV.
-	///
-	/// This converts a [`PixelKind::Full`] RGBA image into a YUV one.
-	///
-	/// The internal buffer is filled with all the Ys first, then the Us, then
-	/// the Vs, and finally the As.
-	///
-	/// This is only used for AVIF encoding and because of its specificity, is
-	/// only exposed to this crate. (It would be too easy to misuse elsewhere.)
-	pub(crate) fn as_yuv(&'a self) -> Self {
-		debug_assert!(self.pixel == PixelKind::Full, "Invalid pixel format.");
-
-		let size = self.width.get() * self.height.get();
-
-		let mut y_plane: Vec<u8> = Vec::with_capacity(size);
-		let mut u_plane: Vec<u8> = Vec::with_capacity(size);
-		let mut v_plane: Vec<u8> = Vec::with_capacity(size);
-		let mut a_plane: Vec<u8> = Vec::with_capacity(size);
-
-		self.img.chunks_exact(4).for_each(|rgba| {
-			let r = f32::from(rgba[0]);
-			let g = f32::from(rgba[1]);
-			let b = f32::from(rgba[2]);
-
-			let y  = r.mul_add(0.2126, g.mul_add(0.7152, 0.0722 * b));
-			let cb = (b - y) * (0.5 / (1.0 - 0.0722));
-			let cr = (r - y) * (0.5 / (1.0 - 0.2126));
-
-			y_plane.push((y * (235.0 - 16.0) / 255.0 + 16.0).round().max(0.0).min(255.0) as u8);
-			u_plane.push(((cb + 128.0) * (240.0 - 16.0) / 255.0 + 16.0).round().max(0.0).min(255.0) as u8);
-			v_plane.push(((cr + 128.0) * (240.0 - 16.0) / 255.0 + 16.0).round().max(0.0).min(255.0) as u8);
-			a_plane.push(rgba[3]);
-		});
-
-		// Take over the y_plane and add the rest of the data to it.
-		y_plane.append(&mut u_plane);
-		y_plane.append(&mut v_plane);
-		y_plane.append(&mut a_plane);
-
-		debug_assert!(y_plane.len() == size * 4, "Invalid buffer size.");
-
-		Self {
-			img: Cow::Owned(y_plane),
-			color: self.color,
-			pixel: PixelKind::Yuv,
-			width: self.width,
-			height: self.height,
-			stride: self.stride,
-		}
-	}
-
-	/// # YUV Plane Pointers.
-	///
-	/// Return pointers and sizes for YUV/alpha data for AVIF encoding.
-	///
-	/// This method only applies for images with pixel type [`PixelKind::Yuv`].
-	///
-	/// This is only used for AVIF encoding and because of its specificity, is
-	/// only exposed to this crate. (It would be too easy to misuse elsewhere.)
-	///
-	/// ## Safety
-	///
-	/// This method itself is safe, but returns mutable pointers that if
-	/// misused would cause trouble.
-	pub(crate) unsafe fn yuv(&'a self) -> ([*mut u8; 3], [u32; 3], *mut u8, u32) {
-		debug_assert!(self.pixel == PixelKind::Yuv, "Invalid pixel format.");
-
-		let size = self.width.get() * self.height.get();
-
-		// Note: these pixels aren't really mutated.
-		let ptr = self.img.as_ptr();
-		let yuv_ptr = [
-			ptr as *mut u8,
-			ptr.add(size) as *mut u8,
-			ptr.add(size * 2) as *mut u8,
-		];
-
-		let a_ptr = ptr.add(size * 3) as *mut u8;
-
-		// This won't fail because width fits in i32.
-		let width32 = self.width_u32().unwrap();
-
-		(
-			yuv_ptr,
-			[width32, width32, width32],
-			a_ptr,
-			if self.color.has_alpha() { width32 }
-			else { 0 }
-		)
 	}
 }
