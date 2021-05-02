@@ -239,10 +239,10 @@ limitations under the License.
 * [cfg-if 1.0.0](https://github.com/alexcrichton/cfg-if)
 * [crossbeam-channel 0.5.1](https://github.com/crossbeam-rs/crossbeam)
 * [crossbeam-deque 0.8.0](https://github.com/crossbeam-rs/crossbeam)
-* [crossbeam-epoch 0.9.3](https://github.com/crossbeam-rs/crossbeam)
-* [crossbeam-utils 0.8.3](https://github.com/crossbeam-rs/crossbeam)
+* [crossbeam-epoch 0.9.4](https://github.com/crossbeam-rs/crossbeam)
+* [crossbeam-utils 0.8.4](https://github.com/crossbeam-rs/crossbeam)
 * [either 1.6.1](https://github.com/bluss/either)
-* [fallible_collections 0.4.1](https://github.com/vcombey/fallible_collections.git)
+* [fallible_collections 0.4.2](https://github.com/vcombey/fallible_collections.git)
 * [flate2 1.0.20](https://github.com/rust-lang/flate2-rs)
 * [hashbrown 0.9.1](https://github.com/rust-lang/hashbrown)
 * [itertools 0.10.0](https://github.com/bluss/rust-itertools)
@@ -264,7 +264,7 @@ limitations under the License.
 * [tempfile 3.2.0](https://github.com/Stebalien/tempfile)
 * [thiserror 1.0.24](https://github.com/dtolnay/thiserror)
 * [thiserror-impl 1.0.24](https://github.com/dtolnay/thiserror)
-* [unicode-xid 0.2.1](https://github.com/unicode-rs/unicode-xid)
+* [unicode-xid 0.2.2](https://github.com/unicode-rs/unicode-xid)
 
 
 ```
@@ -2553,8 +2553,8 @@ SOFTWARE.
 * [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
 * [dowser 0.2.2](https://github.com/Blobfolio/dowser)
 * [fyi_msg 0.7.1](https://github.com/Blobfolio/fyi)
-* [refract 0.3.3](https://github.com/Blobfolio/refract)
-* [refract_core 0.3.3](https://github.com/Blobfolio/refract)
+* [refract 0.3.4](https://github.com/Blobfolio/refract)
+* [refract_core 0.3.4](https://github.com/Blobfolio/refract)
 
 
 ```
