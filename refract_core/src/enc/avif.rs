@@ -3,26 +3,26 @@
 */
 
 use crate::{
+	Candidate,
 	Image,
-	Output,
 	RefractError,
 };
 use libavif_sys::{
-	AVIF_CHROMA_UPSAMPLING_BILINEAR,
+	AVIF_CHROMA_SAMPLE_POSITION_COLOCATED,
 	AVIF_CODEC_CHOICE_RAV1E,
-	AVIF_PLANES_YUV,
+	AVIF_COLOR_PRIMARIES_BT709,
+	AVIF_MATRIX_COEFFICIENTS_BT709,
+	AVIF_RANGE_LIMITED,
 	AVIF_RESULT_OK,
-	AVIF_RGB_FORMAT_RGBA,
+	AVIF_TRANSFER_CHARACTERISTICS_SRGB,
 	avifEncoder,
 	avifEncoderCreate,
 	avifEncoderDestroy,
 	avifEncoderWrite,
 	avifImage,
-	avifImageAllocatePlanes,
 	avifImageCreate,
 	avifImageDestroy,
-	avifImageRGBToYUV,
-	avifRGBImage,
+	avifResult,
 	avifRWData,
 	avifRWDataFree,
 };
@@ -42,69 +42,13 @@ const SB_SIZE_LOG2: usize = 6;
 
 
 
-/// # Avif Image.
-///
-/// This holds a YUV copy of the image, which is created in a roundabout way
-/// by converting a raw slice into an RGB image. Haha.
-///
-/// The struct includes initialization helpers, but exists primarily for
-/// garbage cleanup.
-struct AvifImage(*mut avifImage);
-
-impl TryFrom<&Image<'_>> for AvifImage {
-	type Error = RefractError;
-	fn try_from(src: &Image) -> Result<Self, Self::Error> {
-		// Make sure dimensions fit u32.
-		let width = u32::try_from(src.width()).map_err(|_| RefractError::Overflow)?;
-		let height = u32::try_from(src.height()).map_err(|_| RefractError::Overflow)?;
-
-		// Grab the buffer.
-		let raw: &[u8] = &*src;
-
-		// Make an "avifRGBImage" with that buffer.
-		let rgb = avifRGBImage {
-			width,
-			height,
-			depth: 8,
-			format: AVIF_RGB_FORMAT_RGBA,
-			chromaUpsampling: AVIF_CHROMA_UPSAMPLING_BILINEAR,
-			ignoreAlpha: ! src.color_kind().has_alpha() as _,
-			alphaPremultiplied: 0,
-			pixels: raw.as_ptr() as *mut u8,
-			rowBytes: 4 * width,
-		};
-
-		// Make a YUV version of the same.
-		let yuv = unsafe {
-			let tmp = avifImageCreate(
-				i32::try_from(width).map_err(|_| RefractError::Overflow)?,
-				i32::try_from(height).map_err(|_| RefractError::Overflow)?,
-				8, // Depth.
-				1, // YUV444 = 1_i32
-			);
-			avifImageAllocatePlanes(tmp, AVIF_PLANES_YUV as _);
-			avifImageRGBToYUV(tmp, &rgb);
-			tmp
-		};
-
-		Ok(Self(yuv))
-	}
-}
-
-impl Drop for AvifImage {
-	#[inline]
-	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
-}
-
-
-
 /// # AVIF Encoer.
 ///
 /// This wraps the AVIF encoder. It primarily exists to give us a way to free
 /// resources on drop, but also handles setup.
-struct AvifEncoder(*mut avifEncoder);
+struct LibAvifEncoder(*mut avifEncoder);
 
-impl TryFrom<NonZeroU8> for AvifEncoder {
+impl TryFrom<NonZeroU8> for LibAvifEncoder {
 	type Error = RefractError;
 
 	/// # New Instance.
@@ -113,7 +57,9 @@ impl TryFrom<NonZeroU8> for AvifEncoder {
 		let (q, aq) = quality_to_quantizers(quality);
 
 		// Total threads.
-		let threads = i32::try_from(num_cpus::get()).map_err(|_| RefractError::Encode)?;
+		let threads = i32::try_from(num_cpus::get())
+			.unwrap_or(1)
+			.max(1);
 
 		// Start up the encoder!
 		let encoder = unsafe { avifEncoderCreate() };
@@ -136,9 +82,59 @@ impl TryFrom<NonZeroU8> for AvifEncoder {
 	}
 }
 
-impl Drop for AvifEncoder {
+impl Drop for LibAvifEncoder {
 	#[inline]
 	fn drop(&mut self) { unsafe { avifEncoderDestroy(self.0); } }
+}
+
+
+
+/// # Avif Image.
+///
+/// This holds a YUV copy of the image, which is created in a roundabout way
+/// by converting a raw slice into an RGB image. Haha.
+///
+/// The struct includes initialization helpers, but exists primarily for
+/// garbage cleanup.
+struct LibAvifImage(*mut avifImage);
+
+impl TryFrom<&Image<'_>> for LibAvifImage {
+	type Error = RefractError;
+	fn try_from(src: &Image) -> Result<Self, Self::Error> {
+		// And convert it to YUV.
+		let yuv = unsafe {
+			let tmp = avifImageCreate(
+				src.width_i32()?,
+				src.height_i32()?,
+				8, // Depth.
+				1, // YUV444 = 1_i32
+			);
+
+			let (yuv_planes, yuv_row_bytes, alpha_plane, alpha_row_bytes) = src.yuv();
+
+			(*tmp).imageOwnsYUVPlanes = 0;
+			(*tmp).imageOwnsAlphaPlane = 0;
+			(*tmp).yuvPlanes = yuv_planes;
+			(*tmp).yuvRowBytes = yuv_row_bytes;
+			(*tmp).alphaPlane = alpha_plane;
+			(*tmp).alphaRowBytes = alpha_row_bytes;
+
+			(*tmp).yuvRange = AVIF_RANGE_LIMITED;
+			(*tmp).yuvChromaSamplePosition = AVIF_CHROMA_SAMPLE_POSITION_COLOCATED;
+			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709;
+			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB;
+			(*tmp).matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT709;
+
+			tmp
+		};
+
+		Ok(Self(yuv))
+	}
+}
+
+impl Drop for LibAvifImage {
+	#[inline]
+	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
 }
 
 
@@ -146,12 +142,13 @@ impl Drop for AvifEncoder {
 /// # Data Struct.
 ///
 /// This wrapper only exists to provide garbage cleanup.
-struct AvifData(avifRWData);
+struct LibAvifRwData(avifRWData);
 
-impl Drop for AvifData {
+impl Drop for LibAvifRwData {
 	#[inline]
 	fn drop(&mut self) { unsafe { avifRWDataFree(&mut self.0); } }
 }
+
 
 
 /// # Tiling Helper.
@@ -161,7 +158,7 @@ impl Drop for AvifData {
 ///
 /// It is a stripped down version of `rav1e`'s `TilingInfo` struct, containing
 /// only the bits needed for x/y tile figuring.
-struct TilingLite {
+struct LibAvifTiles {
 	cols: usize,
 	rows: usize,
 
@@ -174,7 +171,7 @@ struct TilingLite {
 	tile_height_sb: usize,
 }
 
-impl TilingLite {
+impl LibAvifTiles {
 	/// # Tile Info.
 	fn from_target_tiles(
 		frame_width: usize,
@@ -264,11 +261,12 @@ impl TilingLite {
 /// encountered during encoding or saving.
 pub(super) fn make_lossy(
 	img: &Image,
+	candidate: &mut Candidate,
 	quality: NonZeroU8,
 	tiling: bool
-) -> Result<Output, RefractError> {
-	let image = AvifImage::try_from(img)?;
-	let encoder = AvifEncoder::try_from(quality)?;
+) -> Result<(), RefractError> {
+	let image = LibAvifImage::try_from(img)?;
+	let encoder = LibAvifEncoder::try_from(quality)?;
 
 	// Configure tiling.
 	if tiling {
@@ -280,22 +278,23 @@ pub(super) fn make_lossy(
 		}
 	}
 
-	let mut data = AvifData(avifRWData::default());
-
 	// Encode!
-	if AVIF_RESULT_OK != unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) } {
-		return Err(RefractError::Encode);
-	}
+	let mut data = LibAvifRwData(avifRWData::default());
+	maybe_die(unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) })?;
 
 	// Grab the output.
-	let raw: Box<[u8]> = unsafe {
+	candidate.set_slice(unsafe {
 		std::slice::from_raw_parts(data.0.data, data.0.size)
-			.to_vec()
-			.into_boxed_slice()
-	};
+	});
 
-	Output::new(raw, quality)
+	drop(data);
+	drop(encoder);
+	drop(image);
+
+	Ok(())
 }
+
+
 
 #[inline]
 /// # Align and Shift to Power of 2.
@@ -309,14 +308,24 @@ const fn ceil_log2(a: usize, n: usize) -> usize { floor_log2(a + (1 << n) - 1, n
 /// # Floored Log2.
 const fn floor_log2(a: usize, n: usize) -> usize { a & !((1 << n) - 1) }
 
+#[inline]
+/// # Verify Encoder Status.
+///
+/// This converts unsuccessful AVIF system function results into proper Rust
+/// errors.
+const fn maybe_die(res: avifResult) -> Result<(), RefractError> {
+	if AVIF_RESULT_OK == res { Ok(()) }
+	else { Err(RefractError::Encode) }
+}
+
 #[allow(clippy::cast_sign_loss)]
 #[allow(clippy::cast_possible_truncation)]
 /// # Quality to Quantizer(s).
 ///
-/// This converts the quality stepping from [`OutputIter`] into appropriate
+/// This converts the quality stepping from [`EncodeIter`] into appropriate
 /// `libavif` quantizers.
 ///
-/// The first step is to flip the provided value as [`OutputIter`] and
+/// The first step is to flip the provided value as [`EncodeIter`] and
 /// `libavif` work backward relative to one another. (Or best is their worst.)
 ///
 /// AVIF separates out color and alpha values. For the latter, we apply the
@@ -393,7 +402,7 @@ fn tiles(width: usize, height: usize) -> Option<(i32, i32)> {
 	// A starting point.
 	let mut tile_rows_log2 = 0;
 	let mut tile_cols_log2 = 0;
-	let mut tiling = TilingLite::from_target_tiles(
+	let mut tiling = LibAvifTiles::from_target_tiles(
 		width,
 		height,
 		tile_cols_log2,
@@ -405,7 +414,7 @@ fn tiles(width: usize, height: usize) -> Option<(i32, i32)> {
 		(tile_rows_log2 < tiling.max_tile_rows_log2) ||
 		(tile_cols_log2 < tiling.max_tile_cols_log2)
 	{
-		tiling = TilingLite::from_target_tiles(
+		tiling = LibAvifTiles::from_target_tiles(
 			width,
 			height,
 			tile_cols_log2,
@@ -417,11 +426,11 @@ fn tiles(width: usize, height: usize) -> Option<(i32, i32)> {
 
 		// Bump the row count.
 		if
+			tile_cols_log2 >= tiling.max_tile_cols_log2 ||
 			(
 				(tiling.tile_height_sb >= tiling.tile_width_sb) &&
 				(tiling.tile_rows_log2 < tiling.max_tile_rows_log2)
-			) ||
-			(tile_cols_log2 >= tiling.max_tile_cols_log2)
+			)
 		{
 			tile_rows_log2 += 1;
 		}

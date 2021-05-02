@@ -3,9 +3,8 @@
 */
 
 use crate::{
+	Candidate,
 	Image,
-	Output,
-	OutputKind,
 	RefractError,
 };
 use jpegxl_sys::{
@@ -49,9 +48,9 @@ use std::{
 /// # Hold the Encoder.
 ///
 /// This wrapper exists solely to help with drop cleanup.
-struct JxlImageEncoder(*mut JxlEncoder);
+struct LibJxlEncoder(*mut JxlEncoder);
 
-impl JxlImageEncoder {
+impl LibJxlEncoder {
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		let enc = unsafe { JxlEncoderCreate(std::ptr::null()) };
@@ -86,45 +85,53 @@ impl JxlImageEncoder {
 	}
 
 	/// # Write.
-	fn write(&self) -> Result<Box<[u8]>, RefractError> {
-		// Set up a write buffer, starting with 1MB.
-		const CHUNK_SIZE: usize = 1024 * 1024;
-		let mut buffer = vec![0; CHUNK_SIZE];
-		let mut next_out = buffer.as_mut_ptr().cast();
-		let mut avail_out = CHUNK_SIZE;
+	fn write(&self, candidate: &mut Candidate) -> Result<(), RefractError> {
+		// Grab the buffer.
+		let buf = candidate.as_mut_vec();
 
 		// Process the output.
-		let mut status;
 		loop {
-			status = unsafe {
+			let mut len: usize = buf.len();
+			let mut avail_out = buf.capacity() - len;
+
+			// Make sure we can write at least 64KiB to the buffer.
+			if avail_out < 65_536 {
+				buf.reserve(65_536);
+				avail_out = buf.capacity() - len;
+			}
+
+			// Let JPEG XL do its thing.
+			let mut next_out = unsafe { buf.as_mut_ptr().add(len).cast() };
+			let res = unsafe {
 				JxlEncoderProcessOutput(self.0, &mut next_out, &mut avail_out)
 			};
-			if status != JxlEncoderStatus::NeedMoreOutput {
-				break;
+
+			// Abort on error.
+			if res != JxlEncoderStatus::Success && res != JxlEncoderStatus::NeedMoreOutput {
+				return Err(RefractError::Encode);
 			}
 
-			unsafe {
-				let offset = next_out.offset_from(buffer.as_ptr());
-				buffer.resize(buffer.len() * 2, 0);
-				next_out = (buffer.as_mut_ptr()).offset(offset);
-				avail_out = buffer.len() - usize::try_from(offset).map_err(|_| RefractError::Encode)?;
-			}
+			// The new next offset is how far from the beginning?
+			len = usize::try_from(unsafe { next_out.offset_from(buf.as_ptr()) })
+				.map_err(|_| RefractError::Overflow)?;
+
+			// Adjust the buffer length to match.
+			unsafe { buf.set_len(len); }
+
+			// We're done!
+			if JxlEncoderStatus::Success == res { break; }
 		}
-		maybe_die(&status)?;
 
-		// Adjust the buffer accordingly.
-		let len: usize = usize::try_from(unsafe { next_out.offset_from(buffer.as_ptr()) })
-			.map_err(|_| RefractError::Encode)?;
-		buffer.truncate(len);
-		Ok(buffer.into_boxed_slice())
+		// Let the candidate know we finished.
+		candidate.finish_mut_vec();
+
+		Ok(())
 	}
 }
 
-impl Drop for JxlImageEncoder {
+impl Drop for LibJxlEncoder {
 	#[inline]
-	fn drop(&mut self) {
-		unsafe { JxlEncoderDestroy(self.0) };
-	}
+	fn drop(&mut self) { unsafe { JxlEncoderDestroy(self.0) }; }
 }
 
 
@@ -132,9 +139,9 @@ impl Drop for JxlImageEncoder {
 /// # Hold the Thread Runner.
 ///
 /// This wrapper exists solely to help with drop cleanup.
-struct JxlImageEncoderThreads(*mut c_void);
+struct LibJxlThreadParallelRunner(*mut c_void);
 
-impl JxlImageEncoderThreads {
+impl LibJxlThreadParallelRunner {
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		let threads = unsafe {
@@ -145,7 +152,7 @@ impl JxlImageEncoderThreads {
 	}
 }
 
-impl Drop for JxlImageEncoderThreads {
+impl Drop for LibJxlThreadParallelRunner {
 	#[inline]
 	fn drop(&mut self) {
 		unsafe { JxlThreadParallelRunnerDestroy(self.0) };
@@ -164,8 +171,12 @@ impl Drop for JxlImageEncoderThreads {
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossy(img: &Image, quality: NonZeroU8) -> Result<Output, RefractError> {
-	encode(img, Some(quality))
+pub(super) fn make_lossy(
+	img: &Image,
+	candidate: &mut Candidate,
+	quality: NonZeroU8
+) -> Result<(), RefractError> {
+	encode(img, candidate, Some(quality))
 }
 
 #[inline]
@@ -178,22 +189,28 @@ pub(super) fn make_lossy(img: &Image, quality: NonZeroU8) -> Result<Output, Refr
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossless(img: &Image) -> Result<Output, RefractError> {
-	encode(img, None)
+pub(super) fn make_lossless(img: &Image, candidate: &mut Candidate) -> Result<(), RefractError> {
+	encode(img, candidate, None)
 }
+
+
 
 /// # Encode.
 ///
 /// This stitches all the pieces together. Who would have thought a
 /// convoluted format like JPEG XL would require so many steps to produce?!
-fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractError> {
+fn encode(
+	img: &Image,
+	candidate: &mut Candidate,
+	quality: Option<NonZeroU8>
+) -> Result<(), RefractError> {
 	// Initialize the encoder.
-	let enc = JxlImageEncoder::new()?;
+	let enc = LibJxlEncoder::new()?;
 
 	let color = img.color_kind();
 
 	// Hook in parallelism.
-	let runner = JxlImageEncoderThreads::new()?;
+	let runner = LibJxlThreadParallelRunner::new()?;
 	maybe_die(unsafe {
 		&JxlEncoderSetParallelRunner(
 			enc.0,
@@ -237,11 +254,7 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	maybe_die(&unsafe { JxlEncoderOptionsSetDecodingSpeed(options, 0) })?;
 
 	// Set up JPEG XL's "basic info" struct.
-	enc.set_basic_info(
-		u32::try_from(img.width()).map_err(|_| RefractError::Encode)?,
-		u32::try_from(img.height()).map_err(|_| RefractError::Encode)?,
-		color.has_alpha(),
-	)?;
+	enc.set_basic_info(img.width_u32()?, img.height_u32()?, color.has_alpha())?;
 
 	// Set up a "frame".
 	let pixel_format = JxlPixelFormat {
@@ -264,11 +277,7 @@ fn encode(img: &Image, quality: Option<NonZeroU8>) -> Result<Output, RefractErro
 	// Finalize the encoder.
 	unsafe { JxlEncoderCloseInput(enc.0) };
 
-	// Done!
-	Output::new(
-		enc.write()?,
-		quality.unwrap_or_else(|| OutputKind::Jxl.lossless_quality())
-	)
+	enc.write(candidate)
 }
 
 /// # Verify Encoder Status.

@@ -16,4 +16,6 @@ pub enum PixelKind {
 	Compact,
 	/// # RGBA.
 	Full,
+	/// # YUV.
+	Yuv,
 }

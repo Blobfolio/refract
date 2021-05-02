@@ -2,13 +2,20 @@
 # `Refract` - Encoded Image
 */
 
-use crate::OutputKind;
-use crate::RefractError;
-use std::borrow::Cow;
-use std::convert::TryFrom;
-use std::num::NonZeroU64;
-use std::num::NonZeroU8;
-use std::ops::Deref;
+use crate::{
+	Candidate,
+	OutputKind,
+	RefractError,
+};
+use std::{
+	borrow::Cow,
+	convert::TryFrom,
+	num::{
+		NonZeroU64,
+		NonZeroU8,
+	},
+	ops::Deref,
+};
 
 
 
@@ -17,7 +24,7 @@ use std::ops::Deref;
 ///
 /// This holds the raw data for an encoded image along with basic metadata.
 pub struct Output {
-	raw: Box<[u8]>,
+	raw: Vec<u8>,
 	size: NonZeroU64,
 	quality: NonZeroU8,
 	kind: OutputKind,
@@ -30,29 +37,46 @@ impl Deref for Output {
 	fn deref(&self) -> &Self::Target { self.raw.as_ref() }
 }
 
+impl TryFrom<&Candidate> for Output {
+	type Error = RefractError;
+
+	fn try_from(src: &Candidate) -> Result<Self, Self::Error> {
+		let raw = src.as_slice()?.to_vec();
+		let size = u64::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
+		Ok(Self {
+			raw,
+			size: unsafe { NonZeroU64::new_unchecked(size) },
+			quality: src.quality(),
+			kind: src.kind(),
+		})
+	}
+}
+
 /// ## Construction.
 impl Output {
-	/// # New Instance.
+	/// # Update.
 	///
-	/// Create a new instance from raw bytes and quality.
+	/// Replace the inner bits with new data. This can save a few allocations.
 	///
 	/// ## Errors
 	///
 	/// This will return an error if the image is invalid or its size overflows.
-	pub fn new(raw: Box<[u8]>, quality: NonZeroU8) -> Result<Self, RefractError> {
-		let kind = OutputKind::try_from(raw.as_ref())?;
-
-		// We know this is non-zero because we were able to obtain a valid
-		// image kind from its headers.
+	pub fn update(&mut self, src: &Candidate) -> Result<(), RefractError> {
+		let raw = src.as_slice()?;
 		let size = u64::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
-		let size = unsafe { NonZeroU64::new_unchecked(size) };
 
-		Ok(Self {
-			raw,
-			size,
-			quality,
-			kind,
-		})
+		// A few additional sanity checks.
+		if src.kind() != self.kind || size > self.size.get() {
+			return Err(RefractError::Encode);
+		}
+
+		self.raw.truncate(0);
+		self.raw.extend_from_slice(raw);
+
+		self.size = unsafe { NonZeroU64::new_unchecked(size) };
+		self.quality = src.quality();
+
+		Ok(())
 	}
 }
 
