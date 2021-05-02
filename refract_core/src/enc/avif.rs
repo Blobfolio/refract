@@ -10,7 +10,6 @@ use crate::{
 use libavif_sys::{
 	AVIF_CHROMA_UPSAMPLING_BILINEAR,
 	AVIF_CODEC_CHOICE_RAV1E,
-	AVIF_PLANES_YUV,
 	AVIF_RESULT_OK,
 	AVIF_RGB_FORMAT_RGBA,
 	avifEncoder,
@@ -18,7 +17,6 @@ use libavif_sys::{
 	avifEncoderDestroy,
 	avifEncoderWrite,
 	avifImage,
-	avifImageAllocatePlanes,
 	avifImageCreate,
 	avifImageDestroy,
 	avifImageRGBToYUV,
@@ -128,7 +126,6 @@ impl TryFrom<&Image<'_>> for LibAvifImage {
 				8, // Depth.
 				1, // YUV444 = 1_i32
 			);
-			avifImageAllocatePlanes(tmp, AVIF_PLANES_YUV as _);
 			maybe_die(avifImageRGBToYUV(tmp, &rgb))?;
 			tmp
 		};
