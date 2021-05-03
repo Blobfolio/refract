@@ -61,7 +61,7 @@ impl Output {
 	/// ## Errors
 	///
 	/// This will return an error if the image is invalid or its size overflows.
-	pub fn update(&mut self, src: &Candidate) -> Result<(), RefractError> {
+	pub(crate) fn update(&mut self, src: &Candidate) -> Result<(), RefractError> {
 		let raw = src.as_slice()?;
 		let size = u64::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
 

@@ -49,7 +49,7 @@ pub struct Candidate {
 impl Candidate {
 	#[must_use]
 	/// # New.
-	pub const fn new(kind: OutputKind) -> Self {
+	pub(crate) const fn new(kind: OutputKind) -> Self {
 		Self {
 			buf: Vec::new(),
 			quality: kind.lossless_quality(),
@@ -59,7 +59,7 @@ impl Candidate {
 	}
 
 	/// # Reset.
-	pub fn reset(&mut self) {
+	pub(crate) fn reset(&mut self) {
 		self.buf.truncate(0);
 		self.flags = 0;
 	}
@@ -71,7 +71,7 @@ impl Candidate {
 	/// ## Errors
 	///
 	/// An error will be returned — and the struct reset — if validation fails.
-	pub fn verify(&mut self, size: NonZeroU64) -> Result<(), RefractError> {
+	pub(crate) fn verify(&mut self, size: NonZeroU64) -> Result<(), RefractError> {
 		if ! self.verify_kind() || 0 != self.flags & FLAG_MUT_BORROW {
 			self.reset();
 			return Err(RefractError::Encode);
@@ -135,11 +135,11 @@ impl Candidate {
 	///
 	/// For safety, [`Candidate::finish_mut_vec`] must be called after writing
 	/// is complete or it will fail validation.
-	pub fn as_mut_vec(&mut self) -> &mut Vec<u8> { &mut self.buf }
+	pub(crate) fn as_mut_vec(&mut self) -> &mut Vec<u8> { &mut self.buf }
 
 	#[must_use]
 	/// # Is Verified?
-	pub const fn is_verified(&self) -> bool { self.flags == FLAG_VALID }
+	pub(crate) const fn is_verified(&self) -> bool { self.flags == FLAG_VALID }
 
 	#[must_use]
 	/// # Kind.
@@ -156,10 +156,10 @@ impl Candidate {
 	///
 	/// This method must be called after borrowing a mutable vec or the result
 	/// will fail validation.
-	pub fn finish_mut_vec(&mut self) { self.flags = 0; }
+	pub(crate) fn finish_mut_vec(&mut self) { self.flags = 0; }
 
 	/// # From Quality.
-	pub fn set_quality(&mut self, quality: Option<NonZeroU8>) {
+	pub(crate) fn set_quality(&mut self, quality: Option<NonZeroU8>) {
 		self.reset();
 		if let Some(quality) = quality {
 			self.quality = quality;
@@ -170,7 +170,7 @@ impl Candidate {
 	}
 
 	/// # From Slice.
-	pub fn set_slice(&mut self, data: &[u8]) {
+	pub(crate) fn set_slice(&mut self, data: &[u8]) {
 		self.reset();
 		self.buf.extend_from_slice(data);
 	}
