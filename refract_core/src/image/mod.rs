@@ -282,6 +282,11 @@ impl<'a> Image<'a> {
 	/// If this image is already compacted or uses all channels, no additional
 	/// allocations are made. If reduction is necessary, an owned buffer is
 	/// created.
+	///
+	/// ## Panics
+	///
+	/// This method contains a debug assertion to ensure the buffer ends up
+	/// the expected size. It shouldn't actually fail.
 	pub fn as_compact(&'a self) -> Self {
 		match self.pixel {
 			PixelKind::Compact => self.as_ref(),
@@ -292,7 +297,7 @@ impl<'a> Image<'a> {
 					ColorKind::GreyAlpha => self.img.chunks_exact(4).fold(
 						Vec::with_capacity(self.width() * self.height() * 2),
 						|mut acc, p| {
-							acc.extend_from_slice(&[p[0], p[3]]);
+							acc.extend_from_slice(&p[2..]);
 							acc
 						}
 					),
@@ -304,6 +309,11 @@ impl<'a> Image<'a> {
 						}
 					),
 				};
+
+				debug_assert_eq!(
+					buf.len(),
+					self.width() * self.height() * self.color.channels() as usize
+				);
 
 				Self {
 					img: Cow::Owned(buf),

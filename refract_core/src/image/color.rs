@@ -29,6 +29,19 @@ pub enum ColorKind {
 /// # Getters.
 impl ColorKind {
 	#[must_use]
+	/// # Total Channels.
+	///
+	/// Return the number of channels.
+	pub const fn channels(self) -> u32 {
+		match self {
+			Self::Grey => 1,
+			Self::GreyAlpha => 2,
+			Self::Rgb => 3,
+			Self::Rgba => 4,
+		}
+	}
+
+	#[must_use]
 	/// # Color Channels.
 	///
 	/// Return the number of channels used by color, e.g. 3 for RGB.
