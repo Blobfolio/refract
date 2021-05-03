@@ -86,8 +86,7 @@ impl<'a> ImageCli<'a> {
 
 		// Loop it.
 		let mut guide = self.src.encode(self.kind);
-		while guide.next()
-			.and_then(|_| guide.candidate())
+		while guide.advance()
 			.and_then(|data| save_image(&self.tmp, data).ok())
 			.is_some()
 		{
