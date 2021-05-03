@@ -16,9 +16,16 @@ use std::{
 
 
 
+/// # Flag: Kind Validated.
 const FLAG_KIND: u8        = 0b0001;
+
+/// # Flag: Size Validated.
 const FLAG_SIZE: u8        = 0b0010;
+
+/// # Flag: Mutable Vec is Outstanding.
 const FLAG_MUT_BORROW: u8  = 0b0100;
+
+/// # Flag: All validated.
 const FLAG_VALID: u8       = 0b0011;
 
 
