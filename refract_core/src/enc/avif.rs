@@ -10,6 +10,8 @@ use crate::{
 use libavif_sys::{
 	AVIF_CHROMA_UPSAMPLING_BILINEAR,
 	AVIF_CODEC_CHOICE_RAV1E,
+	AVIF_PIXEL_FORMAT_YUV400,
+	AVIF_PIXEL_FORMAT_YUV444,
 	AVIF_RESULT_OK,
 	AVIF_RGB_FORMAT_RGBA,
 	avifEncoder,
@@ -124,7 +126,8 @@ impl TryFrom<&Image<'_>> for LibAvifImage {
 				src.width_i32()?,
 				src.height_i32()?,
 				8, // Depth.
-				1, // YUV444 = 1_i32
+				if src.color_kind().is_greyscale() { AVIF_PIXEL_FORMAT_YUV400 }
+				else { AVIF_PIXEL_FORMAT_YUV444 }
 			);
 			maybe_die(avifImageRGBToYUV(tmp, &rgb))?;
 			tmp

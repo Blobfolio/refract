@@ -107,7 +107,7 @@
 	Does derby.jpg.PROPOSED.avif look good? [y/N]
 	Does derby.jpg.PROPOSED.avif look good? [y/N]
 	Does derby.jpg.PROPOSED.avif look good? [y/N]
-	Success: Created derby.jpg.avif with quantizer 24. (Saved 95,894 bytes, 68.76%.)
+	Success: Created derby.jpg.avif with quantizer 24. (Saved 95,973 bytes, 68.82%.)
 [JPEG XL]
 	Does derby.jpg.PROPOSED.jxl look good? [y/N]
 	Does derby.jpg.PROPOSED.jxl look good? [y/N]
@@ -154,7 +154,7 @@
 	Does myrna.png.PROPOSED.avif look good? [y/N]
 	Does myrna.png.PROPOSED.avif look good? [y/N] y
 	Does myrna.png.PROPOSED.avif look good? [y/N]
-	Success: Created myrna.png.avif with quantizer 18. (Saved 333,312 bytes, 75.82%.)
+	Success: Created myrna.png.avif with quantizer 18. (Saved 333,282 bytes, 75.81%.)
 [JPEG XL]
 	Does myrna.png.PROPOSED.jxl look good? [y/N]
 	Does myrna.png.PROPOSED.jxl look good? [y/N]
