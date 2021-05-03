@@ -1,4 +1,33 @@
 +-----------------------------+
+| /share/skel/assets/bars.png |
++-----------------------------+
+[WebP]
+	Does bars.png.PROPOSED.webp look good? [y/N]
+	Does bars.png.PROPOSED.webp look good? [y/N]
+	Does bars.png.PROPOSED.webp look good? [y/N]
+	Does bars.png.PROPOSED.webp look good? [y/N] y
+	Does bars.png.PROPOSED.webp look good? [y/N] y
+	Does bars.png.PROPOSED.webp look good? [y/N] y
+	Success: Created bars.png.webp with quality 88. (Saved 187,804 bytes, 84.08%.)
+[AVIF]
+	Does bars.png.PROPOSED.avif look good? [y/N]
+	Does bars.png.PROPOSED.avif look good? [y/N] y
+	Does bars.png.PROPOSED.avif look good? [y/N]
+	Does bars.png.PROPOSED.avif look good? [y/N] y
+	Does bars.png.PROPOSED.avif look good? [y/N]
+	Does bars.png.PROPOSED.avif look good? [y/N] y
+	Success: Created bars.png.avif with quantizer 21. (Saved 197,047 bytes, 88.22%.)
+[JPEG XL]
+	Does bars.png.PROPOSED.jxl look good? [y/N]
+	Does bars.png.PROPOSED.jxl look good? [y/N]
+	Does bars.png.PROPOSED.jxl look good? [y/N] y
+	Does bars.png.PROPOSED.jxl look good? [y/N]
+	Does bars.png.PROPOSED.jxl look good? [y/N] y
+	Does bars.png.PROPOSED.jxl look good? [y/N]
+	Does bars.png.PROPOSED.jxl look good? [y/N] y
+	Success: Created bars.png.jxl with quality 2.6. (Saved 200,829 bytes, 89.91%.)
+
++-----------------------------+
 | /share/skel/assets/cats.jpg |
 +-----------------------------+
 [WebP]
