@@ -217,10 +217,9 @@ impl EncodeIter<'_> {
 	fn keep_candidate(&mut self) {
 		if self.candidate.is_verified() {
 			// Replace the existing best.
-			if let Some(mut output) = self.best.take() {
+			if let Some(ref mut output) = self.best {
 				if output.update(&self.candidate).is_ok() {
 					self.size = output.size();
-					self.best.replace(output);
 				}
 			}
 			// Insert a first best.
