@@ -64,6 +64,15 @@ impl ColorKind {
 	}
 
 	#[must_use]
+	/// # Is Color?
+	///
+	/// An image is color if it contains at least one pixel with an R, G,
+	/// and/or B that are not all the same.
+	pub const fn is_color(self) -> bool {
+		matches!(self, Self::Rgb | Self::Rgba)
+	}
+
+	#[must_use]
 	/// # Is Greyscale?
 	///
 	/// An image is greyscale if every pixel's individual R, G, and B values
