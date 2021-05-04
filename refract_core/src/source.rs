@@ -142,6 +142,14 @@ impl Source<'_> {
 	pub fn img_compact(&self) -> Image<'_> { self.img.as_compact() }
 
 	#[must_use]
+	/// # YUV Image (reference).
+	///
+	/// Return an image buffer converted to limited YUV range. This is only
+	/// used when the [`FLAG_AVIF_LIMITED`] flag is set, and only if the source
+	/// is color.
+	pub(crate) fn img_yuv(&self) -> Image<'_> { self.img.as_yuv() }
+
+	#[must_use]
 	/// # Path.
 	///
 	/// Return a reference to the original path.
@@ -152,6 +160,25 @@ impl Source<'_> {
 	///
 	/// Return the file size of the source.
 	pub const fn size(&self) -> NonZeroU64 { self.size }
+
+	#[must_use]
+	#[inline]
+	/// # Can Do YUV?
+	///
+	/// This is a convenient function that will evaluate whether an image
+	/// source supports limited-range YUV encoding.
+	pub fn can_yuv(&self) -> bool { self.img.can_yuv() }
+
+	#[must_use]
+	#[inline]
+	/// # Wants YUV?
+	///
+	/// This is a convenient function that will evaluate the image and flags
+	/// to see if it should be YUV.
+	///
+	/// It is assumed the asker knows it is dealing with an AVIF; otherwise
+	/// the answer is misleading.
+	pub fn wants_yuv(&self, flags: u8) -> bool { self.img.wants_yuv(flags) }
 }
 
 /// ## Encoding.
@@ -162,8 +189,8 @@ impl Source<'_> {
 	///
 	/// This returns a guided encoding iterator. See [`EncodeIter`] for more
 	/// information.
-	pub fn encode(&self, enc: OutputKind) -> EncodeIter<'_> {
-		EncodeIter::new(self, enc)
+	pub fn encode(&self, enc: OutputKind, flags: u8) -> EncodeIter<'_> {
+		EncodeIter::new(self, enc, flags)
 	}
 }
 

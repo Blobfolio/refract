@@ -9,6 +9,7 @@ use dactyl::{
 };
 use fyi_msg::Msg;
 use refract_core::{
+	FLAG_AVIF_LIMITED,
 	Output,
 	OutputKind,
 	RefractError,
@@ -37,6 +38,7 @@ pub(super) struct ImageCli<'a> {
 	kind: OutputKind,
 	tmp: PathBuf,
 	dst: PathBuf,
+	flags: u8,
 }
 
 impl<'a> Drop for ImageCli<'a> {
@@ -63,18 +65,31 @@ impl<'a> ImageCli<'a> {
 			let _res = std::fs::File::create(&tmp);
 		}
 
+		// Default limited mode for AVIF when appropriate.
+		let flags: u8 =
+			if kind == OutputKind::Avif && src.can_yuv() { FLAG_AVIF_LIMITED }
+			else { 0 };
+
 		Self {
 			src,
 			kind,
 			tmp,
 			dst,
+			flags,
 		}
 	}
 
 	/// # Encode.
-	pub(crate) fn encode(self) {
+	pub(crate) fn encode(mut self) {
 		// Print a header for the encoding type.
-		println!("\x1b[34m[\x1b[96;1m{}\x1b[0;34m]\x1b[0m", self.kind);
+		println!(
+			"\x1b[34m[\x1b[96;1m{}\x1b[0;34m]\x1b[0m{}",
+			self.kind,
+			if self.kind == OutputKind::Avif && self.src.wants_yuv(self.flags) {
+				" \x1b[2m(YCbCr)\x1b[0m"
+			}
+			else { "" }
+		);
 
 		// We'll be re-using this prompt throughout.
 		let prompt = Msg::plain(format!(
@@ -85,7 +100,7 @@ impl<'a> ImageCli<'a> {
 			.with_indent(1);
 
 		// Loop it.
-		let mut guide = self.src.encode(self.kind);
+		let mut guide = self.src.encode(self.kind, self.flags);
 		while guide.advance()
 			.and_then(|data| save_image(&self.tmp, data).ok())
 			.is_some()
@@ -100,7 +115,7 @@ impl<'a> ImageCli<'a> {
 
 		// Wrap it up!
 		let time = guide.time();
-		self.finish(guide.take());
+		let res = self.finish(guide.take());
 
 		// Print the timings.
 		Msg::plain(format!(
@@ -109,10 +124,21 @@ impl<'a> ImageCli<'a> {
 		))
 			.with_indent(1)
 			.print();
+
+		// We might want to re-run AVIF in full mode. This only applies if no
+		// candidate was found using YCbCr.
+		if
+			! res &&
+			self.kind == OutputKind::Avif &&
+			FLAG_AVIF_LIMITED == self.flags & FLAG_AVIF_LIMITED
+		{
+			self.flags = 0;
+			self.encode()
+		}
 	}
 
 	/// # Finish.
-	fn finish(self, result: Result<Output, RefractError>) {
+	fn finish(&self, result: Result<Output, RefractError>) -> bool {
 		// Handle results.
 		match result {
 			Ok(result) => match save_image(&self.dst, &result) {
@@ -153,14 +179,16 @@ pub(super) fn print_path_title(path: &Path) {
 }
 
 /// # Print Error.
-fn print_error(err: RefractError) {
+fn print_error(err: RefractError) -> bool {
 	Msg::warning(err.as_str())
 		.with_indent(1)
 		.print();
+
+	false
 }
 
 /// # Print Success.
-fn print_success(src_size: u64, output: &Output, dst_path: &Path) {
+fn print_success(src_size: u64, output: &Output, dst_path: &Path) -> bool {
 	let diff: u64 = src_size - output.size().get();
 	let per = dactyl::int_div_float(diff, src_size);
 	let name = dst_path.file_name()
@@ -188,6 +216,8 @@ fn print_success(src_size: u64, output: &Output, dst_path: &Path) {
 			}
 		)
 		.print();
+
+	true
 }
 
 /// # Write Result.

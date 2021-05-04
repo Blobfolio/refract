@@ -8,12 +8,19 @@ use crate::{
 	RefractError,
 };
 use libavif_sys::{
+	AVIF_CHROMA_SAMPLE_POSITION_COLOCATED,
 	AVIF_CHROMA_UPSAMPLING_BILINEAR,
 	AVIF_CODEC_CHOICE_RAV1E,
+	AVIF_COLOR_PRIMARIES_BT709,
+	AVIF_MATRIX_COEFFICIENTS_BT709,
+	AVIF_MATRIX_COEFFICIENTS_IDENTITY,
 	AVIF_PIXEL_FORMAT_YUV400,
 	AVIF_PIXEL_FORMAT_YUV444,
+	AVIF_RANGE_FULL,
+	AVIF_RANGE_LIMITED,
 	AVIF_RESULT_OK,
 	AVIF_RGB_FORMAT_RGBA,
+	AVIF_TRANSFER_CHARACTERISTICS_SRGB,
 	avifEncoder,
 	avifEncoderCreate,
 	avifEncoderDestroy,
@@ -102,6 +109,26 @@ struct LibAvifImage(*mut avifImage);
 impl TryFrom<&Image<'_>> for LibAvifImage {
 	type Error = RefractError;
 	fn try_from(src: &Image) -> Result<Self, Self::Error> {
+		// Limited mode.
+		if src.is_yuv() {
+			Self::from_yuv(src)
+		}
+		else {
+			Self::from_rgb(src)
+		}
+	}
+}
+
+impl Drop for LibAvifImage {
+	#[inline]
+	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
+}
+
+impl LibAvifImage {
+	/// # From RGB.
+	///
+	/// This copies pixel data into the struct using full-range conversion.
+	fn from_rgb(src: &Image) -> Result<Self, RefractError> {
 		// Make sure dimensions fit u32.
 		let width = src.width_u32()?;
 		let height = src.height_u32()?;
@@ -120,26 +147,69 @@ impl TryFrom<&Image<'_>> for LibAvifImage {
 			rowBytes: 4 * width,
 		};
 
+		let greyscale: bool = src.color_kind().is_greyscale();
+
 		// And convert it to YUV.
 		let yuv = unsafe {
 			let tmp = avifImageCreate(
 				src.width_i32()?,
 				src.height_i32()?,
 				8, // Depth.
-				if src.color_kind().is_greyscale() { AVIF_PIXEL_FORMAT_YUV400 }
+				if greyscale { AVIF_PIXEL_FORMAT_YUV400 }
 				else { AVIF_PIXEL_FORMAT_YUV444 }
 			);
+
+			// Set metadata.
+			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709;
+			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB;
+			(*tmp).matrixCoefficients =
+				if greyscale { AVIF_MATRIX_COEFFICIENTS_BT709 }
+				else { AVIF_MATRIX_COEFFICIENTS_IDENTITY };
+
+			// Convert the source.
 			maybe_die(avifImageRGBToYUV(tmp, &rgb))?;
 			tmp
 		};
 
 		Ok(Self(yuv))
 	}
-}
 
-impl Drop for LibAvifImage {
-	#[inline]
-	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
+	/// # From YUV.
+	///
+	/// This copies pre-converted limited-range YUV planes into the struct
+	/// without any additional fuss.
+	fn from_yuv(src: &Image) -> Result<Self, RefractError> {
+		// And convert it to YUV.
+		let yuv = unsafe {
+			let tmp = avifImageCreate(
+				src.width_i32()?,
+				src.height_i32()?,
+				8, // Depth.
+				AVIF_PIXEL_FORMAT_YUV444
+			);
+
+			let (yuv_planes, yuv_row_bytes, alpha_plane, alpha_row_bytes) = src.yuv();
+
+			(*tmp).imageOwnsYUVPlanes = 0;
+			(*tmp).yuvRange = AVIF_RANGE_LIMITED;
+			(*tmp).yuvPlanes = yuv_planes;
+			(*tmp).yuvRowBytes = yuv_row_bytes;
+
+			(*tmp).imageOwnsAlphaPlane = 0;
+			(*tmp).alphaRange = AVIF_RANGE_FULL;
+			(*tmp).alphaPlane = alpha_plane;
+			(*tmp).alphaRowBytes = alpha_row_bytes;
+
+			(*tmp).yuvChromaSamplePosition = AVIF_CHROMA_SAMPLE_POSITION_COLOCATED;
+			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709;
+			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB;
+			(*tmp).matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT709;
+
+			tmp
+		};
+
+		Ok(Self(yuv))
+	}
 }
 
 

@@ -16,4 +16,11 @@ pub enum PixelKind {
 	Compact,
 	/// # RGBA.
 	Full,
+	/// # YUV.
+	///
+	/// This is a special mode used by AVIF when the [`FLAG_AVIF_LIMITED`] flag
+	/// is set. This indicates the buffer has been converted from RGB into YUV,
+	/// stored contiguously with all the Ys first, then the Us, Vs, and finally
+	/// As.
+	Yuv,
 }

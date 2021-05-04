@@ -69,7 +69,7 @@ impl<'a> EncodeIter<'a> {
 	/// # New.
 	///
 	/// Start a new iterator with a given source and output format.
-	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind) -> Self {
+	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind, flags: u8) -> Self {
 		let (bottom, top) = kind.quality_range();
 
 		let mut out = Self {
@@ -80,8 +80,12 @@ impl<'a> EncodeIter<'a> {
 			src: match kind {
 				// JPEG XL takes a compacted source.
 				OutputKind::Jxl => src.img_compact(),
-				// AVIF and WebP both work from RGBA.
-				OutputKind::Avif | OutputKind::Webp => src.img(),
+				// AVIF might need RGB or YUV depending on options.
+				OutputKind::Avif =>
+					if src.wants_yuv(flags) { src.img_yuv() }
+					else { src.img() },
+				// WebP always wants RGB.
+				OutputKind::Webp => src.img(),
 			},
 			size: src.size(),
 			kind,
