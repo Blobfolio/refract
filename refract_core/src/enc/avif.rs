@@ -8,22 +8,25 @@ use crate::{
 	RefractError,
 };
 use libavif_sys::{
-	AVIF_CHROMA_UPSAMPLING_BILINEAR,
+	AVIF_CHROMA_SAMPLE_POSITION_COLOCATED,
 	AVIF_CODEC_CHOICE_RAV1E,
-	AVIF_PLANES_YUV,
+	AVIF_COLOR_PRIMARIES_BT709,
+	AVIF_MATRIX_COEFFICIENTS_BT709,
+	AVIF_MATRIX_COEFFICIENTS_IDENTITY,
+	AVIF_PIXEL_FORMAT_YUV400,
+	AVIF_PIXEL_FORMAT_YUV444,
+	AVIF_RANGE_FULL,
+	AVIF_RANGE_LIMITED,
 	AVIF_RESULT_OK,
-	AVIF_RGB_FORMAT_RGBA,
+	AVIF_TRANSFER_CHARACTERISTICS_SRGB,
 	avifEncoder,
 	avifEncoderCreate,
 	avifEncoderDestroy,
 	avifEncoderWrite,
 	avifImage,
-	avifImageAllocatePlanes,
 	avifImageCreate,
 	avifImageDestroy,
-	avifImageRGBToYUV,
 	avifResult,
-	avifRGBImage,
 	avifRWData,
 	avifRWDataFree,
 };
@@ -64,6 +67,8 @@ impl TryFrom<NonZeroU8> for LibAvifEncoder {
 
 		// Start up the encoder!
 		let encoder = unsafe { avifEncoderCreate() };
+		if encoder.is_null() { return Err(RefractError::Encode); }
+
 		unsafe {
 			(*encoder).codecChoice = AVIF_CODEC_CHOICE_RAV1E;
 			(*encoder).maxThreads = threads;
@@ -92,33 +97,23 @@ impl Drop for LibAvifEncoder {
 
 /// # Avif Image.
 ///
-/// This holds a YUV copy of the image, which is created in a roundabout way
-/// by converting a raw slice into an RGB image. Haha.
-///
 /// The struct includes initialization helpers, but exists primarily for
 /// garbage cleanup.
 struct LibAvifImage(*mut avifImage);
 
 impl TryFrom<&Image<'_>> for LibAvifImage {
 	type Error = RefractError;
-	fn try_from(src: &Image) -> Result<Self, Self::Error> {
-		// Make sure dimensions fit u32.
-		let width = src.width_u32()?;
-		let height = src.height_u32()?;
 
-		// Make an "avifRGBImage" from our buffer.
-		let raw: &[u8] = &*src;
-		let rgb = avifRGBImage {
-			width,
-			height,
-			depth: 8,
-			format: AVIF_RGB_FORMAT_RGBA,
-			chromaUpsampling: AVIF_CHROMA_UPSAMPLING_BILINEAR,
-			ignoreAlpha: ! src.color_kind().has_alpha() as _,
-			alphaPremultiplied: 0,
-			pixels: raw.as_ptr() as *mut u8,
-			rowBytes: 4 * width,
-		};
+	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
+	fn try_from(src: &Image) -> Result<Self, Self::Error> {
+		// AVIF dimensions can't exceed this amount. We might as well bail as
+		// early as possible.
+		if src.width() * src.height() > 16_384 * 16_384 {
+			return Err(RefractError::Overflow);
+		}
+
+		let limited = src.is_yuv_limited();
+		let greyscale: bool = src.color_kind().is_greyscale();
 
 		// And convert it to YUV.
 		let yuv = unsafe {
@@ -126,10 +121,34 @@ impl TryFrom<&Image<'_>> for LibAvifImage {
 				src.width_i32()?,
 				src.height_i32()?,
 				8, // Depth.
-				1, // YUV444 = 1_i32
+				if greyscale { AVIF_PIXEL_FORMAT_YUV400 }
+				else { AVIF_PIXEL_FORMAT_YUV444 }
 			);
-			avifImageAllocatePlanes(tmp, AVIF_PLANES_YUV as _);
-			maybe_die(avifImageRGBToYUV(tmp, &rgb))?;
+
+			// This shouldn't happen, but could, maybe.
+			if tmp.is_null() { return Err(RefractError::Encode); }
+
+			let (yuv_planes, yuv_row_bytes, alpha_plane, alpha_row_bytes) = src.yuv();
+
+			(*tmp).imageOwnsYUVPlanes = 0;
+			(*tmp).yuvRange =
+				if limited { AVIF_RANGE_LIMITED }
+				else { AVIF_RANGE_FULL };
+			(*tmp).yuvPlanes = yuv_planes;
+			(*tmp).yuvRowBytes = yuv_row_bytes;
+
+			(*tmp).imageOwnsAlphaPlane = 0;
+			(*tmp).alphaRange = AVIF_RANGE_FULL;
+			(*tmp).alphaPlane = alpha_plane;
+			(*tmp).alphaRowBytes = alpha_row_bytes;
+
+			(*tmp).yuvChromaSamplePosition = AVIF_CHROMA_SAMPLE_POSITION_COLOCATED;
+			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709 as _;
+			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB as _;
+			(*tmp).matrixCoefficients =
+				if greyscale || limited { AVIF_MATRIX_COEFFICIENTS_BT709 as _ }
+				else { AVIF_MATRIX_COEFFICIENTS_IDENTITY as _ };
+
 			tmp
 		};
 

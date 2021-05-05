@@ -40,7 +40,7 @@ Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjx
 
 | Encoding | Mode | Parallel | Comparable To Running |
 | -------- | ---- | -------- | --------------------- |
-| AVIF | Lossy | Y | `cavif --speed 1 --quality <N>` |
+| AVIF | Lossy | Y | `cavif --color rgb --speed 1 --quality <N>` |
 | JPEG XL | Lossless | Y | `cjxl --speed tortoise --distance 0.0` |
 | JPEG XL | Lossy | Y | `cjxl --speed tortoise --distance <N>` |
 | WebP | Lossless | N | `cwebp -lossless -z 9 -q 100` |
@@ -54,12 +54,17 @@ The guided feedback is only required for lossy stages. Lossless, being lossless,
 
 AVIF encoding is _slow_.
 
-To make it at all bearable, three concessions are made:
- * Lossless encoding is unsupported (it isn't competitive anyway);
+To make it at all bearable, two concessions are made:
  * The encoder is run with speed `1` rather than speed `0`;
  * Images are split into "tiles" that can be processed in parallel;
 
-That last item is compensated for by automatically repeating the chosen "best" encoding one time at the end with tiling optimizations disabled.
+The latter is compensated for by automatically repeating the chosen "best" encoding one time at the end with tiling optimizations disabled.
+
+Color sources are outputted using `Y′UV444`, while greyscale sources are outputted using `Y′UV400` instead.
+
+Speaking of color sources, Refract will first attempt encoding using limited-range YCbCr as that usually reduces output sizes 2-5%. Because YCbCr can result in color shifting or other undesired distortion, if none of the candidates look good, it will rerun the process using full-range RGB.
+
+Because YCbCr particularly messes with blacks and whites, greyscale images are only ever encoded in full-range mode.
 
 **Note:**
  >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.

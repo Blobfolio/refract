@@ -28,15 +28,18 @@ use std::{
 #[derive(Debug, Clone)]
 /// # Encoding Iterator.
 ///
-/// This is a guided encoding iterator generated from [`Source::encode`].
+/// This is a guided encoding "iterator" generated from [`Source::encode`].
 ///
 /// If the encoder supports lossless encoding, that is attempted first, right
 /// out the gate.
 ///
-/// From there, the `Iterator` [`EncodeIter::next`] can be repeatedly called
-/// to produce candidate images at various encoding qualities. Each result
-/// should be expected for Quality Assurance and passed to either
-/// [`EncodeIter::keep`] if it is good or [`EncodeIter::discard`] if it sucks.
+/// From there, [`EncodeIter::advance`] can be repeatedly called to produce
+/// candidate images at various encoding qualities, returning a byte slice of
+/// the last encoded image so you can e.g. write it to a file.
+///
+/// Each result should be expected for Quality Assurance before continuing,
+/// with a call to either [`EncodeIter::keep`] if it looked good or
+/// [`EncodeIter::discard`] if it sucked.
 ///
 /// Feedback from keep/discard operations is factored into the iterator,
 /// allowing it to adjust the min/max quality boundaries to avoid pointless
@@ -61,36 +64,12 @@ pub struct EncodeIter<'a> {
 	done: bool,
 }
 
-impl Iterator for EncodeIter<'_> {
-	type Item = ();
-
-	fn next(&mut self) -> Option<Self::Item> {
-		// Start a timer.
-		let now = Instant::now();
-
-		// Handle the actual next business.
-		let res = self.next_inner();
-
-		// If we're done, see if it is worth doing one more (silent) pass
-		// against the best found. This currently only applies to AVIF.
-		if res.is_none() && ! self.done {
-			let _res = self.next_final();
-		}
-
-		// Record the time spent.
-		self.time += now.elapsed();
-
-		// Return the result!
-		res
-	}
-}
-
 impl<'a> EncodeIter<'a> {
 	#[must_use]
 	/// # New.
 	///
 	/// Start a new iterator with a given source and output format.
-	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind) -> Self {
+	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind, flags: u8) -> Self {
 		let (bottom, top) = kind.quality_range();
 
 		let mut out = Self {
@@ -101,8 +80,10 @@ impl<'a> EncodeIter<'a> {
 			src: match kind {
 				// JPEG XL takes a compacted source.
 				OutputKind::Jxl => src.img_compact(),
-				// AVIF and WebP both work from RGBA.
-				OutputKind::Avif | OutputKind::Webp => src.img(),
+				// AVIF wants some kind of YUV source.
+				OutputKind::Avif => src.img_yuv(flags),
+				// WebP always wants RGB.
+				OutputKind::Webp => src.img(),
 			},
 			size: src.size(),
 			kind,
@@ -194,6 +175,34 @@ impl EncodeIter<'_> {
 
 /// ## Iteration Helpers.
 impl EncodeIter<'_> {
+	/// # Crunch the Next Quality!
+	///
+	/// This method will attempt to re-encode the source using the next
+	/// quality. If successful, it will return a byte slice of the raw image
+	/// file.
+	///
+	/// Once all qualities have been tested, this will return `None`.
+	pub fn advance(&mut self) -> Option<&[u8]> {
+		// Start a timer.
+		let now = Instant::now();
+
+		// Handle the actual next business.
+		let res = self.next_inner();
+
+		// If we're done, see if it is worth doing one more (silent) pass
+		// against the best found. This currently only applies to AVIF.
+		if res.is_none() && ! self.done {
+			let _res = self.next_final();
+		}
+
+		// Record the time spent.
+		self.time += now.elapsed();
+
+		// Return the result!
+		if res.is_some() { self.candidate() }
+		else { None }
+	}
+
 	/// # Discard Candidate.
 	///
 	/// Use this method to reject a given candidate because e.g. it didn't look
@@ -217,10 +226,9 @@ impl EncodeIter<'_> {
 	fn keep_candidate(&mut self) {
 		if self.candidate.is_verified() {
 			// Replace the existing best.
-			if let Some(mut output) = self.best.take() {
+			if let Some(ref mut output) = self.best {
 				if output.update(&self.candidate).is_ok() {
 					self.size = output.size();
-					self.best.replace(output);
 				}
 			}
 			// Insert a first best.
@@ -242,7 +250,7 @@ impl EncodeIter<'_> {
 		match self.lossy(quality, true) {
 			Ok(_) => Some(()),
 			Err(RefractError::TooBig) => {
-				// Recurse to see if the next quality works out OK.
+				// Recurse to see if the next-next quality works out OK.
 				self.set_top_minus_one(quality);
 				self.next_inner()
 			},
@@ -288,6 +296,8 @@ impl EncodeIter<'_> {
 	/// This will choose an untested quality from the moving range, preferring
 	/// a value somewhere in the middle.
 	fn next_quality(&mut self) -> Option<NonZeroU8> {
+		debug_assert!(self.bottom <= self.top);
+
 		let min = self.bottom.get();
 		let max = self.top.get();
 		let mut diff = max - min;

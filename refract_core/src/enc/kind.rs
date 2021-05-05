@@ -7,9 +7,11 @@
 */
 
 use crate::RefractError;
-use std::convert::TryFrom;
-use std::fmt;
-use std::num::NonZeroU8;
+use std::{
+	convert::TryFrom,
+	fmt,
+	num::NonZeroU8,
+};
 
 
 

@@ -258,7 +258,7 @@ fn encode(
 
 	// Set up a "frame".
 	let pixel_format = JxlPixelFormat {
-		num_channels: color.color_channels() + color.extra_channels(),
+		num_channels: color.channels(),
 		data_type: JxlDataType::Uint8,
 		endianness: JxlEndianness::Native,
 		align: 0,
