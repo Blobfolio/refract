@@ -37,6 +37,7 @@ pub(super) struct ImageCli<'a> {
 	kind: OutputKind,
 	tmp: PathBuf,
 	dst: PathBuf,
+	flags: u8,
 }
 
 impl<'a> Drop for ImageCli<'a> {
@@ -50,7 +51,7 @@ impl<'a> Drop for ImageCli<'a> {
 
 impl<'a> ImageCli<'a> {
 	/// # New Instance.
-	pub(crate) fn new(src: &'a Source, kind: OutputKind) -> Self {
+	pub(crate) fn new(src: &'a Source, kind: OutputKind, flags: u8) -> Self {
 		// Let's start by setting up the file system paths we'll be using for
 		// preview and permanent output.
 		let stub: &[u8] = src.path().as_os_str().as_bytes();
@@ -68,6 +69,7 @@ impl<'a> ImageCli<'a> {
 			kind,
 			tmp,
 			dst,
+			flags,
 		}
 	}
 
@@ -85,7 +87,7 @@ impl<'a> ImageCli<'a> {
 			.with_indent(1);
 
 		// Loop it.
-		let mut guide = self.src.encode(self.kind, 0);
+		let mut guide = self.src.encode(self.kind, self.flags);
 		while guide.advance()
 			.and_then(|data| save_image(&self.tmp, data).ok())
 			.is_some()

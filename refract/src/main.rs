@@ -37,6 +37,7 @@ use argyle::{
 };
 use image::ImageCli;
 use refract_core::{
+	FLAG_NO_AVIF_LIMITED,
 	OutputKind,
 	RefractError,
 	Source,
@@ -86,6 +87,9 @@ fn _main() -> Result<(), RefractError> {
 		.map_err(RefractError::Menu)?
 		.with_list();
 
+	// We'll get to these in a bit.
+	let mut flags: u8 = 0;
+
 	// Figure out which types we're dealing with.
 	let mut encoders: Vec<OutputKind> = Vec::with_capacity(2);
 	if ! args.switch(b"--no-webp") {
@@ -93,6 +97,10 @@ fn _main() -> Result<(), RefractError> {
 	}
 	if ! args.switch(b"--no-avif") {
 		encoders.push(OutputKind::Avif);
+
+		if args.switch(b"--skip-ycbcr") {
+			flags |= FLAG_NO_AVIF_LIMITED;
+		}
 	}
 	if ! args.switch(b"--no-jxl") {
 		encoders.push(OutputKind::Jxl);
@@ -124,7 +132,7 @@ fn _main() -> Result<(), RefractError> {
 
 			match Source::try_from(x) {
 				Ok(img) => encoders.iter()
-					.map(|&e| ImageCli::new(&img, e))
+					.map(|&e| ImageCli::new(&img, e, flags))
 					.for_each(ImageCli::encode),
 				Err(e) => Msg::error(e.as_str()).print(),
 			}
@@ -172,6 +180,8 @@ FLAGS:
         --no-avif     Skip AVIF conversion.
         --no-jxl      Skip JPEG XL conversion.
         --no-webp     Skip WebP conversion.
+        --skip-ycbcr  Only test full-range RGB AVIF encoding (when encoding
+                      AVIFs).
     -V, --version     Prints version information.
 
 OPTIONS:

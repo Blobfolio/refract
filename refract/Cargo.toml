@@ -49,6 +49,10 @@ long = "--no-webp"
 description = "Skip WebP conversion."
 
 [[package.metadata.bashman.switches]]
+long = "--skip-ycbcr"
+description = "Only test full-range RGB AVIF encoding (when encoding AVIFs)."
+
+[[package.metadata.bashman.switches]]
 short = "-V"
 long = "--version"
 description = "Print program version."
