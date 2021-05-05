@@ -125,6 +125,7 @@ impl Drop for LibAvifImage {
 }
 
 impl LibAvifImage {
+	#[allow(clippy::cast_possible_truncation)] // The values are intended to fit.
 	/// # From RGB.
 	///
 	/// This copies pixel data into the struct using full-range conversion.
@@ -160,11 +161,11 @@ impl LibAvifImage {
 			);
 
 			// Set metadata.
-			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709;
-			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB;
+			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709 as _;
+			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB as _;
 			(*tmp).matrixCoefficients =
-				if greyscale { AVIF_MATRIX_COEFFICIENTS_BT709 }
-				else { AVIF_MATRIX_COEFFICIENTS_IDENTITY };
+				if greyscale { AVIF_MATRIX_COEFFICIENTS_BT709 as _ }
+				else { AVIF_MATRIX_COEFFICIENTS_IDENTITY as _ };
 
 			// Convert the source.
 			maybe_die(avifImageRGBToYUV(tmp, &rgb))?;
@@ -174,6 +175,7 @@ impl LibAvifImage {
 		Ok(Self(yuv))
 	}
 
+	#[allow(clippy::cast_possible_truncation)] // The values are intended to fit.
 	/// # From YUV.
 	///
 	/// This copies pre-converted limited-range YUV planes into the struct
@@ -201,9 +203,9 @@ impl LibAvifImage {
 			(*tmp).alphaRowBytes = alpha_row_bytes;
 
 			(*tmp).yuvChromaSamplePosition = AVIF_CHROMA_SAMPLE_POSITION_COLOCATED;
-			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709;
-			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB;
-			(*tmp).matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT709;
+			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709 as _;
+			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB as _;
+			(*tmp).matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT709 as _;
 
 			tmp
 		};
