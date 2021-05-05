@@ -106,6 +106,12 @@ impl TryFrom<&Image<'_>> for LibAvifImage {
 
 	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
 	fn try_from(src: &Image) -> Result<Self, Self::Error> {
+		// AVIF dimensions can't exceed this amount. We might as well bail as
+		// early as possible.
+		if src.width() * src.height() > 16_384 * 16_384 {
+			return Err(RefractError::Overflow);
+		}
+
 		let limited = src.is_yuv_limited();
 		let greyscale: bool = src.color_kind().is_greyscale();
 
