@@ -8,7 +8,6 @@ pub(super) mod pixel;
 
 use crate::{
 	ColorKind,
-	FLAG_AVIF_LIMITED,
 	PixelKind,
 	RefractError,
 	SourceKind,
@@ -352,127 +351,6 @@ impl<'a> Image<'a> {
 
 /// # YUV.
 impl<'a> Image<'a> {
-	#[must_use]
-	/// # As YUV.
-	///
-	/// This converts a [`PixelKind::Full`] RGBA image into a YUV one.
-	///
-	/// The internal buffer is filled with all the Ys first, then the Us, then
-	/// the Vs, and finally the As.
-	///
-	/// Depending on the flags and source, this will either create a buffer in
-	/// limited range `YCbCr` format or a simple passthrough `GBR` one for full-
-	/// range encoding.
-	///
-	/// This is only used for AVIF encoding and because of its specificity, is
-	/// only exposed to this crate. (It would be too easy to misuse elsewhere.)
-	pub(crate) fn as_yuv(&'a self, flags: u8) -> Self {
-		debug_assert_eq!(self.pixel, PixelKind::Full);
-
-		let size = self.width.get() * self.height.get();
-
-		let mut y_plane: Vec<u8> = Vec::with_capacity(size);
-		let mut u_plane: Vec<u8> = Vec::with_capacity(size);
-		let mut v_plane: Vec<u8> = Vec::with_capacity(size);
-		let mut a_plane: Vec<u8> = Vec::with_capacity(size);
-
-		let limited = self.wants_yuv_limited(flags);
-
-		self.img.chunks_exact(4).for_each(|rgba| {
-			if limited {
-				let r = f32::from(rgba[0]);
-				let g = f32::from(rgba[1]);
-				let b = f32::from(rgba[2]);
-
-				let y  = r.mul_add(0.2126, g.mul_add(0.7152, 0.0722 * b));
-				let cb = (b - y) * (0.5 / (1.0 - 0.0722));
-				let cr = (r - y) * (0.5 / (1.0 - 0.2126));
-
-				y_plane.push(normalize_yuv_pixel(y * (235.0 - 16.0) / 255.0 + 16.0));
-				u_plane.push(normalize_yuv_pixel((cb + 128.0) * (240.0 - 16.0) / 255.0 + 16.0));
-				v_plane.push(normalize_yuv_pixel((cr + 128.0) * (240.0 - 16.0) / 255.0 + 16.0));
-			}
-			else {
-				y_plane.push(rgba[1]); // G.
-				u_plane.push(rgba[2]); // B.
-				v_plane.push(rgba[0]); // R.
-			}
-
-			// Alpha is always just alpha.
-			a_plane.push(rgba[3]);
-		});
-
-		// Take over the y_plane and add the rest of the data to it.
-		y_plane.append(&mut u_plane);
-		y_plane.append(&mut v_plane);
-		y_plane.append(&mut a_plane);
-
-		// Triple check the math.
-		debug_assert_eq!(y_plane.len(), size * 4);
-
-		Self {
-			img: Cow::Owned(y_plane),
-			color: self.color,
-			pixel:
-				if limited { PixelKind::YuvLimited }
-				else { PixelKind::YuvFull },
-			width: self.width,
-			height: self.height,
-			stride: self.stride,
-		}
-	}
-
-	/// # YUV Plane Pointers.
-	///
-	/// Return pointers and sizes for YUV/alpha data for AVIF encoding.
-	///
-	/// This method only applies for images with pixel types [`PixelKind::YuvFull`]
-	/// and [`PixelKind::YuvLimited`].
-	///
-	/// This is only used for AVIF encoding and because of its specificity, is
-	/// only exposed to this crate. (It would be too easy to misuse elsewhere.)
-	///
-	/// ## Safety
-	///
-	/// This method itself is safe, but returns mutable pointers that if
-	/// misused would cause trouble.
-	pub(crate) unsafe fn yuv(&'a self) -> ([*mut u8; 3], [u32; 3], *mut u8, u32) {
-		// We must be a YUV type.
-		debug_assert!(matches!(self.pixel, PixelKind::YuvFull | PixelKind::YuvLimited));
-
-		let size = self.width.get() * self.height.get();
-
-		// Note: these pixels aren't really mutated.
-		let ptr = self.img.as_ptr();
-		let yuv_ptr = [
-			ptr as *mut u8, // Y.
-			ptr.add(size) as *mut u8, // U.
-			ptr.add(size * 2) as *mut u8, // V.
-		];
-
-		let a_ptr = ptr.add(size * 3) as *mut u8;
-
-		// This won't fail because width fits in i32.
-		let width32 = self.width_u32().unwrap();
-
-		(
-			yuv_ptr,
-			[width32, width32, width32], // Row bytes, 1 x width.
-			a_ptr,
-			if self.color.has_alpha() { width32 } // Row bytes as above.
-			else { 0 } // Or none if no alpha.
-		)
-	}
-
-	#[inline]
-	/// # Is `YCbCr` YUV?
-	///
-	/// This is just a simple convenience method, equivalent to checking the
-	/// pixel type.
-	pub(crate) fn is_yuv_limited(&self) -> bool {
-		self.pixel == PixelKind::YuvLimited
-	}
-
 	/// # Can YUV?
 	///
 	/// This is a convenience function that will evaluate whether an image
@@ -481,25 +359,4 @@ impl<'a> Image<'a> {
 	pub(crate) fn supports_yuv_limited(&self) -> bool {
 		self.pixel == PixelKind::Full && self.color.is_color()
 	}
-
-	/// # Wants `YCbCr` YUV?
-	///
-	/// This is a convenience function that will evaluate the image and flags
-	/// to see if it should be limited-range YUV.
-	pub(crate) fn wants_yuv_limited(&self, flags: u8) -> bool {
-		self.supports_yuv_limited() && FLAG_AVIF_LIMITED == flags & FLAG_AVIF_LIMITED
-	}
-}
-
-
-
-#[allow(clippy::cast_possible_truncation)] // Values are clamped.
-#[allow(clippy::cast_sign_loss)] // Values are clamped.
-#[inline]
-/// # Normalize YUV Value.
-///
-/// This simply rounds and converts the working float pixel values into u8 for
-/// storage.
-fn normalize_yuv_pixel(pix: f32) -> u8 {
-	pix.round().max(0.0).min(255.0) as u8
 }

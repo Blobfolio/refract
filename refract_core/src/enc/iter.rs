@@ -4,6 +4,10 @@
 
 use crate::{
 	Candidate,
+	FLAG_AVIF_LIMITED,
+	FLAG_AVIF_SLOW,
+	FLAG_DONE,
+	FLAG_NO_AVIF_LIMITED,
 	Image,
 	Output,
 	OutputKind,
@@ -61,7 +65,7 @@ pub struct EncodeIter<'a> {
 	candidate: Candidate,
 
 	time: Duration,
-	done: bool,
+	flags: u8,
 }
 
 impl<'a> EncodeIter<'a> {
@@ -69,8 +73,19 @@ impl<'a> EncodeIter<'a> {
 	/// # New.
 	///
 	/// Start a new iterator with a given source and output format.
-	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind, flags: u8) -> Self {
+	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind, mut flags: u8) -> Self {
 		let (bottom, top) = kind.quality_range();
+
+		// Clean up flags.
+		if kind == OutputKind::Avif {
+			if src.supports_yuv_limited() && 0 == flags & FLAG_NO_AVIF_LIMITED {
+				flags |= FLAG_AVIF_LIMITED;
+			}
+		}
+		// Only AVIF has flags right now.
+		else {
+			flags = 0;
+		}
 
 		let mut out = Self {
 			bottom,
@@ -80,10 +95,8 @@ impl<'a> EncodeIter<'a> {
 			src: match kind {
 				// JPEG XL takes a compacted source.
 				OutputKind::Jxl => src.img_compact(),
-				// AVIF wants some kind of YUV source.
-				OutputKind::Avif => src.img_yuv(flags),
-				// WebP always wants RGB.
-				OutputKind::Webp => src.img(),
+				// AVIF and WebP work from full buffers.
+				OutputKind::Avif | OutputKind::Webp => src.img(),
 			},
 			size: src.size(),
 			kind,
@@ -92,7 +105,7 @@ impl<'a> EncodeIter<'a> {
 			candidate: Candidate::new(kind),
 
 			time: Duration::from_secs(0),
-			done: false,
+			flags
 		};
 
 		// Try lossless compression.
@@ -146,15 +159,19 @@ impl EncodeIter<'_> {
 	///
 	/// When `main == false`, this will also return an error if the encoder
 	/// does not require a final pass.
-	fn lossy(&mut self, quality: NonZeroU8, main: bool) -> Result<(), RefractError> {
+	fn lossy(&mut self, quality: NonZeroU8, flags: u8) -> Result<(), RefractError> {
 		self.candidate.set_quality(Some(quality));
+
+		// No tiling is done as a final pass at the end; it only applies to
+		// AVIF sessions.
+		let main = 0 == flags & FLAG_AVIF_SLOW;
 
 		match self.kind {
 			OutputKind::Avif => super::avif::make_lossy(
 				&self.src,
 				&mut self.candidate,
 				quality,
-				main,
+				flags,
 			),
 			OutputKind::Jxl if main => super::jxl::make_lossy(
 				&self.src,
@@ -187,12 +204,26 @@ impl EncodeIter<'_> {
 		let now = Instant::now();
 
 		// Handle the actual next business.
-		let res = self.next_inner();
+		let mut res = self.next_inner();
 
 		// If we're done, see if it is worth doing one more (silent) pass
 		// against the best found. This currently only applies to AVIF.
-		if res.is_none() && ! self.done {
+		if res.is_none() && 0 == self.flags & FLAG_DONE {
 			let _res = self.next_final();
+
+			// We might need to reboot and run again in full mode if this run
+			// was done in limited mode. (Limited is usually but not always
+			// better.)
+			if FLAG_AVIF_LIMITED == self.flags & FLAG_AVIF_LIMITED {
+				let (bottom, top) = self.kind.quality_range();
+				self.bottom = bottom;
+				self.top = top;
+				self.tried.clear();
+				self.flags &= ! FLAG_AVIF_LIMITED;
+
+				// And run again.
+				res = self.next_inner();
+			}
 		}
 
 		// Record the time spent.
@@ -220,6 +251,7 @@ impl EncodeIter<'_> {
 	pub fn keep(&mut self) {
 		self.set_top(self.candidate.quality());
 		self.keep_candidate();
+		self.flags &= ! FLAG_DONE;
 	}
 
 	/// # Keep Candidate.
@@ -247,7 +279,7 @@ impl EncodeIter<'_> {
 	/// time.
 	fn next_inner(&mut self) -> Option<()> {
 		let quality = self.next_quality()?;
-		match self.lossy(quality, true) {
+		match self.lossy(quality, self.flags) {
 			Ok(_) => Some(()),
 			Err(RefractError::TooBig) => {
 				// Recurse to see if the next-next quality works out OK.
@@ -277,15 +309,15 @@ impl EncodeIter<'_> {
 	/// gains, etc., but the result is not actually used anywhere. If it works
 	/// it is silently saved, if not, no changes occur.
 	fn next_final(&mut self) -> Result<(), RefractError> {
-		if self.done { return Ok(()); }
-		self.done = true;
+		if FLAG_DONE == self.flags & FLAG_DONE { return Ok(()); }
+		self.flags |= FLAG_DONE;
 
 		let quality = self.best
 			.as_ref()
 			.map(Output::quality)
 			.ok_or(RefractError::NothingDoing)?;
 
-		self.lossy(quality, false)?;
+		self.lossy(quality, self.flags | FLAG_AVIF_SLOW)?;
 		self.keep_candidate();
 
 		Ok(())

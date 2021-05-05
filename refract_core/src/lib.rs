@@ -51,12 +51,16 @@ pub use source::{
 
 
 
-/// # Flag: AVIF Limited.
+/// # Flag: Disable AVIF Limited Range
 ///
-/// When enabled, color RGB sources will be encoded using the limited `YCbCr`
-/// color space. This typically leads to smaller output compared to the default
-/// full-range RGB mode.
-///
-/// This flag has no effect on greyscale images, which are always encoded using
-/// the full range.
-pub const FLAG_AVIF_LIMITED: u8 = 0b0001;
+/// When set, limited ranges will never be tested.
+pub const FLAG_NO_AVIF_LIMITED: u8     = 0b0001;
+
+/// # Internal Flag: AVIF Limited.
+pub(crate) const FLAG_AVIF_LIMITED: u8 = 0b0010;
+
+/// # Internal Flag: AVIF Slow Encoding (no tiling).
+pub(crate) const FLAG_AVIF_SLOW: u8    = 0b0100;
+
+/// # Internal Flag: Done w/ Encoding.
+pub(crate) const FLAG_DONE: u8         = 0b1000;
