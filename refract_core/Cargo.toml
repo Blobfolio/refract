@@ -28,7 +28,7 @@ default-features = false
 features = [ "threads" ]
 
 [dependencies.libavif-sys]
-version = "0.9.0"
+version = "0.10.0"
 default-features = false
 features = [ "codec-rav1e" ]
 
