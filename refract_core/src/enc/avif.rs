@@ -9,7 +9,6 @@ use crate::{
 };
 use libavif_sys::{
 	AVIF_CHROMA_SAMPLE_POSITION_COLOCATED,
-	AVIF_CHROMA_UPSAMPLING_BILINEAR,
 	AVIF_CODEC_CHOICE_RAV1E,
 	AVIF_COLOR_PRIMARIES_BT709,
 	AVIF_MATRIX_COEFFICIENTS_BT709,
@@ -19,7 +18,6 @@ use libavif_sys::{
 	AVIF_RANGE_FULL,
 	AVIF_RANGE_LIMITED,
 	AVIF_RESULT_OK,
-	AVIF_RGB_FORMAT_RGBA,
 	AVIF_TRANSFER_CHARACTERISTICS_SRGB,
 	avifEncoder,
 	avifEncoderCreate,
@@ -28,9 +26,7 @@ use libavif_sys::{
 	avifImage,
 	avifImageCreate,
 	avifImageDestroy,
-	avifImageRGBToYUV,
 	avifResult,
-	avifRGBImage,
 	avifRWData,
 	avifRWDataFree,
 };
@@ -71,6 +67,8 @@ impl TryFrom<NonZeroU8> for LibAvifEncoder {
 
 		// Start up the encoder!
 		let encoder = unsafe { avifEncoderCreate() };
+		if encoder.is_null() { return Err(RefractError::Encode); }
+
 		unsafe {
 			(*encoder).codecChoice = AVIF_CODEC_CHOICE_RAV1E;
 			(*encoder).maxThreads = threads;
@@ -99,55 +97,16 @@ impl Drop for LibAvifEncoder {
 
 /// # Avif Image.
 ///
-/// This holds a YUV copy of the image, which is created in a roundabout way
-/// by converting a raw slice into an RGB image. Haha.
-///
 /// The struct includes initialization helpers, but exists primarily for
 /// garbage cleanup.
 struct LibAvifImage(*mut avifImage);
 
 impl TryFrom<&Image<'_>> for LibAvifImage {
 	type Error = RefractError;
+
+	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
 	fn try_from(src: &Image) -> Result<Self, Self::Error> {
-		// Limited mode.
-		if src.is_yuv() {
-			Self::from_yuv(src)
-		}
-		else {
-			Self::from_rgb(src)
-		}
-	}
-}
-
-impl Drop for LibAvifImage {
-	#[inline]
-	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
-}
-
-impl LibAvifImage {
-	#[allow(clippy::cast_possible_truncation)] // The values are intended to fit.
-	/// # From RGB.
-	///
-	/// This copies pixel data into the struct using full-range conversion.
-	fn from_rgb(src: &Image) -> Result<Self, RefractError> {
-		// Make sure dimensions fit u32.
-		let width = src.width_u32()?;
-		let height = src.height_u32()?;
-
-		// Make an "avifRGBImage" from our buffer.
-		let raw: &[u8] = &*src;
-		let rgb = avifRGBImage {
-			width,
-			height,
-			depth: 8,
-			format: AVIF_RGB_FORMAT_RGBA,
-			chromaUpsampling: AVIF_CHROMA_UPSAMPLING_BILINEAR,
-			ignoreAlpha: ! src.color_kind().has_alpha() as _,
-			alphaPremultiplied: 0,
-			pixels: raw.as_ptr() as *mut u8,
-			rowBytes: 4 * width,
-		};
-
+		let limited = src.is_yuv_limited();
 		let greyscale: bool = src.color_kind().is_greyscale();
 
 		// And convert it to YUV.
@@ -160,40 +119,15 @@ impl LibAvifImage {
 				else { AVIF_PIXEL_FORMAT_YUV444 }
 			);
 
-			// Set metadata.
-			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709 as _;
-			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB as _;
-			(*tmp).matrixCoefficients =
-				if greyscale { AVIF_MATRIX_COEFFICIENTS_BT709 as _ }
-				else { AVIF_MATRIX_COEFFICIENTS_IDENTITY as _ };
-
-			// Convert the source.
-			maybe_die(avifImageRGBToYUV(tmp, &rgb))?;
-			tmp
-		};
-
-		Ok(Self(yuv))
-	}
-
-	#[allow(clippy::cast_possible_truncation)] // The values are intended to fit.
-	/// # From YUV.
-	///
-	/// This copies pre-converted limited-range YUV planes into the struct
-	/// without any additional fuss.
-	fn from_yuv(src: &Image) -> Result<Self, RefractError> {
-		// And convert it to YUV.
-		let yuv = unsafe {
-			let tmp = avifImageCreate(
-				src.width_i32()?,
-				src.height_i32()?,
-				8, // Depth.
-				AVIF_PIXEL_FORMAT_YUV444
-			);
+			// This shouldn't happen, but could, maybe.
+			if tmp.is_null() { return Err(RefractError::Encode); }
 
 			let (yuv_planes, yuv_row_bytes, alpha_plane, alpha_row_bytes) = src.yuv();
 
 			(*tmp).imageOwnsYUVPlanes = 0;
-			(*tmp).yuvRange = AVIF_RANGE_LIMITED;
+			(*tmp).yuvRange =
+				if limited { AVIF_RANGE_LIMITED }
+				else { AVIF_RANGE_FULL };
 			(*tmp).yuvPlanes = yuv_planes;
 			(*tmp).yuvRowBytes = yuv_row_bytes;
 
@@ -205,13 +139,20 @@ impl LibAvifImage {
 			(*tmp).yuvChromaSamplePosition = AVIF_CHROMA_SAMPLE_POSITION_COLOCATED;
 			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709 as _;
 			(*tmp).transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB as _;
-			(*tmp).matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT709 as _;
+			(*tmp).matrixCoefficients =
+				if greyscale || limited { AVIF_MATRIX_COEFFICIENTS_BT709 as _ }
+				else { AVIF_MATRIX_COEFFICIENTS_IDENTITY as _ };
 
 			tmp
 		};
 
 		Ok(Self(yuv))
 	}
+}
+
+impl Drop for LibAvifImage {
+	#[inline]
+	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
 }
 
 

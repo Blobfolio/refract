@@ -144,10 +144,9 @@ impl Source<'_> {
 	#[must_use]
 	/// # YUV Image (reference).
 	///
-	/// Return an image buffer converted to limited YUV range. This is only
-	/// used when the [`FLAG_AVIF_LIMITED`] flag is set, and only if the source
-	/// is color.
-	pub(crate) fn img_yuv(&self) -> Image<'_> { self.img.as_yuv() }
+	/// Return an image buffer converted to YUV range, either limited or full
+	/// depending on the flag and source colorness.
+	pub(crate) fn img_yuv(&self, flags: u8) -> Image<'_> { self.img.as_yuv(flags) }
 
 	#[must_use]
 	/// # Path.
@@ -167,18 +166,7 @@ impl Source<'_> {
 	///
 	/// This is a convenient function that will evaluate whether an image
 	/// source supports limited-range YUV encoding.
-	pub fn can_yuv(&self) -> bool { self.img.can_yuv() }
-
-	#[must_use]
-	#[inline]
-	/// # Wants YUV?
-	///
-	/// This is a convenient function that will evaluate the image and flags
-	/// to see if it should be YUV.
-	///
-	/// It is assumed the asker knows it is dealing with an AVIF; otherwise
-	/// the answer is misleading.
-	pub fn wants_yuv(&self, flags: u8) -> bool { self.img.wants_yuv(flags) }
+	pub fn supports_yuv_limited(&self) -> bool { self.img.supports_yuv_limited() }
 }
 
 /// ## Encoding.

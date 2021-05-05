@@ -54,8 +54,8 @@ pub use source::{
 /// # Flag: AVIF Limited.
 ///
 /// When enabled, color RGB sources will be encoded using the limited `YCbCr`
-/// color space instead of the default full range, which typically leads to
-/// smaller output.
+/// color space. This typically leads to smaller output compared to the default
+/// full-range RGB mode.
 ///
 /// This flag has no effect on greyscale images, which are always encoded using
 /// the full range.

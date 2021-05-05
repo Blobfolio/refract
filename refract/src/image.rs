@@ -65,9 +65,12 @@ impl<'a> ImageCli<'a> {
 			let _res = std::fs::File::create(&tmp);
 		}
 
-		// Default limited mode for AVIF when appropriate.
+		// Default limited mode for AVIF when appropriate. If no candidate is
+		// chosen, the process will repeat in full RGB mode.
 		let flags: u8 =
-			if kind == OutputKind::Avif && src.can_yuv() { FLAG_AVIF_LIMITED }
+			if kind == OutputKind::Avif && src.supports_yuv_limited() {
+				FLAG_AVIF_LIMITED
+			}
 			else { 0 };
 
 		Self {
@@ -85,7 +88,8 @@ impl<'a> ImageCli<'a> {
 		println!(
 			"\x1b[34m[\x1b[96;1m{}\x1b[0;34m]\x1b[0m{}",
 			self.kind,
-			if self.kind == OutputKind::Avif && self.src.wants_yuv(self.flags) {
+			// Append a subtitle for limited-range AVIF.
+			if FLAG_AVIF_LIMITED == self.flags & FLAG_AVIF_LIMITED {
 				" \x1b[2m(YCbCr)\x1b[0m"
 			}
 			else { "" }
@@ -179,6 +183,8 @@ pub(super) fn print_path_title(path: &Path) {
 }
 
 /// # Print Error.
+///
+/// This always returns false.
 fn print_error(err: RefractError) -> bool {
 	Msg::warning(err.as_str())
 		.with_indent(1)
@@ -188,6 +194,8 @@ fn print_error(err: RefractError) -> bool {
 }
 
 /// # Print Success.
+///
+/// This always returns true.
 fn print_success(src_size: u64, output: &Output, dst_path: &Path) -> bool {
 	let diff: u64 = src_size - output.size().get();
 	let per = dactyl::int_div_float(diff, src_size);

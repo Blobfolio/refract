@@ -12,15 +12,20 @@
 /// the channels used by the image. For example, a greyscale image would just
 /// be `[R,R,R…]`.
 pub enum PixelKind {
-	/// # Only Used Channels.
+	/// # RGBA (but just the used channels).
 	Compact,
 	/// # RGBA.
 	Full,
-	/// # YUV.
+	/// # YUV (YCbCr).
 	///
-	/// This is a special mode used by AVIF when the [`FLAG_AVIF_LIMITED`] flag
-	/// is set. This indicates the buffer has been converted from RGB into YUV,
-	/// stored contiguously with all the Ys first, then the Us, Vs, and finally
-	/// As.
-	Yuv,
+	/// This is a special storage mode enabled by the [`FLAG_AVIF_LIMITED`] flag.
+	/// The RGB buffer is converted from RGB into YUV (YCbCr) and stored
+	/// contiguously with all the Ys first, then the Us, Vs, and As.
+	YuvLimited,
+	/// # YUV (GBR).
+	///
+	/// This is a special storage mode for AVIF encoding. The RGB buffer is
+	/// converted to GBR/YUV and stored contiguously with all the Ys first,
+	/// then the Us, Vs, and As.
+	YuvFull,
 }

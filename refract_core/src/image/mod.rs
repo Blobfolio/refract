@@ -289,7 +289,7 @@ impl<'a> Image<'a> {
 	/// This method contains a debug assertion to ensure the buffer ends up
 	/// the expected size. This shouldn't ever trigger a failure.
 	///
-	/// This method will fail if called on a [`PixelKind::Yuv`] source, but as
+	/// This method will fail if called on a `PixelKind::Yuv*` source, but as
 	/// the YUV types are scoped to the crate, that shouldn't cause any
 	/// runtime failures either.
 	pub fn as_compact(&'a self) -> Self {
@@ -329,7 +329,7 @@ impl<'a> Image<'a> {
 					stride: self.stride,
 				}
 			},
-			PixelKind::Yuv => unimplemented!(),
+			PixelKind::YuvFull | PixelKind::YuvLimited => unreachable!(),
 		}
 	}
 
@@ -360,9 +360,13 @@ impl<'a> Image<'a> {
 	/// The internal buffer is filled with all the Ys first, then the Us, then
 	/// the Vs, and finally the As.
 	///
+	/// Depending on the flags and source, this will either create a buffer in
+	/// limited range `YCbCr` format or a simple passthrough `GBR` one for full-
+	/// range encoding.
+	///
 	/// This is only used for AVIF encoding and because of its specificity, is
 	/// only exposed to this crate. (It would be too easy to misuse elsewhere.)
-	pub(crate) fn as_yuv(&'a self) -> Self {
+	pub(crate) fn as_yuv(&'a self, flags: u8) -> Self {
 		debug_assert_eq!(self.pixel, PixelKind::Full);
 
 		let size = self.width.get() * self.height.get();
@@ -372,18 +376,29 @@ impl<'a> Image<'a> {
 		let mut v_plane: Vec<u8> = Vec::with_capacity(size);
 		let mut a_plane: Vec<u8> = Vec::with_capacity(size);
 
+		let limited = self.wants_yuv_limited(flags);
+
 		self.img.chunks_exact(4).for_each(|rgba| {
-			let r = f32::from(rgba[0]);
-			let g = f32::from(rgba[1]);
-			let b = f32::from(rgba[2]);
+			if limited {
+				let r = f32::from(rgba[0]);
+				let g = f32::from(rgba[1]);
+				let b = f32::from(rgba[2]);
 
-			let y  = r.mul_add(0.2126, g.mul_add(0.7152, 0.0722 * b));
-			let cb = (b - y) * (0.5 / (1.0 - 0.0722));
-			let cr = (r - y) * (0.5 / (1.0 - 0.2126));
+				let y  = r.mul_add(0.2126, g.mul_add(0.7152, 0.0722 * b));
+				let cb = (b - y) * (0.5 / (1.0 - 0.0722));
+				let cr = (r - y) * (0.5 / (1.0 - 0.2126));
 
-			y_plane.push(normalize_yuv_pixel(y * (235.0 - 16.0) / 255.0 + 16.0));
-			u_plane.push(normalize_yuv_pixel((cb + 128.0) * (240.0 - 16.0) / 255.0 + 16.0));
-			v_plane.push(normalize_yuv_pixel((cr + 128.0) * (240.0 - 16.0) / 255.0 + 16.0));
+				y_plane.push(normalize_yuv_pixel(y * (235.0 - 16.0) / 255.0 + 16.0));
+				u_plane.push(normalize_yuv_pixel((cb + 128.0) * (240.0 - 16.0) / 255.0 + 16.0));
+				v_plane.push(normalize_yuv_pixel((cr + 128.0) * (240.0 - 16.0) / 255.0 + 16.0));
+			}
+			else {
+				y_plane.push(rgba[1]); // G.
+				u_plane.push(rgba[2]); // B.
+				v_plane.push(rgba[0]); // R.
+			}
+
+			// Alpha is always just alpha.
 			a_plane.push(rgba[3]);
 		});
 
@@ -398,7 +413,9 @@ impl<'a> Image<'a> {
 		Self {
 			img: Cow::Owned(y_plane),
 			color: self.color,
-			pixel: PixelKind::Yuv,
+			pixel:
+				if limited { PixelKind::YuvLimited }
+				else { PixelKind::YuvFull },
 			width: self.width,
 			height: self.height,
 			stride: self.stride,
@@ -409,7 +426,8 @@ impl<'a> Image<'a> {
 	///
 	/// Return pointers and sizes for YUV/alpha data for AVIF encoding.
 	///
-	/// This method only applies for images with pixel type [`PixelKind::Yuv`].
+	/// This method only applies for images with pixel types [`PixelKind::YuvFull`]
+	/// and [`PixelKind::YuvLimited`].
 	///
 	/// This is only used for AVIF encoding and because of its specificity, is
 	/// only exposed to this crate. (It would be too easy to misuse elsewhere.)
@@ -419,16 +437,17 @@ impl<'a> Image<'a> {
 	/// This method itself is safe, but returns mutable pointers that if
 	/// misused would cause trouble.
 	pub(crate) unsafe fn yuv(&'a self) -> ([*mut u8; 3], [u32; 3], *mut u8, u32) {
-		debug_assert!(self.is_yuv());
+		// We must be a YUV type.
+		debug_assert!(matches!(self.pixel, PixelKind::YuvFull | PixelKind::YuvLimited));
 
 		let size = self.width.get() * self.height.get();
 
 		// Note: these pixels aren't really mutated.
 		let ptr = self.img.as_ptr();
 		let yuv_ptr = [
-			ptr as *mut u8,
-			ptr.add(size) as *mut u8,
-			ptr.add(size * 2) as *mut u8,
+			ptr as *mut u8, // Y.
+			ptr.add(size) as *mut u8, // U.
+			ptr.add(size * 2) as *mut u8, // V.
 		];
 
 		let a_ptr = ptr.add(size * 3) as *mut u8;
@@ -438,37 +457,37 @@ impl<'a> Image<'a> {
 
 		(
 			yuv_ptr,
-			[width32, width32, width32],
+			[width32, width32, width32], // Row bytes, 1 x width.
 			a_ptr,
-			if self.color.has_alpha() { width32 }
-			else { 0 }
+			if self.color.has_alpha() { width32 } // Row bytes as above.
+			else { 0 } // Or none if no alpha.
 		)
 	}
 
 	#[inline]
-	/// # Is YUV?
+	/// # Is `YCbCr` YUV?
 	///
 	/// This is just a simple convenience method, equivalent to checking the
 	/// pixel type.
-	pub(crate) fn is_yuv(&self) -> bool { self.pixel == PixelKind::Yuv }
+	pub(crate) fn is_yuv_limited(&self) -> bool {
+		self.pixel == PixelKind::YuvLimited
+	}
 
 	/// # Can YUV?
 	///
-	/// This is a convenient function that will evaluate whether an image
-	/// source supports limited-range YUV encoding.
-	pub(crate) fn can_yuv(&self) -> bool {
+	/// This is a convenience function that will evaluate whether an image
+	/// source supports limited-range YUV encoding. If it is greyscale, it has
+	/// to be full.
+	pub(crate) fn supports_yuv_limited(&self) -> bool {
 		self.pixel == PixelKind::Full && self.color.is_color()
 	}
 
-	/// # Wants YUV?
+	/// # Wants `YCbCr` YUV?
 	///
-	/// This is a convenient function that will evaluate the image and flags
-	/// to see if it should be YUV.
-	///
-	/// It is assumed the asker knows it is dealing with an AVIF; otherwise
-	/// the answer is misleading.
-	pub(crate) fn wants_yuv(&self, flags: u8) -> bool {
-		(FLAG_AVIF_LIMITED == flags & FLAG_AVIF_LIMITED) && self.can_yuv()
+	/// This is a convenience function that will evaluate the image and flags
+	/// to see if it should be limited-range YUV.
+	pub(crate) fn wants_yuv_limited(&self, flags: u8) -> bool {
+		self.supports_yuv_limited() && FLAG_AVIF_LIMITED == flags & FLAG_AVIF_LIMITED
 	}
 }
 
@@ -476,7 +495,6 @@ impl<'a> Image<'a> {
 
 #[allow(clippy::cast_possible_truncation)] // Values are clamped.
 #[allow(clippy::cast_sign_loss)] // Values are clamped.
-#[allow(clippy::many_single_char_names)] // Judgey!
 #[inline]
 /// # Normalize YUV Value.
 ///
