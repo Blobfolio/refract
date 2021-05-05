@@ -9,7 +9,6 @@ use dactyl::{
 };
 use fyi_msg::Msg;
 use refract_core::{
-	FLAG_AVIF_LIMITED,
 	Output,
 	OutputKind,
 	RefractError,
@@ -52,7 +51,7 @@ impl<'a> Drop for ImageCli<'a> {
 
 impl<'a> ImageCli<'a> {
 	/// # New Instance.
-	pub(crate) fn new(src: &'a Source, kind: OutputKind) -> Self {
+	pub(crate) fn new(src: &'a Source, kind: OutputKind, flags: u8) -> Self {
 		// Let's start by setting up the file system paths we'll be using for
 		// preview and permanent output.
 		let stub: &[u8] = src.path().as_os_str().as_bytes();
@@ -65,14 +64,6 @@ impl<'a> ImageCli<'a> {
 			let _res = std::fs::File::create(&tmp);
 		}
 
-		// Default limited mode for AVIF when appropriate. If no candidate is
-		// chosen, the process will repeat in full RGB mode.
-		let flags: u8 =
-			if kind == OutputKind::Avif && src.supports_yuv_limited() {
-				FLAG_AVIF_LIMITED
-			}
-			else { 0 };
-
 		Self {
 			src,
 			kind,
@@ -83,17 +74,9 @@ impl<'a> ImageCli<'a> {
 	}
 
 	/// # Encode.
-	pub(crate) fn encode(mut self) {
+	pub(crate) fn encode(self) {
 		// Print a header for the encoding type.
-		println!(
-			"\x1b[34m[\x1b[96;1m{}\x1b[0;34m]\x1b[0m{}",
-			self.kind,
-			// Append a subtitle for limited-range AVIF.
-			if FLAG_AVIF_LIMITED == self.flags & FLAG_AVIF_LIMITED {
-				" \x1b[2m(YCbCr)\x1b[0m"
-			}
-			else { "" }
-		);
+		println!("\x1b[34m[\x1b[96;1m{}\x1b[0;34m]\x1b[0m", self.kind);
 
 		// We'll be re-using this prompt throughout.
 		let prompt = Msg::plain(format!(
@@ -119,7 +102,7 @@ impl<'a> ImageCli<'a> {
 
 		// Wrap it up!
 		let time = guide.time();
-		let res = self.finish(guide.take());
+		self.finish(guide.take());
 
 		// Print the timings.
 		Msg::plain(format!(
@@ -128,33 +111,17 @@ impl<'a> ImageCli<'a> {
 		))
 			.with_indent(1)
 			.print();
-
-		// We might want to re-run AVIF in full mode. This only applies if no
-		// candidate was found using YCbCr.
-		if
-			! res &&
-			self.kind == OutputKind::Avif &&
-			FLAG_AVIF_LIMITED == self.flags & FLAG_AVIF_LIMITED
-		{
-			self.flags = 0;
-			self.encode()
-		}
 	}
 
 	/// # Finish.
-	fn finish(&self, result: Result<Output, RefractError>) -> bool {
+	fn finish(self, result: Result<Output, RefractError>) {
 		// Handle results.
 		match result {
 			Ok(result) => match save_image(&self.dst, &result) {
 				Ok(_) => print_success(self.src.size().get(), &result, &self.dst),
 				Err(e) => print_error(e),
 			},
-			Err(e) => {
-				if self.dst.exists() {
-					let _res = std::fs::remove_file(&self.dst);
-				}
-				print_error(e)
-			}
+			Err(e) => print_error(e),
 		}
 	}
 }
@@ -183,20 +150,14 @@ pub(super) fn print_path_title(path: &Path) {
 }
 
 /// # Print Error.
-///
-/// This always returns false.
-fn print_error(err: RefractError) -> bool {
+fn print_error(err: RefractError) {
 	Msg::warning(err.as_str())
 		.with_indent(1)
 		.print();
-
-	false
 }
 
 /// # Print Success.
-///
-/// This always returns true.
-fn print_success(src_size: u64, output: &Output, dst_path: &Path) -> bool {
+fn print_success(src_size: u64, output: &Output, dst_path: &Path) {
 	let diff: u64 = src_size - output.size().get();
 	let per = dactyl::int_div_float(diff, src_size);
 	let name = dst_path.file_name()
@@ -224,8 +185,6 @@ fn print_success(src_size: u64, output: &Output, dst_path: &Path) -> bool {
 			}
 		)
 		.print();
-
-	true
 }
 
 /// # Write Result.

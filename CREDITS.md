@@ -2553,8 +2553,8 @@ SOFTWARE.
 * [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
 * [dowser 0.2.2](https://github.com/Blobfolio/dowser)
 * [fyi_msg 0.7.1](https://github.com/Blobfolio/fyi)
-* [refract 0.4.0](https://github.com/Blobfolio/refract)
-* [refract_core 0.4.0](https://github.com/Blobfolio/refract)
+* [refract 0.4.1](https://github.com/Blobfolio/refract)
+* [refract_core 0.4.1](https://github.com/Blobfolio/refract)
 
 
 ```

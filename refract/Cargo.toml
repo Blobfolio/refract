@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.4.0"
+version = "0.4.1"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -47,6 +47,10 @@ description = "Skip JPEG XL conversion."
 [[package.metadata.bashman.switches]]
 long = "--no-webp"
 description = "Skip WebP conversion."
+
+[[package.metadata.bashman.switches]]
+long = "--skip-ycbcr"
+description = "Only test full-range RGB AVIF encoding (when encoding AVIFs)."
 
 [[package.metadata.bashman.switches]]
 short = "-V"
