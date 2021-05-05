@@ -260,7 +260,7 @@ limitations under the License.
 * [rayon 1.5.0](https://github.com/rayon-rs/rayon)
 * [rayon-core 1.9.0](https://github.com/rayon-rs/rayon)
 * [scopeguard 1.1.0](https://github.com/bluss/scopeguard)
-* [syn 1.0.71](https://github.com/dtolnay/syn)
+* [syn 1.0.72](https://github.com/dtolnay/syn)
 * [tempfile 3.2.0](https://github.com/Stebalien/tempfile)
 * [thiserror 1.0.24](https://github.com/dtolnay/thiserror)
 * [thiserror-impl 1.0.24](https://github.com/dtolnay/thiserror)
@@ -1876,7 +1876,7 @@ limitations under the License.
 
 **Used By:**
 
-* [libavif-sys 0.9.0](https://github.com/njaard/libavif-rs)
+* [libavif-sys 0.10.0](https://github.com/njaard/libavif-rs)
 
 
 ```
@@ -2553,8 +2553,8 @@ SOFTWARE.
 * [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
 * [dowser 0.2.2](https://github.com/Blobfolio/dowser)
 * [fyi_msg 0.7.1](https://github.com/Blobfolio/fyi)
-* [refract 0.3.5](https://github.com/Blobfolio/refract)
-* [refract_core 0.3.5](https://github.com/Blobfolio/refract)
+* [refract 0.4.0](https://github.com/Blobfolio/refract)
+* [refract_core 0.4.0](https://github.com/Blobfolio/refract)
 
 
 ```
