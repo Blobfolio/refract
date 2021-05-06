@@ -152,14 +152,6 @@ impl Source<'_> {
 	///
 	/// Return the file size of the source.
 	pub const fn size(&self) -> NonZeroU64 { self.size }
-
-	#[must_use]
-	#[inline]
-	/// # Can Do YUV?
-	///
-	/// This is a convenient function that will evaluate whether an image
-	/// source supports limited-range YUV encoding.
-	pub(crate) fn supports_yuv_limited(&self) -> bool { self.img.supports_yuv_limited() }
 }
 
 /// ## Encoding.

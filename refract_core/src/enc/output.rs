@@ -4,6 +4,7 @@
 
 use crate::{
 	Candidate,
+	FLAG_LOSSLESS,
 	OutputKind,
 	RefractError,
 };
@@ -28,6 +29,7 @@ pub struct Output {
 	size: NonZeroU64,
 	quality: NonZeroU8,
 	kind: OutputKind,
+	flags: u8,
 }
 
 impl Deref for Output {
@@ -48,6 +50,7 @@ impl TryFrom<&Candidate> for Output {
 			size: unsafe { NonZeroU64::new_unchecked(size) },
 			quality: src.quality(),
 			kind: src.kind(),
+			flags: 0,
 		})
 	}
 }
@@ -83,8 +86,16 @@ impl Output {
 /// # Getters.
 impl Output {
 	#[must_use]
+	/// # Flags.
+	pub const fn flags(&self) -> u8 { self.flags }
+
+	#[must_use]
 	/// # Kind.
 	pub const fn kind(&self) -> OutputKind { self.kind }
+
+	#[must_use]
+	/// # Lossless.
+	pub const fn lossless(&self) -> bool { FLAG_LOSSLESS == self.flags & FLAG_LOSSLESS }
 
 	#[must_use]
 	/// # Formatted Quality.
@@ -93,7 +104,7 @@ impl Output {
 	/// and value.
 	pub fn nice_quality(&self) -> Cow<str> {
 		// Lossless.
-		if self.quality == self.kind.lossless_quality() {
+		if self.lossless() {
 			Cow::Borrowed("lossless quality")
 		}
 		// Weird AVIF.
@@ -118,4 +129,12 @@ impl Output {
 	#[must_use]
 	/// # Size.
 	pub const fn size(&self) -> NonZeroU64 { self.size }
+}
+
+/// # Setters.
+impl Output {
+	/// # Set Flags.
+	pub(crate) fn set_flags(&mut self, flags: u8) {
+		self.flags = flags;
+	}
 }

@@ -54,13 +54,27 @@ pub use source::{
 /// # Flag: Disable AVIF Limited Range
 ///
 /// When set, limited ranges will never be tested.
-pub const FLAG_NO_AVIF_LIMITED: u8     = 0b0001;
+pub const FLAG_NO_AVIF_LIMITED: u8     = 0b0000_0001;
 
-/// # Internal Flag: AVIF Limited.
-pub(crate) const FLAG_AVIF_LIMITED: u8 = 0b0010;
 
-/// # Internal Flag: AVIF Slow Encoding (no tiling).
-pub(crate) const FLAG_AVIF_SLOW: u8    = 0b0100;
 
-/// # Internal Flag: Done w/ Encoding.
-pub(crate) const FLAG_DONE: u8         = 0b1000;
+/// # Internal Flag: AVIF RGB Mode.
+///
+/// This flag is present when encoding should follow full-range RGB mode.
+pub(crate) const FLAG_AVIF_RGB: u8     = 0b0000_0010;
+
+/// # Internal Flag: AVIF Round Two.
+///
+/// Round two is encoding with limited-range `YCbCr` mode.
+pub(crate) const FLAG_AVIF_ROUND_2: u8 = 0b0000_1000;
+
+/// # Internal Flag: AVIF Round Three.
+///
+/// Round three repeats the encoding of the "best" candidate with tiling
+/// disabled.
+pub(crate) const FLAG_AVIF_ROUND_3: u8 = 0b0001_0000;
+
+/// # Internal Flag: Lossless.
+///
+/// This flag is present on output when it was encoded losslessly.
+pub(crate) const FLAG_LOSSLESS:     u8 = 0b0010_0000;

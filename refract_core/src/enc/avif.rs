@@ -4,8 +4,8 @@
 
 use crate::{
 	Candidate,
-	FLAG_AVIF_LIMITED,
-	FLAG_AVIF_SLOW,
+	FLAG_AVIF_RGB,
+	FLAG_AVIF_ROUND_3,
 	Image,
 	RefractError,
 };
@@ -120,7 +120,7 @@ impl LibAvifImage {
 			return Err(RefractError::Overflow);
 		}
 
-		let limited = FLAG_AVIF_LIMITED == flags & FLAG_AVIF_LIMITED;
+		let limited = 0 == flags & FLAG_AVIF_RGB;
 		let greyscale: bool = src.color_kind().is_greyscale();
 
 		// Make an "avifRGBImage" from our buffer.
@@ -308,7 +308,7 @@ pub(super) fn make_lossy(
 	let encoder = LibAvifEncoder::try_from(quality)?;
 
 	// Configure tiling.
-	if 0 == FLAG_AVIF_SLOW & flags {
+	if 0 == FLAG_AVIF_ROUND_3 & flags {
 		if let Some((x, y)) = tiles(img.width(), img.height()) {
 			unsafe {
 				(*encoder.0).tileRowsLog2 = x;

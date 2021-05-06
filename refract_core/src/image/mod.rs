@@ -287,10 +287,6 @@ impl<'a> Image<'a> {
 	///
 	/// This method contains a debug assertion to ensure the buffer ends up
 	/// the expected size. This shouldn't ever trigger a failure.
-	///
-	/// This method will fail if called on a `PixelKind::Yuv*` source, but as
-	/// the YUV types are scoped to the crate, that shouldn't cause any
-	/// runtime failures either.
 	pub fn as_compact(&'a self) -> Self {
 		match self.pixel {
 			PixelKind::Compact => self.as_ref(),
@@ -328,7 +324,6 @@ impl<'a> Image<'a> {
 					stride: self.stride,
 				}
 			},
-			PixelKind::YuvFull | PixelKind::YuvLimited => unreachable!(),
 		}
 	}
 
@@ -346,17 +341,5 @@ impl<'a> Image<'a> {
 			height: self.height,
 			stride: self.stride,
 		}
-	}
-}
-
-/// # YUV.
-impl<'a> Image<'a> {
-	/// # Can YUV?
-	///
-	/// This is a convenience function that will evaluate whether an image
-	/// source supports limited-range YUV encoding. If it is greyscale, it has
-	/// to be full.
-	pub(crate) fn supports_yuv_limited(&self) -> bool {
-		self.pixel == PixelKind::Full && self.color.is_color()
 	}
 }

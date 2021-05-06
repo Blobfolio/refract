@@ -4,9 +4,10 @@
 
 use crate::{
 	Candidate,
-	FLAG_AVIF_LIMITED,
-	FLAG_AVIF_SLOW,
-	FLAG_DONE,
+	FLAG_AVIF_RGB,
+	FLAG_AVIF_ROUND_2,
+	FLAG_AVIF_ROUND_3,
+	FLAG_LOSSLESS,
 	FLAG_NO_AVIF_LIMITED,
 	Image,
 	Output,
@@ -76,16 +77,9 @@ impl<'a> EncodeIter<'a> {
 	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind, mut flags: u8) -> Self {
 		let (bottom, top) = kind.quality_range();
 
-		// Clean up flags.
-		if kind == OutputKind::Avif {
-			if src.supports_yuv_limited() && 0 == flags & FLAG_NO_AVIF_LIMITED {
-				flags |= FLAG_AVIF_LIMITED;
-			}
-		}
-		// Only AVIF has flags right now.
-		else {
-			flags = 0;
-		}
+		// Only AVIF requires special flags at the moment.
+		if kind == OutputKind::Avif { flags |= FLAG_AVIF_RGB;  }
+		else { flags = 0; }
 
 		let mut out = Self {
 			bottom,
@@ -112,7 +106,7 @@ impl<'a> EncodeIter<'a> {
 		let now = Instant::now();
 		out.tried.insert(out.kind.lossless_quality());
 		if out.lossless().is_ok() {
-			out.keep_candidate();
+			out.keep_candidate(true);
 		}
 		out.time += now.elapsed();
 
@@ -141,7 +135,9 @@ impl EncodeIter<'_> {
 			OutputKind::Webp => super::webp::make_lossless(&self.src, &mut self.candidate),
 		}?;
 
-		self.candidate.verify(self.size)
+		self.candidate.verify(self.size)?;
+
+		Ok(())
 	}
 
 	/// # Lossy encoding.
@@ -156,15 +152,12 @@ impl EncodeIter<'_> {
 	///
 	/// This bubbles up encoding-related errors, and will also return an error
 	/// if the resulting file offers no savings over the current best.
-	///
-	/// When `main == false`, this will also return an error if the encoder
-	/// does not require a final pass.
 	fn lossy(&mut self, quality: NonZeroU8, flags: u8) -> Result<(), RefractError> {
 		self.candidate.set_quality(Some(quality));
 
 		// No tiling is done as a final pass at the end; it only applies to
 		// AVIF sessions.
-		let main = 0 == flags & FLAG_AVIF_SLOW;
+		let normal = 0 == flags & FLAG_AVIF_ROUND_3;
 
 		match self.kind {
 			OutputKind::Avif => super::avif::make_lossy(
@@ -173,12 +166,12 @@ impl EncodeIter<'_> {
 				quality,
 				flags,
 			),
-			OutputKind::Jxl if main => super::jxl::make_lossy(
+			OutputKind::Jxl if normal => super::jxl::make_lossy(
 				&self.src,
 				&mut self.candidate,
 				quality,
 			),
-			OutputKind::Webp if main => super::webp::make_lossy(
+			OutputKind::Webp if normal => super::webp::make_lossy(
 				&self.src,
 				&mut self.candidate,
 				quality,
@@ -204,27 +197,7 @@ impl EncodeIter<'_> {
 		let now = Instant::now();
 
 		// Handle the actual next business.
-		let mut res = self.next_inner();
-
-		// If we're done, see if it is worth doing one more (silent) pass
-		// against the best found. This currently only applies to AVIF.
-		if res.is_none() && 0 == self.flags & FLAG_DONE {
-			let _res = self.next_final();
-
-			// We might need to reboot and run again in full mode if this run
-			// was done in limited mode. (Limited is usually but not always
-			// better.)
-			if FLAG_AVIF_LIMITED == self.flags & FLAG_AVIF_LIMITED {
-				let (bottom, top) = self.kind.quality_range();
-				self.bottom = bottom;
-				self.top = top;
-				self.tried.clear();
-				self.flags &= ! FLAG_AVIF_LIMITED;
-
-				// And run again.
-				res = self.next_inner();
-			}
-		}
+		let res = self.next_inner().or_else(|| self.next_avif());
 
 		// Record the time spent.
 		self.time += now.elapsed();
@@ -250,25 +223,79 @@ impl EncodeIter<'_> {
 	/// test a lower quality.
 	pub fn keep(&mut self) {
 		self.set_top(self.candidate.quality());
-		self.keep_candidate();
-		self.flags &= ! FLAG_DONE;
+		self.keep_candidate(false);
 	}
 
 	/// # Keep Candidate.
-	fn keep_candidate(&mut self) {
+	fn keep_candidate(&mut self, lossless: bool) {
+		let mut flags = self.flags;
+		if lossless { flags |= FLAG_LOSSLESS; }
+
 		if self.candidate.is_verified() {
 			// Replace the existing best.
 			if let Some(ref mut output) = self.best {
 				if output.update(&self.candidate).is_ok() {
 					self.size = output.size();
+					output.set_flags(flags);
 				}
 			}
 			// Insert a first best.
-			else if let Ok(output) = Output::try_from(&self.candidate) {
+			else if let Ok(mut output) = Output::try_from(&self.candidate) {
+				output.set_flags(flags);
 				self.size = output.size();
 				self.best.replace(output);
 			}
 		}
+	}
+
+	/// # Next AVIF Round.
+	///
+	/// `AVIF` is complicated, even by next-gen image standards. Haha. Unlike
+	/// `WebP` and `JPEG XL`, we need to test `AVIF` encoding in three rounds:
+	/// once using full-range RGB, once using limited-range RGB, and one final
+	/// (single) re-encoding of the best found with tiling disabled.
+	fn next_avif(&mut self) -> Option<()> {
+		if self.kind != OutputKind::Avif { return None; }
+
+		// The second round is a partial reboot, retrying encoding with
+		// limited YCbCr range. If we haven't done that yet, let's do it
+		// now!
+		if 0 == self.flags & FLAG_AVIF_ROUND_2 {
+			self.flags |= FLAG_AVIF_ROUND_2;
+
+			// Reset the range and remove the RGB flag so that it can
+			// start again (using the existing best as the size cap) in
+			// limited-range mode.
+			if 0 == self.flags & FLAG_NO_AVIF_LIMITED {
+				let (bottom, top) = self.kind.quality_range();
+				self.bottom = bottom;
+				self.top = top;
+				self.tried.clear();
+				self.flags &= ! FLAG_AVIF_RGB;
+
+				// Recurse to pull the next result.
+				return self.next_inner();
+			}
+		}
+
+		// The third round is a final one-off action: re-encode the "best"
+		// (if any) using the same quality and mode, but with parallel
+		// tiling disabled.
+		//
+		// If this pass manages to shrink the image some more, great, we'll
+		// silently accept it; if not, no the previous best stays.
+		if 0 == self.flags & FLAG_AVIF_ROUND_3 {
+			self.flags |= FLAG_AVIF_ROUND_3;
+
+			if let Some(best) = self.best.as_ref() {
+				let quality = best.quality();
+				let flags = best.flags() | FLAG_AVIF_ROUND_3;
+				self.lossy(quality, flags).ok()?;
+				self.keep_candidate(false);
+			}
+		}
+
+		None
 	}
 
 	#[inline]
@@ -288,39 +315,6 @@ impl EncodeIter<'_> {
 			},
 			Err(_) => None,
 		}
-	}
-
-	/// # One More Time.
-	///
-	/// This potentially takes one more run against the settings used for the
-	/// discovered best candidate using stronger (slower) compression.
-	///
-	/// It is currently only used for AVIF images, as we cheat a little bit
-	/// during iteration by splitting images up into multiple tiles for
-	/// parallel processing. Tiling is great performance boost, but does often
-	/// result in slightly larger files.
-	///
-	/// Anyhoo, for AVIFs, this will run once more without tiling and silently
-	/// replace the best candidate if it winds up smaller.
-	///
-	/// ## Errors
-	///
-	/// This will return an erorr if there is no best candidate, no compression
-	/// gains, etc., but the result is not actually used anywhere. If it works
-	/// it is silently saved, if not, no changes occur.
-	fn next_final(&mut self) -> Result<(), RefractError> {
-		if FLAG_DONE == self.flags & FLAG_DONE { return Ok(()); }
-		self.flags |= FLAG_DONE;
-
-		let quality = self.best
-			.as_ref()
-			.map(Output::quality)
-			.ok_or(RefractError::NothingDoing)?;
-
-		self.lossy(quality, self.flags | FLAG_AVIF_SLOW)?;
-		self.keep_candidate();
-
-		Ok(())
 	}
 
 	/// # Next Quality.

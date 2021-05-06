@@ -62,9 +62,7 @@ The latter is compensated for by automatically repeating the chosen "best" encod
 
 Color sources are outputted using `Y′UV444`, while greyscale sources are outputted using `Y′UV400` instead.
 
-Speaking of color sources, Refract attempts AVIF encoding using both limited-range YCbCr and full-range RGB methods. YCbCr typically results in slightly smaller output but may lead to more noticeable color shifts. If you want to skip this, use the `--skip-ycbcr` flag.
-
-Grescale sources are only ever attempted using full-range RGB.
+Speaking of color, Refract attempts AVIF encoding using both full-range (RGB) and limited-range (YCbCr) methods. To speed up processing, you can pass the `--skip-ycbcr` flag to have Refract stick with just RGB.
 
 **Note:**
  >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.
