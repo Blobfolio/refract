@@ -78,6 +78,10 @@ Just run `refract [FLAGS] [OPTIONS] <PATH(S)>…`.
 The following flags are available:
 
 ```bash
+-b, --browser     Output an HTML page that can be viewed in a web browser
+                  to preview encoded images. If omitted, preview images
+                  will be saved directly, allowing you to view them in the
+                  program of your choosing.
 -h, --help        Prints help information.
     --no-avif     Skip AVIF conversion.
     --no-jxl      Skip JPEG XL conversion.
@@ -103,7 +107,7 @@ refract --no-webp /path/to/image.jpg
 
 Refract will load each input image one-at-a-time and try to generate proposed AVIF, JPEG XL, and/or WebP copies at varying quality levels. At each step, it will ask you whether or not the proposed image looks good.
 
-You can preview the candidate images in any program of your choice. Whatever you're comfortable with. We like using web browsers for this.
+You can preview the candidate images in any program of your choice. Whatever you're comfortable with. If you run the program with the `-b`/`--browser` flag, an HTML page will be created (instead of saving preview images directly), allowing you to easily preview the images in a _supporting_ web browser. (Chrome `v.91`+ supports all three formats, with JPEG XL locked behind a flag.)
 
 If your answers and the file sizes work out right, a final best-case copy of each image will be created in the source directory with `.avif`, `.jxl`, or `.webp` appended to the source path, e.g. `/path/to/image.jpg.webp`.
 

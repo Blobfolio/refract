@@ -79,6 +79,18 @@ impl TryFrom<&[u8]> for OutputKind {
 /// ## Byte Getters.
 impl OutputKind {
 	#[must_use]
+	/// # Name (bytes).
+	///
+	/// Return the formatted name of the type as a byte slice.
+	pub const fn as_bytes(self) -> &'static [u8] {
+		match self {
+			Self::Avif => b"AVIF",
+			Self::Jxl => b"JPEG XL",
+			Self::Webp => b"WebP",
+		}
+	}
+
+	#[must_use]
 	/// # Extension (bytes).
 	///
 	/// Return the extension, including the leading period, as a byte slice.
@@ -91,14 +103,14 @@ impl OutputKind {
 	}
 
 	#[must_use]
-	/// # Name (bytes).
+	/// # MIME Type (bytes).
 	///
-	/// Return the formatted name of the type as a byte slice.
-	pub const fn as_bytes(self) -> &'static [u8] {
+	/// Return the MIME type as a byte slice.
+	pub const fn type_bytes(self) -> &'static [u8] {
 		match self {
-			Self::Avif => b"AVIF",
-			Self::Jxl => b"JPEG XL",
-			Self::Webp => b"WebP",
+			Self::Avif => b"image/avif",
+			Self::Jxl => b"image/jxl",
+			Self::Webp => b"image/webp",
 		}
 	}
 }

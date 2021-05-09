@@ -66,6 +66,42 @@ impl TryFrom<&[u8]> for SourceKind {
 	}
 }
 
+/// ## Byte Getters.
+impl SourceKind {
+	#[must_use]
+	/// # Name (bytes).
+	///
+	/// Return the formatted name of the type as a byte slice.
+	pub const fn as_bytes(self) -> &'static [u8] {
+		match self {
+			Self::Jpeg => b"JPEG",
+			Self::Png => b"PNG",
+		}
+	}
+
+	#[must_use]
+	/// # Extension (bytes).
+	///
+	/// Return the extension, including the leading period, as a byte slice.
+	pub const fn ext_bytes(self) -> &'static [u8] {
+		match self {
+			Self::Jpeg => b".jpg",
+			Self::Png => b".png",
+		}
+	}
+
+	#[must_use]
+	/// # MIME Type (bytes).
+	///
+	/// Return the MIME type as a byte slice.
+	pub const fn type_bytes(self) -> &'static [u8] {
+		match self {
+			Self::Jpeg => b"image/jpeg",
+			Self::Png => b"image/png",
+		}
+	}
+}
+
 
 
 #[derive(Debug, Clone)]
