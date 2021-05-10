@@ -187,7 +187,7 @@ impl Viewer<'_> {
 		// Print a message!
 		Msg::plain(format!("\
 			\n    Open \x1b[92;1mfile://{}\x1b[0m in a web browser, making\
-			\n    sure it supports the image formats you're encoding.\n\n",
+			\n    sure it supports the image format(s) you're encoding.\n\n",
 			tmp.path().to_string_lossy(),
 		))
 			.print();

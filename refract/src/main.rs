@@ -196,7 +196,7 @@ USAGE:
     refract [FLAGS] [OPTIONS] <PATH(S)>...
 
 FLAGS:
-    -b, --browser     Output an HTML page that can be viewed in a web browser
+    -b, --browser     Output an HTML page that can be viewed in a web browser", "\x1b[91;1m*\x1b[0m", r"
                       to preview encoded images. If omitted, preview images
                       will be saved directly, allowing you to view them in the
                       program of your choosing.
@@ -213,6 +213,11 @@ OPTIONS:
 
 ARGS:
     <PATH(S)>...      One or more images or directories to crawl and crunch.
+
+-----
+
+", "\x1b[91;1m*\x1b[0mVisit \x1b[34mhttps://blobfolio.com/image-test/\x1b[0m", r" to see which next-generation
+ image formats are supported by your web browser.
 "
 	));
 }

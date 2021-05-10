@@ -16,11 +16,11 @@ Every image is different. The idea of a "Magic Bullet" format is a myth.
 
 If you want to truly maximize the quality and size of next-gen copies, you cannot rely on hardcoded constants or fancy [SSIM](https://en.wikipedia.org/wiki/Structural_similarity) analysis. That will result in frequent over- or under-compression, and some images will come out looking… bad.
 
-You have to actually use your eyes. And you have to pay attention to the resulting file sizes. Sometimes newer formats fall short of what the originals achieved.
+You have to actually use your eyes. And you have to pay attention to the resulting file sizes. Sometimes newer formats result in _larger_ output, which rather defeats the purpose!
 
-While you can do all of this manually, running multiple programs hundreds of times for each and every source you want to convert, it is easy to screw up, and really tedious.
+While you can do all of this manually, running multiple programs hundreds of times for each and every source you want to convert, that would be incredibly tedious and easy to screw up.
 
-Refract helps makes that manual process _less_ tedious.
+Refract helps makes that manual process _less_ tedious and _more_ foolproof.
 
 It automatically uses the strongest (slowest) possible compression settings for each format, keeps track of file sizes and qualities, can process inputs en masse, and reduces the number of conversion tests by around 90%.
 
@@ -36,7 +36,7 @@ Only JPEG and PNG input sources are supported. They can have RGB, RGBA, greyscal
 
 Conversion is done at pixel level; gamma and other metadata profile information is not factored or present in the converted copies, so is not supported.
 
-Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjxl`](https://gitlab.com/wg1/jpeg-xl), and [`libwebp`](https://chromium.googlesource.com/webm/libwebp/) directly so has comparable performance to each format's official standalone binaries (at similar settings). There is some nuance under-the-hood, but Refract's encoding passes roughly correspond to the following third-party commands:
+Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjxl`](https://gitlab.com/wg1/jpeg-xl), and [`libwebp`](https://chromium.googlesource.com/webm/libwebp/) directly so is comparable to using each format's official standalone binaries (at similar settings). There is some nuance under-the-hood, but Refract's encoding passes roughly correspond to the following third-party commands:
 
 | Encoding | Mode | Parallel | Comparable To Running |
 | -------- | ---- | -------- | --------------------- |
@@ -46,26 +46,24 @@ Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjx
 | WebP | Lossless | N | `cwebp -lossless -z 9 -q 100` |
 | WebP | Lossy | N | `cwebp -m 6 -pass 10 -q <N>` |
 
-Refract applies lossless encoding first, when supported, then follows by testing lossy compression at various qualities until the "best" overall candidate is found.
+Refract applies lossless encoding first — for JPEG XL and WebP — then follows by testing lossy compression at various qualities until the "best" overall candidate is found.
 
-The guided feedback is only required for lossy stages. Lossless, being lossless, is assumed to be fine so long as it results in a smaller image than the source.
+The guided feedback is only required for lossy stages. Lossless, being lossless, is assumed to be fine so long as it comes out smaller than the original source.
 
 ### AVIF
 
 AVIF encoding is _slow_.
 
-To make it at all bearable, two concessions are made:
+Refract makes it _even slower_ by testing both full-range (RGB) and limited-range (YCbCr) encodings. The latter usually — but not always — comes out a few percent smaller. If you would rather reach a conclusion faster, you can disable limited-range processing by passing the `--skip-ycbcr` flag.
+
+To compensate for the format's slow encoding process, Refract makes two concessions:
  * The encoder is run with speed `1` rather than speed `0`;
  * Images are split into "tiles" that can be processed in parallel;
 
-The latter is compensated for by automatically repeating the chosen "best" encoding one time at the end with tiling optimizations disabled.
-
-Color sources are outputted using `Y′UV444`, while greyscale sources are outputted using `Y′UV400` instead.
-
-Speaking of color, Refract attempts AVIF encoding using both full-range (RGB) and limited-range (YCbCr) methods. To speed up processing, you can pass the `--skip-ycbcr` flag to have Refract stick with just RGB.
+Because tiling tends to result in slightly larger output, the chosen candidate — if any — is re-encoded one final time with tiling optimizations disabled. If that last pass comes out smaller, great!, the candidate is replaced. If not, the original "best" is kept.
 
 **Note:**
- >The upcoming release of Chrome v.91 is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.
+ >The upcoming release of Chrome `v.91` is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.
 
 
 
@@ -105,11 +103,17 @@ refract --list /path/to/list.txt /path/to/another/image.jpg
 refract --no-webp /path/to/image.jpg
 ```
 
-Refract will load each input image one-at-a-time and try to generate proposed AVIF, JPEG XL, and/or WebP copies at varying quality levels. At each step, it will ask you whether or not the proposed image looks good.
+Refract will load each input image one-at-a-time and try to generate AVIF, JPEG XL, and/or WebP copies at varying quality levels. At each step, it will ask you whether or not the proposed image looks good.
 
-You can preview the candidate images in any program of your choice. Whatever you're comfortable with. If you run the program with the `-b`/`--browser` flag, an HTML page will be created (instead of saving preview images directly), allowing you to easily preview the images in a _supporting_ web browser. (Chrome `v.91`+ supports all three formats, with JPEG XL locked behind a flag.)
+By default, each candidate image is saved alongside the original, allowing you to preview it in the application of your choice.
 
-If your answers and the file sizes work out right, a final best-case copy of each image will be created in the source directory with `.avif`, `.jxl`, or `.webp` appended to the source path, e.g. `/path/to/image.jpg.webp`.
+If you use the `-b`/`--browser` flag, Refract will instead generate an HTML page you can view in a web browser. This page makes it very easy to visually compare the original and candidate images, and is a good idea to use if the images are destined for use on the web.
+
+![Example browser screen.](https://github.com/Blobfolio/refract/raw/master/skel/browser.png)
+
+It is important to note that if you are using the browser mode, you must view the page in a browser that supports the image formats being encoded. At the moment, Chrome `v.91` is the _only_ browser that supports all three formats, though JPEG XL support is locked behind a flag and must be manually enabled.
+
+Regardless of how you preview the images, if your answers and the file sizes work out right, a final best-case copy of each image will be created in the source directory with `.avif`, `.jxl`, or `.webp` appended to the source path, e.g. `/path/to/image.jpg.webp`.
 
 
 
@@ -124,7 +128,7 @@ The program is written in [Rust](https://www.rust-lang.org/) and so can be built
 cargo build --release
 ```
 
-Cargo _will_ take care of the entire build for you, but your system will need modern versions of Clang, GCC, NASM, and Ninja installed to make it through `build.rs` hell. (Who would have thought kitchen sink image formats would have so many build dependencies?)
+Cargo _will_ take care of the entire build for you, but your system will need modern versions of Clang, GCC, NASM, and Ninja installed to make it through the image library `build.rs` hell. (Who would have thought convoluted formats would have so many build dependencies?)
 
 
 
