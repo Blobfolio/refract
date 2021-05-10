@@ -129,6 +129,19 @@ rustflags   := "-C link-arg=-s"
 		-- {{ ARGS }}
 
 
+# SCSS.
+@scss:
+	just _scss "{{ pkg_dir1 }}/skel/scss/main.scss" "{{ pkg_dir1 }}/skel/css/main.css"
+	just _scss "{{ pkg_dir1 }}/skel/scss/pending.scss" "{{ pkg_dir1 }}/skel/css/pending.css"
+
+
+
+@_scss IN OUT:
+	sassc --style=compressed "{{ IN }}" "{{ OUT }}"
+	csso -i "{{ OUT }}" -o "{{ OUT }}"
+
+
+
 # Unit tests!
 @test:
 	clear

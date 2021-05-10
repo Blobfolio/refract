@@ -1,0 +1,63 @@
+@import "reset.scss";
+
+:root {
+	--w: %width%px;
+	--h: %height%px;
+
+	--src: url(data:%src.type%;base64,%src.base64%);
+}
+
+body.ng #image { --src: url(data:%ng.type%;base64,%ng.base64%); }
+
+#image {
+	width: var(--w);
+	height: var(--h);
+	min-width: 100%;
+	min-height: 100vh;
+
+	margin: 0;
+	padding: 0;
+
+	background: transparent var(--src) scroll center center no-repeat;
+
+	z-index: 1;
+}
+
+#aside {
+	position: fixed;
+	right: 0;
+	bottom: 0;
+	left: 0;
+
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+
+	padding: 10px 0 10px 10px;
+
+	background-color: rgba(0, 0, 0, .8);
+
+	z-index: 2;
+}
+
+.extensions {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	margin: -10px 0;
+}
+
+.ext {
+	--shown: #00abc0;
+
+	padding: 10px;
+
+	background-color: transparent;
+	transition: background .3s ease;
+
+	&.ng { --shown: #ff3596; }
+}
+
+body.ng .ext.ng,
+body:not(.ng) .ext.source { background-color: var(--shown); }
