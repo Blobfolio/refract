@@ -111,7 +111,7 @@ If you use the `-b`/`--browser` flag, Refract will instead generate an HTML page
 
 ![Example browser screen.](https://github.com/Blobfolio/refract/raw/master/skel/browser.png)
 
-It is important to note that if you are using the browser mode, you must view the page in a browser that supports the image formats being encoded. At the moment, Chrome `v.91` is the _only_ browser that supports all three formats, though JPEG XL support is locked behind a flag and must be manually enabled.
+It is important to note that if you are using the browser mode, you must view the page in a [browser that supports the image formats](https://blobfolio.com/image-test/) being encoded. At the moment, Chrome `v.91` is the _only_ browser that supports all three formats, though JPEG XL support is locked behind a flag and must be manually enabled.
 
 Regardless of how you preview the images, if your answers and the file sizes work out right, a final best-case copy of each image will be created in the source directory with `.avif`, `.jxl`, or `.webp` appended to the source path, e.g. `/path/to/image.jpg.webp`.
 
