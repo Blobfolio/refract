@@ -29,10 +29,10 @@ use tempfile::NamedTempFile;
 
 
 /// # The raw main HTML template.
-const MAIN_HTML: &[u8] = include_bytes!("../skel/main.html");
+const MAIN_HTML: &[u8] = include_bytes!("../skel/main.min.html");
 
 /// # The raw pending HTML template.
-const PENDING_HTML: &[u8] = include_bytes!("../skel/pending.html");
+const PENDING_HTML: &[u8] = include_bytes!("../skel/pending.min.html");
 
 
 

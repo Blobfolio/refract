@@ -119,6 +119,30 @@ rustflags   := "-C link-arg=-s"
 	exit 0
 
 
+# Frontend.
+@frontend:
+	just _scss "{{ pkg_dir1 }}/skel/scss/main.scss" "{{ pkg_dir1 }}/skel/css/main.css"
+	just _scss "{{ pkg_dir1 }}/skel/scss/pending.scss" "{{ pkg_dir1 }}/skel/css/pending.css"
+	just _terser "{{ pkg_dir1 }}/skel/js/main.js" "{{ pkg_dir1 }}/skel/js/main.min.js"
+
+	# If the CSS or JS change, they'll need to be manually re-copied to the
+	# readable HTML, and then this just recipe will need to be run again to
+	# minify the HTML.
+
+	just _html "{{ pkg_dir1 }}/skel/main.html" "{{ pkg_dir1 }}/skel/main.min.html"
+	just _html "{{ pkg_dir1 }}/skel/pending.html" "{{ pkg_dir1 }}/skel/pending.min.html"
+
+	just _fix-chown "{{ pkg_dir1 }}/skel"
+	just _fix-chmod "{{ pkg_dir1 }}/skel"
+
+
+# Minify HTML.
+@_html IN OUT:
+	cp -a "{{ IN }}" "{{ OUT }}"
+	htminl "{{ OUT }}"
+	sd -s '> <' '><' "{{ OUT }}"
+
+
 # Test Run.
 @run +ARGS:
 	RUSTFLAGS="{{ rustflags }}" cargo run \
@@ -130,16 +154,14 @@ rustflags   := "-C link-arg=-s"
 
 
 # SCSS.
-@scss:
-	just _scss "{{ pkg_dir1 }}/skel/scss/main.scss" "{{ pkg_dir1 }}/skel/css/main.css"
-	just _scss "{{ pkg_dir1 }}/skel/scss/pending.scss" "{{ pkg_dir1 }}/skel/css/pending.css"
-
-
-
 @_scss IN OUT:
 	sassc --style=compressed "{{ IN }}" "{{ OUT }}"
 	csso -i "{{ OUT }}" -o "{{ OUT }}"
 
+
+# Terser.
+@_terser IN OUT:
+	cat "{{ IN }}" | terser -c -m -o "{{ OUT }}"
 
 
 # Unit tests!

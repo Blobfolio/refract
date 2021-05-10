@@ -20,13 +20,6 @@
 		</div>
 	</aside>
 
-	<script>
-		document.body.addEventListener('keypress', function(e) {
-			if (e.keyCode == 32) {
-				e.preventDefault();
-				document.body.classList.toggle('ng');
-			}
-		});
-	</script>
+	<script>document.body.addEventListener("keypress",(function(e){32==e.keyCode&&(e.preventDefault(),document.body.classList.toggle("ng"))}));</script>
 </body>
 </html>
