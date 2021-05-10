@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.4.3"
+version = "0.4.4"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -30,6 +30,11 @@ assets = [
 name = "Refract"
 bash-dir = "../release/completions"
 man-dir = "../release/man"
+
+[[package.metadata.bashman.switches]]
+short = "-b"
+long = "--browser"
+description = "Output an HTML page that can be viewed in a web browser to preview encoded images. If omitted, preview images will be saved directly, allowing you to view them in the program of your choosing."
 
 [[package.metadata.bashman.switches]]
 short = "-h"
@@ -69,9 +74,12 @@ label = "<PATH(s)…>"
 description = "Any number of images and directories to crawl and crunch."
 
 [dependencies]
+aho-corasick = "0.7.*"
 argyle = "0.4.*"
+base64 = "0.13.*"
 dactyl = "0.1.*"
 dowser = "0.2.*"
+tempfile = "3.2.*"
 
 [dependencies.fyi_msg]
 git = "https://github.com/Blobfolio/fyi.git"

@@ -25,8 +25,10 @@
 #![allow(clippy::module_name_repetitions)]
 
 
-
+pub(self) mod cli;
 mod image;
+mod viewer;
+
 
 use argyle::{
 	Argue,
@@ -53,6 +55,7 @@ use std::{
 	os::unix::ffi::OsStrExt,
 	path::PathBuf,
 };
+use viewer::Viewer;
 
 
 
@@ -126,19 +129,36 @@ fn _main() -> Result<(), RefractError> {
 	paths.sort();
 
 	// Run through the set to see what gets created!
-	paths.into_iter()
-		.for_each(|x| {
-			image::print_path_title(&x);
+	if args.switch2(b"-b", b"--browser") {
+		paths.into_iter()
+			.for_each(|x| {
+				cli::print_header_path(&x);
 
-			match Source::try_from(x) {
-				Ok(img) => encoders.iter()
-					.map(|&e| ImageCli::new(&img, e, flags))
-					.for_each(ImageCli::encode),
-				Err(e) => Msg::error(e.as_str()).print(),
-			}
+				match Viewer::new(x, flags) {
+					Ok(viewer) => encoders.iter()
+						.for_each(|&e| viewer.encode(e)),
+					Err(e) => Msg::error(e.as_str()).print(),
+				}
 
-			println!();
-		});
+				println!();
+			});
+
+	}
+	else {
+		paths.into_iter()
+			.for_each(|x| {
+				cli::print_header_path(&x);
+
+				match Source::try_from(x) {
+					Ok(img) => encoders.iter()
+						.map(|&e| ImageCli::new(&img, e, flags))
+						.for_each(ImageCli::encode),
+					Err(e) => Msg::error(e.as_str()).print(),
+				}
+
+				println!();
+			});
+	}
 
 	Ok(())
 }
@@ -176,6 +196,10 @@ USAGE:
     refract [FLAGS] [OPTIONS] <PATH(S)>...
 
 FLAGS:
+    -b, --browser     Output an HTML page that can be viewed in a web browser", "\x1b[91;1m*\x1b[0m", r"
+                      to preview encoded images. If omitted, preview images
+                      will be saved directly, allowing you to view them in the
+                      program of your choosing.
     -h, --help        Prints help information.
         --no-avif     Skip AVIF conversion.
         --no-jxl      Skip JPEG XL conversion.
@@ -189,6 +213,11 @@ OPTIONS:
 
 ARGS:
     <PATH(S)>...      One or more images or directories to crawl and crunch.
+
+-----
+
+", "\x1b[91;1m*\x1b[0mVisit \x1b[34mhttps://blobfolio.com/image-test/\x1b[0m", r" to see which next-generation
+ image formats are supported by your web browser.
 "
 	));
 }

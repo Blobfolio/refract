@@ -5,7 +5,7 @@ License details for project dependencies are listed below.
 ## Overview of Licenses:
 
 * Apache License 2.0 (10)
-* MIT License (6)
+* MIT License (7)
 * BSD 2-Clause &quot;Simplified&quot; License (2)
 * BSD 3-Clause &quot;New&quot; or &quot;Revised&quot; License (2)
 * Creative Commons Zero v1.0 Universal (1)
@@ -234,6 +234,7 @@ limitations under the License.
 * [ahash 0.4.7](https://github.com/tkaitchuck/ahash)
 * [ahash 0.7.2](https://github.com/tkaitchuck/ahash)
 * [arrayvec 0.5.2](https://github.com/bluss/arrayvec)
+* [base64 0.13.0](https://github.com/marshallpierce/rust-base64)
 * [bitstream-io 1.0.0](https://github.com/tuffy/bitstream-io)
 * [cfg-if 0.1.10](https://github.com/alexcrichton/cfg-if)
 * [cfg-if 1.0.0](https://github.com/alexcrichton/cfg-if)
@@ -2371,6 +2372,39 @@ The GNU General Public License does not permit incorporating your program into p
 
 **Used By:**
 
+* [aho-corasick 0.7.18](https://github.com/BurntSushi/aho-corasick)
+* [memchr 2.4.0](https://github.com/BurntSushi/rust-memchr)
+
+
+```
+The MIT License (MIT)
+
+Copyright (c) 2015 Andrew Gallant
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+```
+
+### MIT License
+
+**Used By:**
+
 * [arg_enum_proc_macro 0.3.1](https://github.com/lu-zero/arg_enum_proc_macro)
 
 
@@ -2553,8 +2587,8 @@ SOFTWARE.
 * [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
 * [dowser 0.2.3](https://github.com/Blobfolio/dowser)
 * [fyi_msg 0.7.1](https://github.com/Blobfolio/fyi)
-* [refract 0.4.3](https://github.com/Blobfolio/refract)
-* [refract_core 0.4.3](https://github.com/Blobfolio/refract)
+* [refract 0.4.4](https://github.com/Blobfolio/refract)
+* [refract_core 0.4.4](https://github.com/Blobfolio/refract)
 
 
 ```
