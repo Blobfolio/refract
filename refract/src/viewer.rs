@@ -14,7 +14,6 @@ use refract_core::{
 use std::{
 	borrow::Cow,
 	cell::RefCell,
-	convert::TryFrom,
 	ffi::OsStr,
 	io::SeekFrom,
 	os::unix::ffi::OsStrExt,
@@ -49,8 +48,7 @@ impl Viewer<'_> {
 	///
 	/// Create a new instance from a given file.
 	pub(crate) fn new(path: PathBuf, flags: u8) -> Result<Self, RefractError> {
-		let raw: &[u8] = &std::fs::read(&path).map_err(|_| RefractError::Read)?;
-		let src = Source::try_from(path)?;
+		let (src, raw) = Source::new_and_raw(path)?;
 
 		// To save some effort, let's pre-crunch the template using all of the
 		// source-related information (as it won't change). This way we only
@@ -77,7 +75,7 @@ impl Viewer<'_> {
 				width.as_str(),
 				height.as_str(),
 				unsafe { std::str::from_utf8_unchecked(src.kind().type_bytes()) },
-				&base64::encode(raw),
+				&base64::encode(&raw),
 				unsafe { std::str::from_utf8_unchecked(src.kind().as_bytes()) },
 			];
 

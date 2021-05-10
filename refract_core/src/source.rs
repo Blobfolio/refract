@@ -157,6 +157,41 @@ impl TryFrom<PathBuf> for Source<'_> {
 	}
 }
 
+/// ## Misc Instantiation.
+impl Source<'_> {
+	/// # New and Raw.
+	///
+	/// This method will return a [`Source`] instance and the raw file bytes.
+	///
+	/// This can be used to avoid double-reads in cases where something else
+	/// needs to be done with the original file data. Otherwise [`Source::try_from`]
+	/// should be preferred.
+	///
+	/// ## Errors
+	///
+	/// This returns an error in cases where the source cannot be read or is
+	/// otherwise invalid.
+	pub fn new_and_raw(path: PathBuf) -> Result<(Self, Vec<u8>), RefractError> {
+		let raw: Vec<u8> = std::fs::read(&path).map_err(|_| RefractError::Read)?;
+		let kind = SourceKind::try_from(raw.as_slice())?;
+
+		// We know this is non-zero because we were able to obtain a valid
+		// image kind from its headers.
+		let size = u64::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
+		let size = unsafe { NonZeroU64::new_unchecked(size) };
+
+		Ok((
+			Self {
+				path: Cow::Owned(path),
+				size,
+				img: Image::try_from(raw.as_slice())?,
+				kind,
+			},
+			raw
+		))
+	}
+}
+
 /// ## Getters.
 impl Source<'_> {
 	#[must_use]
