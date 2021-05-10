@@ -3,7 +3,10 @@
 */
 
 use aho_corasick::AhoCorasick;
-use dactyl::NiceU64;
+use dactyl::{
+	NiceU8,
+	NiceU64,
+};
 use fyi_msg::Msg;
 use refract_core::{
 	Output,
@@ -13,7 +16,10 @@ use refract_core::{
 };
 use std::{
 	borrow::Cow,
-	cell::RefCell,
+	cell::{
+		Cell,
+		RefCell,
+	},
 	ffi::OsStr,
 	io::SeekFrom,
 	os::unix::ffi::OsStrExt,
@@ -40,6 +46,7 @@ pub(super) struct Viewer<'a> {
 	template: Box<[u8]>,
 	src: Source<'a>,
 	page: RefCell<NamedTempFile>,
+	count: Cell<u8>,
 	flags: u8,
 }
 
@@ -94,6 +101,7 @@ impl Viewer<'_> {
 				.suffix(".html")
 				.tempfile()
 				.map_err(|_| RefractError::Write)?),
+			count: Cell::new(0),
 			flags
 		};
 
@@ -113,6 +121,9 @@ impl Viewer<'_> {
 
 		let prompt = Msg::plain("\x1b[2m(Reload the test page.)\x1b[0m Does the re-encoded image look good?")
 			.with_indent(1);
+
+		// Reset the count to zero.
+		self.count.replace(0);
 
 		// Loop it.
 		let mut guide = self.src.encode(kind, self.flags);
@@ -217,16 +228,23 @@ impl Viewer<'_> {
 		// Make sure we're starting at the beginning of the file.
 		self.reset_file()?;
 
+		// Increment the count.
+		let count = self.count.get() + 1;
+		self.count.replace(count);
+
 		let keys = &[
 			"%ng.type%",
 			"%ng.base64%",
 			"%ng.ext%",
+			"%count%",
 		];
 
+		let count = NiceU8::from(count);
 		let vals = &[
 			unsafe { std::str::from_utf8_unchecked(kind.type_bytes()) },
 			&base64::encode(data),
 			unsafe { std::str::from_utf8_unchecked(kind.as_bytes()) },
+			count.as_str()
 		];
 
 		let ac = AhoCorasick::new(keys);
