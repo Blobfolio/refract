@@ -139,21 +139,10 @@ impl<'a> TryFrom<&'a Path> for Source<'a> {
 impl TryFrom<PathBuf> for Source<'_> {
 	type Error = RefractError;
 
+	#[inline]
 	fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-		let raw: &[u8] = &std::fs::read(&path).map_err(|_| RefractError::Read)?;
-		let kind = SourceKind::try_from(raw)?;
-
-		// We know this is non-zero because we were able to obtain a valid
-		// image kind from its headers.
-		let size = u64::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
-		let size = unsafe { NonZeroU64::new_unchecked(size) };
-
-		Ok(Self {
-			path: Cow::Owned(path),
-			size,
-			img: Image::try_from(raw)?,
-			kind,
-		})
+		let (out, _) = Self::new_and_raw(path)?;
+		Ok(out)
 	}
 }
 
