@@ -59,6 +59,9 @@ impl Candidate {
 	}
 
 	/// # Reset.
+	///
+	/// This lets us reuse the same instance for multiple passes, saving a few
+	/// allocations.
 	pub(crate) fn reset(&mut self) {
 		self.buf.truncate(0);
 		self.flags = 0;
@@ -86,6 +89,8 @@ impl Candidate {
 	}
 
 	/// # Verify Kind.
+	///
+	/// This checks the data kind matches the expected [`OutputKind`].
 	fn verify_kind(&mut self) -> bool {
 		if 0 != self.flags & FLAG_KIND { return true; }
 		else if let Ok(kind) = OutputKind::try_from(self.buf.as_slice()) {
@@ -99,6 +104,9 @@ impl Candidate {
 	}
 
 	/// # Verify Size.
+	///
+	/// This checks the size of the data is smaller than the "best" found to
+	/// date, passed from the outside.
 	fn verify_size(&mut self, size: NonZeroU64) -> bool {
 		if 0 != self.flags & FLAG_SIZE { return true; }
 		else if let Ok(buf_size) = u64::try_from(self.buf.len()) {
@@ -135,6 +143,13 @@ impl Candidate {
 	///
 	/// For safety, [`Candidate::finish_mut_vec`] must be called after writing
 	/// is complete or it will fail validation.
+	///
+	/// It still isn't fully safe, but prevents cases where a mid-stage abort
+	/// causes data to only be partially written.
+	///
+	/// On the bright side, this is only used by JPEG XL, which requires a
+	/// specific end byte, so type validation would generally fail if writes
+	/// don't finish.
 	pub(crate) fn as_mut_vec(&mut self) -> &mut Vec<u8> { &mut self.buf }
 
 	#[must_use]
