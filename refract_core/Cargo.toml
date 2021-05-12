@@ -13,10 +13,11 @@ publish = false
 ahash = "0.7.*"
 imgref = "1.9.*"
 jpeg-decoder = "0.1.*"
-lodepng = "3.4.*"
 loop9 = "0.1.*"
 num_cpus = "1.13.*"
 num-integer = "0.1.*"
+pix = "0.13.*"
+png_pong = "0.8.*"
 rgb = "0.8.*"
 
 [dependencies.argyle]

@@ -66,19 +66,48 @@ impl TryFrom<&[u8]> for Image<'_> {
 	/// This will return an error if the source is not a valid JPEG or PNG, or
 	/// if it uses an unsupported color scheme.
 	fn try_from(mut raw: &[u8]) -> Result<Self, Self::Error> {
+		use rgb::FromSlice;
+
 		let kind = SourceKind::try_from(raw)?;
 
 		// Parse the image into an `ImgVec` for consistency.
 		let img: ImgVec<RGBA8> = match kind {
 			SourceKind::Png => {
-				let img = lodepng::decode32(raw)
+				use pix::{Raster, rgb::SRgba8};
+				use png_pong::PngRaster;
+
+				// Decode the image.
+				let png_pong::Step { raster, .. } = png_pong::Decoder::new(raw)
+					.map_err(|_| RefractError::Source)?
+					.into_steps()
+					.last()
+					.ok_or(RefractError::Source)
+					.map_err(|_| RefractError::Source)?
 					.map_err(|_| RefractError::Source)?;
-				ImgVec::new(img.buffer, img.width, img.height)
+
+				// Extract/upgrade the raster.
+				let raster = match raster {
+					PngRaster::Gray8(x) => Raster::<SRgba8>::with_raster(&x),
+					PngRaster::Gray16(x) => Raster::<SRgba8>::with_raster(&x),
+					PngRaster::Rgb8(x) => Raster::<SRgba8>::with_raster(&x),
+					PngRaster::Rgb16(x) => Raster::<SRgba8>::with_raster(&x),
+					PngRaster::Palette(x, _, _) => Raster::<SRgba8>::with_raster(&x),
+					PngRaster::Graya8(x) => Raster::<SRgba8>::with_raster(&x),
+					PngRaster::Graya16(x) => Raster::<SRgba8>::with_raster(&x),
+					PngRaster::Rgba8(x) => Raster::<SRgba8>::with_raster(&x),
+					PngRaster::Rgba16(x) => Raster::<SRgba8>::with_raster(&x),
+				};
+
+				ImgVec::new(
+					raster.as_u8_slice().as_rgba().to_vec(),
+					usize::try_from(raster.width()).map_err(|_| RefractError::Overflow)?,
+					usize::try_from(raster.height()).map_err(|_| RefractError::Overflow)?,
+				)
 			},
 			SourceKind::Jpeg => {
 				use jpeg_decoder::PixelFormat::{CMYK32, L8, RGB24};
-				use rgb::FromSlice;
 
+				// Decode the image.
 				let mut jecoder = jpeg_decoder::Decoder::new(&mut raw);
 				let pixels = jecoder.decode()
 					.map_err(|_| RefractError::Source)?;
@@ -87,9 +116,10 @@ impl TryFrom<&[u8]> for Image<'_> {
 				// So many ways to be a JPEG...
 				let buf: Vec<_> = match info.pixel_format {
 					// Upscale greyscale to RGBA.
-					L8 => {
-						pixels.iter().copied().map(|g| RGBA8::new(g, g, g, 255)).collect()
-					},
+					L8 => pixels.iter()
+						.copied()
+						.map(|g| RGBA8::new(g, g, g, 255))
+						.collect(),
 					// Upscale RGB to RGBA.
 					RGB24 => {
 						let rgb = pixels.as_rgb();
