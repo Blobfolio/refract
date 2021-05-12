@@ -182,7 +182,7 @@ const fn weighed_pixel(px: RGBA8) -> (u16, RGB<u32>) {
 		RGB::new(
 			px.r as u32 * weight as u32,
 			px.g as u32 * weight as u32,
-			px.b as u32 * weight as u32
+			px.b as u32 * weight as u32,
 		)
 	)
 }
