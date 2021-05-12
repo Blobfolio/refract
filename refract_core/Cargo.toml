@@ -10,6 +10,7 @@ readme = "README.md"
 publish = false
 
 [dependencies]
+ahash = "0.7.*"
 imgref = "1.9.*"
 jpeg-decoder = "0.1.*"
 lodepng = "3.4.*"
