@@ -43,7 +43,6 @@ pub struct Image<'a> {
 	pixel: PixelKind,
 	width: NonZeroUsize,
 	height: NonZeroUsize,
-	stride: NonZeroUsize,
 }
 
 impl Deref for Image<'_> {
@@ -156,7 +155,6 @@ impl TryFrom<ImgVec<RGBA8>> for Image<'_> {
 
 		let width: usize = raw.width();
 		let height: usize = raw.height();
-		let stride = NonZeroUsize::new(raw.stride()).ok_or(RefractError::Overflow)?;
 
 		// Build up the pixels and figure out the color scheme.
 		let mut any_color: bool = false;
@@ -183,7 +181,6 @@ impl TryFrom<ImgVec<RGBA8>> for Image<'_> {
 			pixel: PixelKind::Full,
 			width: NonZeroUsize::new(width).ok_or(RefractError::Overflow)?,
 			height: NonZeroUsize::new(height).ok_or(RefractError::Overflow)?,
-			stride,
 		})
 	}
 }
@@ -211,12 +208,6 @@ impl<'a> Image<'a> {
 	pub const fn pixel_kind(&self) -> PixelKind { self.pixel }
 
 	#[must_use]
-	/// # Stride.
-	///
-	/// Return the image stride.
-	pub const fn stride(&self) -> usize { self.stride.get() }
-
-	#[must_use]
 	/// # Width.
 	///
 	/// Return the image width.
@@ -234,18 +225,6 @@ impl Image<'_> {
 	/// This will return an error if the `usize` value doesn't fit.
 	pub fn height_i32(&self) -> Result<i32, RefractError> {
 		i32::try_from(self.height.get())
-			.map_err(|_| RefractError::Overflow)
-	}
-
-	/// # Stride.
-	///
-	/// Return the image stride.
-	///
-	/// ## Errors
-	///
-	/// This will return an error if the `usize` value doesn't fit.
-	pub fn stride_i32(&self) -> Result<i32, RefractError> {
-		i32::try_from(self.stride.get())
 			.map_err(|_| RefractError::Overflow)
 	}
 
@@ -273,18 +252,6 @@ impl Image<'_> {
 	/// This will return an error if the `usize` value doesn't fit.
 	pub fn height_u32(&self) -> Result<u32, RefractError> {
 		u32::try_from(self.height.get())
-			.map_err(|_| RefractError::Overflow)
-	}
-
-	/// # Stride.
-	///
-	/// Return the image stride.
-	///
-	/// ## Errors
-	///
-	/// This will return an error if the `usize` value doesn't fit.
-	pub fn stride_u32(&self) -> Result<u32, RefractError> {
-		u32::try_from(self.stride.get())
 			.map_err(|_| RefractError::Overflow)
 	}
 
@@ -351,7 +318,6 @@ impl<'a> Image<'a> {
 					pixel: PixelKind::Compact,
 					width: self.width,
 					height: self.height,
-					stride: self.stride,
 				}
 			},
 		}
@@ -369,7 +335,6 @@ impl<'a> Image<'a> {
 			pixel: self.pixel,
 			width: self.width,
 			height: self.height,
-			stride: self.stride,
 		}
 	}
 }
