@@ -342,7 +342,6 @@ mod tests {
 			assert_eq!(img.pixel_kind(), img2.pixel_kind());
 			assert_eq!(img.width(), img2.width());
 			assert_eq!(img.height(), img2.height());
-			assert_eq!(img.stride(), img2.stride());
 		}
 	}
 }
