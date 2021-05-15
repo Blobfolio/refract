@@ -11,9 +11,7 @@ publish = false
 
 [dependencies]
 ahash = "0.7.*"
-imgref = "1.9.*"
 jpeg-decoder = "0.1.*"
-loop9 = "0.1.*"
 num_cpus = "1.13.*"
 num-integer = "0.1.*"
 pix = "0.13.*"
