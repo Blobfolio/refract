@@ -167,7 +167,7 @@ impl Image<'_> {
 			PngRaster::Palette(x, _, _) => Raster::<SRgba8>::with_raster(&x),
 			PngRaster::Graya8(x) => Raster::<SRgba8>::with_raster(&x),
 			PngRaster::Graya16(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Rgba8(x) => Raster::<SRgba8>::with_raster(&x),
+			PngRaster::Rgba8(x) => x,
 			PngRaster::Rgba16(x) => Raster::<SRgba8>::with_raster(&x),
 		};
 
