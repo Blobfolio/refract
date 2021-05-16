@@ -146,54 +146,36 @@ impl Image<'_> {
 	/// This will return an error if the dimensions overflow or other weird
 	/// things come up during decoding.
 	fn from_png(raw: &[u8]) -> Result<Self, RefractError> {
-		use pix::{Raster, rgb::SRgba8};
-		use png_pong::PngRaster;
+		use rgb::ComponentSlice;
 
-		// Decode the image.
-		let png_pong::Step { raster, .. } = png_pong::Decoder::new(raw)
-			.map_err(|_| RefractError::Source)?
-			.into_steps()
-			.last()
-			.ok_or(RefractError::Source)
-			.map_err(|_| RefractError::Source)?
+		let lodepng::Bitmap { mut buffer, width, height } = lodepng::decode32(raw)
 			.map_err(|_| RefractError::Source)?;
 
-		// Extract/upgrade the raster.
-		let raster = match raster {
-			PngRaster::Gray8(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Gray16(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Rgb8(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Rgb16(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Palette(x, _, _) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Graya8(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Graya16(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Rgba8(x) => x,
-			PngRaster::Rgba16(x) => Raster::<SRgba8>::with_raster(&x),
-		};
+		// Figure out the color/alpha situation.
+		let (any_color, any_alpha) = buffer.iter()
+			.fold((false, false), |(color, alpha), px| {
+				(
+					color || px.r != px.g || px.r != px.b,
+					alpha || px.a != 255
+				)
+			});
 
-		let width = usize::try_from(raster.width()).map_err(|_| RefractError::Overflow)?;
-		let height = usize::try_from(raster.height()).map_err(|_| RefractError::Overflow)?;
-		let mut raw: Vec<u8> = raster.as_u8_slice().to_vec();
-		drop(raster);
+		// If we have alpha, let's take a quick detour.
+		if any_alpha {
+			alpha::clean_alpha(&mut buffer, width, height);
+		}
+
+		// Convert the buffer to a straight u8 slice.
+		let raw: Vec<u8> = buffer
+			.drain(..)
+			.fold(Vec::with_capacity(width * height * 4), |mut acc, px| {
+				acc.extend_from_slice(px.as_slice());
+				acc
+			});
 
 		// Make sure the buffer is sized correctly.
 		if raw.len() != width * height * 4 {
 			return Err(RefractError::Overflow);
-		}
-
-		// Double-check whether or not there are color and/or alpha bits to
-		// consider.
-		let (any_color, any_alpha) = raw.chunks_exact(4)
-			.fold((false, false), |(color, alpha), px| {
-				(
-					color || px[0] != px[1] || px[0] != px[2],
-					alpha || px[3] != 255
-				)
-			});
-
-		// If we have alpha data, we have a little cleanup to do.
-		if any_alpha {
-			alpha::clean_alpha(&mut raw, width, height);
 		}
 
 		let color =
