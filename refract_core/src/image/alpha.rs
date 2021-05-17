@@ -9,11 +9,9 @@ This is a recreation of that module (and its `loop9` dependency), better
 tailored to this app's data design.
 */
 
-use rgb::RGBA8;
 
 
-
-#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # A Square of Nine Pixels.
 ///
 /// This represents a pixel — located in the middle — and all eight of its
@@ -24,39 +22,45 @@ use rgb::RGBA8;
 /// the top and middle rows will be identical, as will the left and center
 /// columns within each row. At coordinate width,height, the middle and bottom
 /// rows will match, as will the center and right columns within each row.
-struct Nine([RGBA8; 9]);
+struct Nine([u8; 36]);
 
 /// ## Getters.
 impl Nine {
+	#[inline]
 	/// # The Center Pixel's Red.
-	const fn red(&self) -> u8 { self.0[4].r }
+	const fn red(&self) -> u8 { self.0[16] }
 
+	#[inline]
 	/// # The Center Pixel's Green.
-	const fn green(&self) -> u8 { self.0[4].g }
+	const fn green(&self) -> u8 { self.0[17] }
 
+	#[inline]
 	/// # The Center Pixel's Blue.
-	const fn blue(&self) -> u8 { self.0[4].b }
+	const fn blue(&self) -> u8 { self.0[18] }
 
+	#[inline]
 	/// # The Center Pixel's Alpha.
-	const fn alpha(&self) -> u8 { self.0[4].a }
+	const fn alpha(&self) -> u8 { self.0[19] }
 
+	#[inline]
 	/// # Has Alpha?
 	///
 	/// This returns true if the center pixel's alpha channel is less than 255.
-	const fn has_alpha(&self) -> bool { self.0[4].a != 255 }
+	const fn has_alpha(&self) -> bool { self.alpha() != 255 }
 
 	/// # Has Invisible Pixels?
 	///
 	/// This returns true if any of the pixels in the set have an alpha value
 	/// of zero.
-	fn has_invisible(&self) -> bool { self.0.iter().any(|px| px.a == 0) }
+	fn has_invisible(&self) -> bool { self.0.chunks_exact(4).any(|px| px[3] == 0) }
 
+	#[inline]
 	/// # Is Semi-Transparent?
 	///
 	/// This returns true if the center pixel's alpha channel is less than 255
 	/// but greater than zero.
 	const fn is_semi_transparent(&self) -> bool {
-		0 < self.0[4].a && self.0[4].a < 255
+		0 < self.alpha() && self.alpha() < 255
 	}
 
 	#[allow(clippy::cast_possible_truncation)] // Values will be in range.
@@ -69,33 +73,33 @@ impl Nine {
 	///
 	/// If the result turns out to be identical to the original value, `None`
 	/// is returned.
-	fn averaged(&self) -> Option<RGBA8> {
-		let (r, g, b) = self.0.iter()
+	fn averaged(&self) -> Option<[u8; 4]> {
+		let (r, g, b) = self.0.chunks_exact(4)
 			.fold((0_u16, 0_u16, 0_u16), |mut acc, px| {
-				acc.0 += u16::from(px.r);
-				acc.1 += u16::from(px.g);
-				acc.2 += u16::from(px.b);
+				acc.0 += u16::from(px[0]);
+				acc.1 += u16::from(px[1]);
+				acc.2 += u16::from(px[2]);
 				acc
 			});
 
 		// This is a straight average of the entire block, which always
 		// has nine members (even if some will be duplicates).
-		let mut avg = RGBA8::new(
+		let mut avg = [
 			num_integer::div_floor(r, 9) as u8,
 			num_integer::div_floor(g, 9) as u8,
 			num_integer::div_floor(b, 9) as u8,
 			self.alpha(),
-		);
+		];
 
 		// Clamp values to keep them from straying too far afield.
 		if self.alpha() != 0 {
-			avg.r = clamp(avg.r, self.red(), self.alpha());
-			avg.b = clamp(avg.b, self.green(), self.alpha());
-			avg.g = clamp(avg.g, self.blue(), self.alpha());
+			avg[0] = clamp(avg[0], self.red(), self.alpha());
+			avg[1] = clamp(avg[1], self.green(), self.alpha());
+			avg[2] = clamp(avg[2], self.blue(), self.alpha());
 		}
 
 		// Return if different!
-		if self.0[4] == avg { None }
+		if self.0[16..20] == avg { None }
 		else { Some(avg) }
 	}
 
@@ -111,14 +115,14 @@ impl Nine {
 	///
 	/// If no weighting is possible, or if the result winds up identical to the
 	/// original, `None` is returned.
-	fn weighted(&self) -> Option<RGBA8> {
-		let (r, g, b, weight) = self.0.iter()
+	fn weighted(&self) -> Option<[u8; 4]> {
+		let (r, g, b, weight) = self.0.chunks_exact(4)
 			.fold((0_u32, 0_u32, 0_u32, 0_u32), |mut acc, px| {
-				if px.a > 0 {
-					let weight = 256 - u32::from(px.a);
-					acc.0 += u32::from(px.r) * weight;
-					acc.1 += u32::from(px.g) * weight;
-					acc.2 += u32::from(px.b) * weight;
+				if px[3] > 0 {
+					let weight = 256 - u32::from(px[3]);
+					acc.0 += u32::from(px[0]) * weight;
+					acc.1 += u32::from(px[1]) * weight;
+					acc.2 += u32::from(px[2]) * weight;
 					acc.3 += weight;
 				}
 
@@ -127,22 +131,22 @@ impl Nine {
 
 		// If there were visible neighbors, make the adjustment!
 		if weight > 0 {
-			let mut avg = RGBA8::new(
+			let mut avg = [
 				num_integer::div_floor(r, weight) as u8,
 				num_integer::div_floor(g, weight) as u8,
 				num_integer::div_floor(b, weight) as u8,
 				self.alpha(),
-			);
+			];
 
 			// Clamp values to keep them from straying too far afield.
 			if self.alpha() != 0 {
-				avg.r = clamp(avg.r, self.red(), self.alpha());
-				avg.g = clamp(avg.g, self.green(), self.alpha());
-				avg.b = clamp(avg.b, self.blue(), self.alpha());
+				avg[0] = clamp(avg[0], self.red(), self.alpha());
+				avg[1] = clamp(avg[1], self.green(), self.alpha());
+				avg[2] = clamp(avg[2], self.blue(), self.alpha());
 			}
 
 			// Return if different!
-			if self.0[4] == avg { None }
+			if self.0[16..20] == avg { None }
 			else { Some(avg) }
 		}
 		else { None }
@@ -161,12 +165,12 @@ impl Nine {
 /// * Those same pixels are then averaged again to smooth out the edges.
 ///
 /// Images without any alpha channel data are passed through unchanged.
-pub(super) fn clean_alpha(img: &mut Vec<RGBA8>, width: usize, height: usize) {
+pub(super) fn clean_alpha(img: &mut Vec<u8>, width: usize, height: usize) {
 	if let Some(avg) = neutral_pixel(img, width, height) {
 		// Set all invisible pixels to said neutral color.
-		img.iter_mut()
-			.filter(|px| px.a == 0)
-			.for_each(|px| { *px = avg; });
+		img.chunks_exact_mut(4)
+			.filter(|px| px[3] == 0)
+			.for_each(|px| { px.copy_from_slice(&avg); });
 
 		// Visible pixels with transparency require more regional sensitivity to
 		// avoid undesirable distortion. This is done with two rounds of averaging.
@@ -180,9 +184,9 @@ pub(super) fn clean_alpha(img: &mut Vec<RGBA8>, width: usize, height: usize) {
 /// otherwise) appearing next to visible pixels.
 ///
 /// The less visible a pixel is, the more we can shift it.
-fn blur_alpha(img: &mut Vec<RGBA8>, width: usize, height: usize) {
+fn blur_alpha(img: &mut Vec<u8>, width: usize, height: usize) {
 	// First compute a weighted average.
-	let mut diff: Vec<(usize, RGBA8)> = Vec::new();
+	let mut diff: Vec<(usize, [u8; 4])> = Vec::new();
 	let mut idx: usize = 0;
 	the_nines(img, width, height, |n| {
 		if n.has_alpha() {
@@ -190,11 +194,13 @@ fn blur_alpha(img: &mut Vec<RGBA8>, width: usize, height: usize) {
 				diff.push((idx, avg));
 			}
 		}
-		idx += 1;
+		idx += 4;
 	});
 
 	// Apply the changes.
-	diff.drain(..).for_each(|(idx, px)| { img[idx] = px; });
+	diff.drain(..).for_each(|(idx, px)| {
+		img[idx..idx + 4].copy_from_slice(&px);
+	});
 
 	// Now compute a straight average.
 	idx = 0;
@@ -204,11 +210,13 @@ fn blur_alpha(img: &mut Vec<RGBA8>, width: usize, height: usize) {
 				diff.push((idx, avg));
 			}
 		}
-		idx += 1;
+		idx += 4;
 	});
 
 	// And apply it!
-	diff.into_iter().for_each(|(idx, px)| { img[idx] = px; });
+	diff.into_iter().for_each(|(idx, px)| {
+		img[idx..idx + 4].copy_from_slice(&px);
+	});
 }
 
 #[inline]
@@ -223,7 +231,7 @@ fn clamp(px: u8, old: u8, a: u8) -> u8 {
 #[allow(clippy::cast_possible_truncation)] // Values will be in range.
 #[allow(clippy::similar_names)] // Weight and Height are quite different!
 /// # Neutral Pixel.
-fn neutral_pixel(img: &[RGBA8], width: usize, height: usize) -> Option<RGBA8> {
+fn neutral_pixel(img: &[u8], width: usize, height: usize) -> Option<[u8; 4]> {
 	// First up, let's look for semi-transparent pixels appearing next to fully
 	// transparent pixels, and average them up to create a suitable "default"
 	// to apply to invisible pixels image-wide.
@@ -244,12 +252,12 @@ fn neutral_pixel(img: &[RGBA8], width: usize, height: usize) -> Option<RGBA8> {
 	// We only need to continue if we found the pixels we were looking for.
 	if 0 < t {
 		// Finish the average calculation to give us the neutral color.
-		Some(RGBA8::new(
+		Some([
 			num_integer::div_floor(r, t) as u8,
 			num_integer::div_floor(g, t) as u8,
 			num_integer::div_floor(b, t) as u8,
 			0,
-		))
+		])
 	}
 	else { None }
 }
@@ -274,55 +282,60 @@ fn premultiplied_minmax(px: u8, alpha: u8) -> (u8, u8) {
 ///
 /// Loop through the pixels of an image, producing a [`Nine`] for each,
 /// containing all of the neighboring pixels (with the main one in the center).
-fn the_nines<Cb>(img: &[RGBA8], width: usize, height: usize, mut cb: Cb)
+fn the_nines<Cb>(img: &[u8], width: usize, height: usize, mut cb: Cb)
 where Cb: FnMut(Nine) {
+	let row_size = width * 4;
+
 	// Make sure we have at least 3 pixels in either direction, and that the
 	// buffer is the correct size.
-	if width < 3 || height < 3 || img.len() != width * height { return; }
+	if width < 3 || height < 3 || img.len() != row_size * height { return; }
 
-	let mut nine = Nine::default();
+	let mut nine = Nine([0_u8; 36]);
 
 	// Loop the rows.
 	for y in 0..height {
 		// Figure out the rows.
-		let middle = y * width;
-		let top = middle.saturating_sub(width);
+		let middle = y * row_size;
+		let top = middle.saturating_sub(row_size);
 		let bottom =
-			if y + 1 < height { middle + width }
+			if y + 1 < height { middle + row_size }
 			else { middle };
 
 		// Start each row with 0, 0, 1 columns. We know there's always going to
 		// be a +1 because we refuse images with widths < 3.
-		nine.0[0] = img[top];
-		nine.0[1] = img[top];
-		nine.0[2] = img[top + 1];
-		nine.0[3] = img[middle];
-		nine.0[4] = img[middle];
-		nine.0[5] = img[middle + 1];
-		nine.0[6] = img[bottom];
-		nine.0[7] = img[bottom];
-		nine.0[8] = img[bottom + 1];
+		nine.0[..4].copy_from_slice(&img[top..top + 4]);
+		nine.0[4..12].copy_from_slice(&img[top..top + 8]);
+
+		nine.0[12..16].copy_from_slice(&img[middle..middle + 4]);
+		nine.0[16..24].copy_from_slice(&img[middle..middle + 8]);
+
+		nine.0[24..28].copy_from_slice(&img[bottom..bottom + 4]);
+		nine.0[28..].copy_from_slice(&img[bottom..bottom + 8]);
+
+		// Callback for X zero.
+		cb(nine);
 
 		// Loop the columns.
-		for x in 0..width {
-			// X=0 is set by the outer loop; everything else requires shifting.
-			if x > 0 {
-				// Shift the old middle and right positions down for each row.
-				nine.0[..3].rotate_left(1);
-				nine.0[3..6].rotate_left(1);
-				nine.0[6..].rotate_left(1);
+		for x in 1..width {
+			// Shift the old middle and right positions down for each row.
+			unsafe {
+				let src = nine.0.as_ptr().add(4);
+				let dst = nine.0.as_mut_ptr();
 
-				// Copy in the new right positions, if any.
-				let right =
-					if x + 1 < width { x + 1 }
-					else { x };
-
-				nine.0[2] = img[top + right];
-				nine.0[5] = img[middle + right];
-				nine.0[8] = img[bottom + right];
+				std::ptr::copy(src, dst, 8);
+				std::ptr::copy(src.add(12), dst.add(12), 8);
+				std::ptr::copy(src.add(24), dst.add(24), 8);
 			}
 
-			// Run the callback!
+			// Copy in the new right positions, if any.
+			if x + 1 < width {
+				let right = (x + 1) * 4;
+				nine.0[8..12].copy_from_slice(&img[top + right..top + right + 4]);
+				nine.0[20..24].copy_from_slice(&img[middle + right..middle + right + 4]);
+				nine.0[32..].copy_from_slice(&img[bottom + right..bottom + right + 4]);
+			}
+
+			// Callback for the rest!
 			cb(nine);
 		}
 	}
@@ -347,16 +360,11 @@ mod tests {
 
 	#[test]
 	fn t_nine() {
-		let mut raw: Vec<u8> = Vec::new();
-		for i in 0..16*4 { raw.push(i); }
-
-		// Make a buffer with RGBA8 pixels.
-		let img: Vec<RGBA8> = raw.chunks_exact(4)
-			.map(|px| RGBA8::new(px[0], px[1], px[2], px[3]))
-			.collect();
+		let mut img: Vec<u8> = Vec::new();
+		for i in 0..16*4 { img.push(i); }
 
 		// There should be 16 pixels total.
-		assert_eq!(img.len(), 16);
+		assert_eq!(img.len(), 16 * 4);
 
 		let mut idx: u8 = 0;
 		the_nines(&img, 4, 4, |n| {
@@ -365,129 +373,111 @@ mod tests {
 				0 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(16, 17, 18, 19),
-						RGBA8::new(16, 17, 18, 19),
-						RGBA8::new(20, 21, 22, 23)
+						0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7,
+						0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7,
+						16, 17, 18, 19, 16, 17, 18, 19, 20, 21, 22, 23,
 					]),
 				),
 				1 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(16, 17, 18, 19),
-						RGBA8::new(20, 21, 22, 23),
-						RGBA8::new(24, 25, 26, 27)
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+						16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
 					]),
 				),
 				2 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(20, 21, 22, 23),
-						RGBA8::new(24, 25, 26, 27),
-						RGBA8::new(28, 29, 30, 31),
+						4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+						4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+						20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
 					]),
 				),
 				3 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(24, 25, 26, 27),
-						RGBA8::new(28, 29, 30, 31),
-						RGBA8::new(28, 29, 30, 31),
+						8, 9, 10, 11,
+						12, 13, 14, 15,
+						12, 13, 14, 15,
+						8, 9, 10, 11,
+						12, 13, 14, 15,
+						12, 13, 14, 15,
+						24, 25, 26, 27,
+						28, 29, 30, 31,
+						28, 29, 30, 31,
 					]),
 				),
 				// Row change!
 				4 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(16, 17, 18, 19),
-						RGBA8::new(16, 17, 18, 19),
-						RGBA8::new(20, 21, 22, 23),
-						RGBA8::new(32, 33, 34, 35),
-						RGBA8::new(32, 33, 34, 35),
-						RGBA8::new(36, 37, 38, 39),
+						0, 1, 2, 3,
+						0, 1, 2, 3,
+						4, 5, 6, 7,
+						16, 17, 18, 19,
+						16, 17, 18, 19,
+						20, 21, 22, 23,
+						32, 33, 34, 35,
+						32, 33, 34, 35,
+						36, 37, 38, 39,
 					])
 				),
 				5 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(0, 1, 2, 3),
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(16, 17, 18, 19),
-						RGBA8::new(20, 21, 22, 23),
-						RGBA8::new(24, 25, 26, 27),
-						RGBA8::new(32, 33, 34, 35),
-						RGBA8::new(36, 37, 38, 39),
-						RGBA8::new(40, 41, 42, 43),
+						0, 1, 2, 3,
+						4, 5, 6, 7,
+						8, 9, 10, 11,
+						16, 17, 18, 19,
+						20, 21, 22, 23,
+						24, 25, 26, 27,
+						32, 33, 34, 35,
+						36, 37, 38, 39,
+						40, 41, 42, 43,
 					]),
 				),
 				6 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(4, 5, 6, 7),
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(20, 21, 22, 23),
-						RGBA8::new(24, 25, 26, 27),
-						RGBA8::new(28, 29, 30, 31),
-						RGBA8::new(36, 37, 38, 39),
-						RGBA8::new(40, 41, 42, 43),
-						RGBA8::new(44, 45, 46, 47),
+						4, 5, 6, 7,
+						8, 9, 10, 11,
+						12, 13, 14, 15,
+						20, 21, 22, 23,
+						24, 25, 26, 27,
+						28, 29, 30, 31,
+						36, 37, 38, 39,
+						40, 41, 42, 43,
+						44, 45, 46, 47,
 					]),
 				),
 				7 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(8, 9, 10, 11),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(12, 13, 14, 15),
-						RGBA8::new(24, 25, 26, 27),
-						RGBA8::new(28, 29, 30, 31),
-						RGBA8::new(28, 29, 30, 31),
-						RGBA8::new(40, 41, 42, 43),
-						RGBA8::new(44, 45, 46, 47),
-						RGBA8::new(44, 45, 46, 47),
+						8, 9, 10, 11,
+						12, 13, 14, 15,
+						12, 13, 14, 15,
+						24, 25, 26, 27,
+						28, 29, 30, 31,
+						28, 29, 30, 31,
+						40, 41, 42, 43,
+						44, 45, 46, 47,
+						44, 45, 46, 47,
 					]),
 				),
 				// Jump to the end.
 				15 => assert_eq!(
 					n,
 					Nine([
-						RGBA8::new(40, 41, 42, 43),
-						RGBA8::new(44, 45, 46, 47),
-						RGBA8::new(44, 45, 46, 47),
-						RGBA8::new(56, 57, 58, 59),
-						RGBA8::new(60, 61, 62, 63),
-						RGBA8::new(60, 61, 62, 63),
-						RGBA8::new(56, 57, 58, 59),
-						RGBA8::new(60, 61, 62, 63),
-						RGBA8::new(60, 61, 62, 63),
+						40, 41, 42, 43,
+						44, 45, 46, 47,
+						44, 45, 46, 47,
+						56, 57, 58, 59,
+						60, 61, 62, 63,
+						60, 61, 62, 63,
+						56, 57, 58, 59,
+						60, 61, 62, 63,
+						60, 61, 62, 63,
 					])
 				),
 				_ => {}
