@@ -80,7 +80,7 @@ impl Image<'_> {
 	/// This will return an error if the dimensions overflow or other weird
 	/// things come up during decoding.
 	fn from_jpg(mut raw: &[u8]) -> Result<Self, RefractError> {
-		use jpeg_decoder::PixelFormat::{CMYK32, L8, RGB24};
+		use jpeg_decoder::PixelFormat;
 		use rgb::{ComponentSlice, FromSlice};
 
 		// Decode the image.
@@ -95,7 +95,7 @@ impl Image<'_> {
 		// So many ways to be a JPEG...
 		let (raw, any_color): (Vec<u8>, bool) = match info.pixel_format {
 			// Upscale greyscale to RGBA.
-			L8 => (
+			PixelFormat::L8 => (
 				pixels.iter()
 					.fold(Vec::with_capacity(width * height * 4), |mut acc, &px| {
 						acc.extend_from_slice(&[px, px, px, 255]);
@@ -104,7 +104,7 @@ impl Image<'_> {
 				false
 			),
 			// Upscale RGB to RGBA.
-			RGB24 =>  pixels.as_rgb()
+			PixelFormat::RGB24 =>  pixels.as_rgb()
 				.iter()
 				.map(|px| px.alpha(255))
 				.fold(
@@ -115,8 +115,8 @@ impl Image<'_> {
 						acc.1 || px.r != px.g || px.r != px.b,
 					)
 				}),
-			// CMYK doesn't work.
-			CMYK32 => return Err(RefractError::Color),
+			// CMYK isn't supported.
+			PixelFormat::CMYK32 => return Err(RefractError::Color),
 		};
 
 		let color =
@@ -146,25 +146,29 @@ impl Image<'_> {
 	/// This will return an error if the dimensions overflow or other weird
 	/// things come up during decoding.
 	fn from_png(raw: &[u8]) -> Result<Self, RefractError> {
+		// Grab the RGBA pixels, width, and height.
 		let (mut raw, width, height): (Vec<u8>, usize, usize) = {
+			// Parse the file.
 			let decoder = spng::Decoder::new(raw)
 				.with_output_format(spng::Format::Rgba8)
 				.with_decode_flags(spng::DecodeFlags::TRANSPARENCY);
-			let (out_info, mut reader) = decoder.read_info()
+			let (info, mut reader) = decoder.read_info()
 				.map_err(|_| RefractError::Source)?;
 
-			let width = usize::try_from(out_info.width)
+			// Grab the dimensions.
+			let width = usize::try_from(info.width)
 				.map_err(|_| RefractError::Overflow)?;
-			let height = usize::try_from(out_info.height)
+			let height = usize::try_from(info.height)
 				.map_err(|_| RefractError::Overflow)?;
 
+			// Throw the pixels into a buffer.
 			let mut out = Vec::new();
-			out.reserve_exact(out_info.buffer_size);
-			unsafe { out.set_len(out_info.buffer_size); }
+			out.reserve_exact(info.buffer_size);
+			unsafe { out.set_len(info.buffer_size); }
 			reader.next_frame(&mut out)
 				.map_err(|_| RefractError::Source)?;
 
-			// Make sure the buffer is actually sized correctly.
+			// Make sure the buffer is the right RGBA size.
 			if out.len() != width * height * 4 {
 				return Err(RefractError::Overflow);
 			}
@@ -172,7 +176,8 @@ impl Image<'_> {
 			(out, width, height)
 		};
 
-		// Figure out the color/alpha situation.
+		// Figure out the color/alpha situation. We don't want to trust the
+		// source color type, as images might have been saved inappropriately.
 		let (any_color, any_alpha) = raw.chunks_exact(4)
 			.fold((false, false), |(color, alpha), px| {
 				(
@@ -181,7 +186,7 @@ impl Image<'_> {
 				)
 			});
 
-		// If we have alpha, let's take a quick detour.
+		// If we have alpha, let's take a quick detour to clean it up.
 		if any_alpha {
 			alpha::clean_alpha(&mut raw, width, height);
 		}
