@@ -14,9 +14,8 @@ ahash = "0.7.*"
 jpeg-decoder = "0.1.*"
 num_cpus = "1.13.*"
 num-integer = "0.1.*"
-pix = "0.13.*"
-png_pong = "0.8.1"
 rgb = "0.8.*"
+spng = "0.1.0"
 
 [dependencies.argyle]
 version = "0.4.*"

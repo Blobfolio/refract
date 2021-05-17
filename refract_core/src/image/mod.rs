@@ -12,10 +12,6 @@ use crate::{
 	RefractError,
 	SourceKind,
 };
-use pix::{
-	Raster,
-	rgb::SRgba8,
-};
 use std::{
 	borrow::{
 		Borrow,
@@ -150,35 +146,31 @@ impl Image<'_> {
 	/// This will return an error if the dimensions overflow or other weird
 	/// things come up during decoding.
 	fn from_png(raw: &[u8]) -> Result<Self, RefractError> {
-		use png_pong::PngRaster;
+		let (mut raw, width, height): (Vec<u8>, usize, usize) = {
+			let decoder = spng::Decoder::new(raw)
+				.with_output_format(spng::Format::Rgba8)
+				.with_decode_flags(spng::DecodeFlags::TRANSPARENCY);
+			let (out_info, mut reader) = decoder.read_info()
+				.map_err(|_| RefractError::Source)?;
 
-		// Decode the image.
-		let png_pong::Step { raster, .. } = png_pong::Decoder::new(raw)
-			.map_err(|_| RefractError::Source)?
-			.into_steps()
-			.last()
-			.ok_or(RefractError::Source)
-			.map_err(|_| RefractError::Source)?
-			.map_err(|_| RefractError::Source)?;
+			let width = usize::try_from(out_info.width)
+				.map_err(|_| RefractError::Overflow)?;
+			let height = usize::try_from(out_info.height)
+				.map_err(|_| RefractError::Overflow)?;
 
-		// Extract/upgrade the raster.
-		let raster = match raster {
-			PngRaster::Gray8(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Gray16(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Rgb8(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Rgb16(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Palette(x, _, _) => png_palette_to_srgba(raw, x)?,
-			PngRaster::Graya8(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Graya16(x) => Raster::<SRgba8>::with_raster(&x),
-			PngRaster::Rgba8(x) => x,
-			PngRaster::Rgba16(x) => Raster::<SRgba8>::with_raster(&x),
+			let mut out = Vec::new();
+			out.reserve_exact(out_info.buffer_size);
+			unsafe { out.set_len(out_info.buffer_size); }
+			reader.next_frame(&mut out)
+				.map_err(|_| RefractError::Source)?;
+
+			// Make sure the buffer is actually sized correctly.
+			if out.len() != width * height * 4 {
+				return Err(RefractError::Overflow);
+			}
+
+			(out, width, height)
 		};
-
-		let width = usize::try_from(raster.width()).map_err(|_| RefractError::Overflow)?;
-		let height = usize::try_from(raster.height()).map_err(|_| RefractError::Overflow)?;
-
-		let raw: Box<[u8]> = raster.into();
-		let mut raw: Vec<u8> = raw.into();
 
 		// Figure out the color/alpha situation.
 		let (any_color, any_alpha) = raw.chunks_exact(4)
@@ -192,11 +184,6 @@ impl Image<'_> {
 		// If we have alpha, let's take a quick detour.
 		if any_alpha {
 			alpha::clean_alpha(&mut raw, width, height);
-		}
-
-		// Make sure the buffer is sized correctly.
-		if raw.len() != width * height * 4 {
-			return Err(RefractError::Overflow);
 		}
 
 		let color =
@@ -213,84 +200,6 @@ impl Image<'_> {
 			height: NonZeroUsize::new(height).ok_or(RefractError::Overflow)?,
 		})
 	}
-}
-
-#[allow(clippy::cast_possible_truncation)] // Values are in range.
-/// # Convert Paletted Image to SRGBA.
-///
-/// The `pix` crate doesn't seem to have a way to convert a paletted `Raster`
-/// into an `sRGBA` one, and `png_pong` has an error currently where it isn't
-/// fetching palette data during the steps iter.
-///
-/// This method works around both issues by re-reading the PNG to tease the
-/// necessary data out of the chunks, then remaps the "greyscale" raster with
-/// the correct colors to produce an `sRGBA` array.
-///
-/// Oof! Haha.
-fn png_palette_to_srgba(raw: &[u8], img: Raster::<pix::gray::Gray8>) -> Result<Raster<SRgba8>, RefractError> {
-	use pix::{
-		el::Pixel,
-		rgb::SRgb8,
-	};
-	use png_pong::chunk::{Chunk, Palette, Transparency};
-
-	let mut p: Option<Vec<SRgb8>> = None;
-	let mut t: Option<Vec<u8>> = None;
-	png_pong::Decoder::new(raw)
-		.map_err(|_| RefractError::Color)?
-		.into_chunks()
-		.filter_map(std::result::Result::ok)
-		.try_for_each(|x| {
-			match x {
-				Chunk::Palette(Palette { palette }) => { p.replace(palette); },
-				Chunk::Transparency(tp) => {
-					match tp {
-						Transparency::Palette(x) => { t.replace(x); },
-						// TODO: Maybe we can figure out how to deal with these.
-						_ => return Err(RefractError::Color),
-					}
-				},
-				_ => {}
-			}
-			Ok(())
-		})?;
-
-	// Build up the palette.
-	let mut p: Vec<SRgba8> = p.filter(|x| ! x.is_empty())
-		.ok_or(RefractError::Color)?
-		.into_iter()
-		.map(pix::el::Pixel::convert).collect();
-
-	// We have transparency to deal with.
-	if let Some(t) = t {
-		let len: usize = t.len();
-		p[..len].iter_mut()
-			.zip(t.into_iter())
-			.for_each(|(px, alpha)| {
-				*px.alpha_mut() = pix::chan::Ch8::from(alpha);
-			});
-	}
-
-	// Double-check the raster vector is 1-byte greyscale. It should be, but
-	// you never know...
-	let width = usize::try_from(img.width()).map_err(|_| RefractError::Overflow)?;
-	let height = usize::try_from(img.height()).map_err(|_| RefractError::Overflow)?;
-	let grey: Box<[u8]> = img.into();
-	if grey.len() != width * height {
-		return Err(RefractError::Color);
-	}
-
-	// And finally, we can build up the image!
-	let dead: SRgba8 = SRgba8::new(0, 0, 0, 0);
-	Ok(Raster::<SRgba8>::with_pixels(
-		width as u32,
-		height as u32,
-		grey.iter()
-			.map(|&idx| {
-				*(p.get(idx as usize).unwrap_or(&dead))
-			})
-			.collect::<Vec<SRgba8>>()
-	))
 }
 
 /// ## Getters.
