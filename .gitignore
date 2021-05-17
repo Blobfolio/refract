@@ -1,10 +1,10 @@
+**.avif
 **.br
 **.deb
 **.gz
+**.jxl
+**.webp
 **/target/
 /Cargo.lock
 /doc/
 /jpegxl-rs
-/skel/assets/*.avif
-/skel/assets/*.jxl
-/skel/assets/*.webp
