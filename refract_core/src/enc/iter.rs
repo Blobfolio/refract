@@ -142,7 +142,21 @@ impl EncodeIter<'_> {
 		self.candidate.set_quality(None);
 
 		match self.kind {
-			OutputKind::Avif => Err(RefractError::NoLossless),
+			OutputKind::Avif =>
+				// Lossless compression isn't possible for greyscale images.
+				if self.src.color_kind().is_greyscale() {
+					Err(RefractError::NoLossless)
+				}
+				// Lossless AVIF encoding works exactly the same as lossy
+				// encoding, it just uses maximum quality.
+				else {
+					super::avif::make_lossy(
+						&self.src,
+						&mut self.candidate,
+						self.kind.lossless_quality(),
+						self.flags,
+					)
+				},
 			OutputKind::Jxl => super::jxl::make_lossless(&self.src, &mut self.candidate),
 			OutputKind::Webp => super::webp::make_lossless(&self.src, &mut self.candidate),
 		}?;
