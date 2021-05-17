@@ -10,9 +10,12 @@ use crate::{
 	FLAG_AVIF_ROUND_3,
 	FLAG_LOSSLESS,
 	FLAG_NO_AVIF_LIMITED,
+	FLAG_NO_LOSSLESS,
+	FLAG_NO_LOSSY,
 	Image,
 	Output,
 	OutputKind,
+	PUBLIC_FLAGS,
 	RefractError,
 	Source,
 };
@@ -89,9 +92,13 @@ impl<'a> EncodeIter<'a> {
 	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind, mut flags: u8) -> Self {
 		let (bottom, top) = kind.quality_range();
 
-		// Only AVIF requires special flags at the moment.
+		// Sanitize the flags.
+		flags &= PUBLIC_FLAGS;
 		if kind == OutputKind::Avif { flags |= FLAG_AVIF_RGB;  }
-		else { flags = 0; }
+		else {
+			// This only applies to AVIF.
+			flags &= ! FLAG_NO_AVIF_LIMITED;
+		}
 
 		let mut out = Self {
 			bottom,
@@ -115,12 +122,14 @@ impl<'a> EncodeIter<'a> {
 		};
 
 		// Try lossless compression.
-		let now = Instant::now();
-		out.tried.insert(out.kind.lossless_quality());
-		if out.lossless().is_ok() {
-			out.keep_candidate(true);
+		if 0 == out.flags & FLAG_NO_LOSSLESS {
+			let now = Instant::now();
+			out.tried.insert(out.kind.lossless_quality());
+			if out.lossless().is_ok() {
+				out.keep_candidate(true);
+			}
+			out.time += now.elapsed();
 		}
-		out.time += now.elapsed();
 
 		// We're done!
 		out
@@ -145,7 +154,7 @@ impl EncodeIter<'_> {
 			OutputKind::Avif =>
 				// Lossless compression isn't possible for greyscale images.
 				if self.src.color_kind().is_greyscale() {
-					Err(RefractError::NoLossless)
+					Err(RefractError::NothingDoing)
 				}
 				// Lossless AVIF encoding works exactly the same as lossy
 				// encoding, it just uses maximum quality.
@@ -349,6 +358,9 @@ impl EncodeIter<'_> {
 	/// a value somewhere in the middle.
 	fn next_quality(&mut self) -> Option<NonZeroU8> {
 		debug_assert!(self.bottom <= self.top);
+
+		// Lossy encoding is disabled.
+		if FLAG_NO_LOSSY == self.flags & FLAG_NO_LOSSY { return None; }
 
 		let min = self.bottom.get();
 		let max = self.top.get();
