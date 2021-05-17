@@ -13,17 +13,6 @@ use rgb::RGBA8;
 
 
 
-/// # Flag: Has Alpha (i.e. 0-254).
-const FLAG_ALPHA: u8   = 0b0001;
-
-/// # Flag: Is Visible (i.e. a != 0).
-const FLAG_VISIBLE: u8 = 0b0010;
-
-/// # Flag: Semi-Transparent.
-const FLAG_SEMI_TRANSPARENT: u8 = 0b0011;
-
-
-
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 /// # A Square of Nine Pixels.
 ///
@@ -51,23 +40,64 @@ impl Nine {
 	/// # The Center Pixel's Alpha.
 	const fn alpha(&self) -> u8 { self.0[4].a }
 
-	/// # The Center Pixel's Flags.
+	/// # Has Alpha?
 	///
-	/// This can be used to quickly determine whether or not the center pixel
-	/// is visible — `alpha > 0` — and/or has alpha data — `alpha < 255`.
-	const fn flags(&self) -> u8 {
-		match self.alpha() {
-			0 => FLAG_ALPHA,
-			255 => FLAG_VISIBLE,
-			_ => FLAG_ALPHA | FLAG_VISIBLE,
-		}
-	}
+	/// This returns true if the center pixel's alpha channel is less than 255.
+	const fn has_alpha(&self) -> bool { self.0[4].a != 255 }
 
 	/// # Has Invisible Pixels?
 	///
 	/// This returns true if any of the pixels in the set have an alpha value
 	/// of zero.
 	fn has_invisible(&self) -> bool { self.0.iter().any(|px| px.a == 0) }
+
+	/// # Is Semi-Transparent?
+	///
+	/// This returns true if the center pixel's alpha channel is less than 255
+	/// but greater than zero.
+	const fn is_semi_transparent(&self) -> bool {
+		0 < self.0[4].a && self.0[4].a < 255
+	}
+
+	#[allow(clippy::cast_possible_truncation)] // Values will be in range.
+	/// # Average.
+	///
+	/// This is a straight average of all of the pixels in a given set.
+	///
+	/// For visible center pixels, the result is clamped to prevent too much
+	/// drift.
+	///
+	/// If the result turns out to be identical to the original value, `None`
+	/// is returned.
+	fn averaged(&self) -> Option<RGBA8> {
+		let (r, g, b) = self.0.iter()
+			.fold((0_u16, 0_u16, 0_u16), |mut acc, px| {
+				acc.0 += u16::from(px.r);
+				acc.1 += u16::from(px.g);
+				acc.2 += u16::from(px.b);
+				acc
+			});
+
+		// This is a straight average of the entire block, which always
+		// has nine members (even if some will be duplicates).
+		let mut avg = RGBA8::new(
+			num_integer::div_floor(r, 9) as u8,
+			num_integer::div_floor(g, 9) as u8,
+			num_integer::div_floor(b, 9) as u8,
+			self.alpha(),
+		);
+
+		// Clamp values to keep them from straying too far afield.
+		if self.alpha() != 0 {
+			avg.r = clamp(avg.r, self.red(), self.alpha());
+			avg.b = clamp(avg.b, self.green(), self.alpha());
+			avg.g = clamp(avg.g, self.blue(), self.alpha());
+		}
+
+		// Return if different!
+		if self.0[4] == avg { None }
+		else { Some(avg) }
+	}
 
 	#[allow(clippy::cast_possible_truncation)] // Values will be in range.
 	/// # Weighted Average.
@@ -117,46 +147,6 @@ impl Nine {
 		}
 		else { None }
 	}
-
-	#[allow(clippy::cast_possible_truncation)] // Values will be in range.
-	/// # Average.
-	///
-	/// This is a straight average of all of the pixels in a given set.
-	///
-	/// For visible center pixels, the result is clamped to prevent too much
-	/// drift.
-	///
-	/// If the result turns out to be identical to the original value, `None`
-	/// is returned.
-	fn averaged(&self) -> Option<RGBA8> {
-		let (r, g, b) = self.0.iter()
-			.fold((0_u16, 0_u16, 0_u16), |mut acc, px| {
-				acc.0 += u16::from(px.r);
-				acc.1 += u16::from(px.g);
-				acc.2 += u16::from(px.b);
-				acc
-			});
-
-		// This is a straight average of the entire block, which always
-		// has nine members (even if some will be duplicates).
-		let mut avg = RGBA8::new(
-			num_integer::div_floor(r, 9) as u8,
-			num_integer::div_floor(g, 9) as u8,
-			num_integer::div_floor(b, 9) as u8,
-			self.alpha(),
-		);
-
-		// Clamp values to keep them from straying too far afield.
-		if self.alpha() != 0 {
-			avg.r = clamp(avg.r, self.red(), self.alpha());
-			avg.b = clamp(avg.b, self.green(), self.alpha());
-			avg.g = clamp(avg.g, self.blue(), self.alpha());
-		}
-
-		// Return if different!
-		if self.0[4] == avg { None }
-		else { Some(avg) }
-	}
 }
 
 
@@ -195,7 +185,7 @@ fn blur_alpha(img: &mut Vec<RGBA8>, width: usize, height: usize) {
 	let mut diff: Vec<(usize, RGBA8)> = Vec::new();
 	let mut idx: usize = 0;
 	the_nines(img, width, height, |n| {
-		if FLAG_ALPHA == n.flags() & FLAG_ALPHA {
+		if n.has_alpha() {
 			if let Some(avg) = n.weighted() {
 				diff.push((idx, avg));
 			}
@@ -209,7 +199,7 @@ fn blur_alpha(img: &mut Vec<RGBA8>, width: usize, height: usize) {
 	// Now compute a straight average.
 	idx = 0;
 	the_nines(img, width, height, |n| {
-		if FLAG_ALPHA == n.flags() & FLAG_ALPHA {
+		if n.has_alpha() {
 			if let Some(avg) = n.averaged() {
 				diff.push((idx, avg));
 			}
@@ -242,10 +232,7 @@ fn neutral_pixel(img: &[RGBA8], width: usize, height: usize) -> Option<RGBA8> {
 	let mut b: u64 = 0;
 	let mut t: u64 = 0;
 	the_nines(img, width, height, |n| {
-		if
-			(FLAG_SEMI_TRANSPARENT == n.flags() & FLAG_SEMI_TRANSPARENT) &&
-			n.has_invisible()
-		{
+		if n.is_semi_transparent() && n.has_invisible() {
 			let weight = 256 - u64::from(n.alpha());
 			r += u64::from(n.red()) * weight;
 			g += u64::from(n.green()) * weight;
