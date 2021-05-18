@@ -6,20 +6,27 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>Refract &mdash; %filename%</title>
 
-	<style>@-webkit-viewport{width:device-width}@-moz-viewport{width:device-width}@-ms-viewport{width:device-width}@-o-viewport{width:device-width}@viewport{width:device-width}*{box-sizing:border-box;margin:0;padding:0}body,html{min-height:100vh}html{scroll-behavior:smooth;-ms-overflow-style:scrollbar;-webkit-tap-highlight-color:transparent}body{color:#fff;background:repeating-conic-gradient(#e1e1e1 0% 25%,transparent 0% 50%) 50%/30px 30px;font-family:"SFMono-Regular",Menlo,Monaco,Consolas,"Fira Mono","Liberation Mono","Courier New",monospace;font-size:1rem;font-weight:400;font-style:normal;line-height:1.1}:root{--w:%width%px;--h:%height%px;--src:url(data:%src.type%;base64,%src.base64%)}body.ng #image{--src:url(data:%ng.type%;base64,%ng.base64%)}#image{width:var(--w);height:var(--h);min-width:100%;min-height:100vh;margin:0;padding:0;background:var(--src) center center no-repeat;z-index:1}#aside,.extensions{display:flex;align-items:center}#aside{position:fixed;right:0;bottom:0;left:0;justify-content:space-between;padding:10px 0 10px 10px;background-color:rgba(0,0,0,.8);z-index:2}.extensions{justify-content:center;margin:-10px 0}.ext{--shown:#00abc0;padding:10px;background-color:transparent;transition:background .3s ease}.ext.ng{--shown:#ff3596}body.ng .ext.ng,body:not(.ng) .ext.source{background-color:var(--shown)}</style>
+	<style>@-webkit-viewport{width:device-width}@-moz-viewport{width:device-width}@-ms-viewport{width:device-width}@-o-viewport{width:device-width}@viewport{width:device-width}*{box-sizing:border-box;margin:0;padding:0}body,html{min-height:100vh}html{scroll-behavior:smooth;-ms-overflow-style:scrollbar;-webkit-tap-highlight-color:transparent}body{color:#fff;background:repeating-conic-gradient(#e1e1e1 0% 25%,transparent 0% 50%) 50%/30px 30px;font-family:"SFMono-Regular",Menlo,Monaco,Consolas,"Fira Mono","Liberation Mono","Courier New",monospace;font-size:1rem;font-weight:400;font-style:normal;line-height:1.1}:root{--w:%width%px;--h:%height%px;--src:url(data:%src.type%;base64,%src.base64%)}body.ng #image{--src:url(data:%ng.type%;base64,%ng.base64%)}#image{width:var(--w);height:var(--h);min-width:100%;min-height:100vh;margin:0;padding:0;background:var(--src) center center no-repeat;z-index:1}#aside{position:fixed;right:0;bottom:0;left:0;display:flex;align-items:stretch;justify-content:space-between;padding:10px 0 10px 10px;background-color:rgba(0,0,0,.8);z-index:2}.ext,.extensions{display:flex;justify-content:center}.extensions{align-items:stretch;margin:-10px 0}.ext{--shown:#00abc0;flex-direction:column;align-items:center;padding:10px;background-color:transparent;transition:background .3s ease}.ext.ng{--shown:#ff3596}.quality{display:block;text-transform:capitalize;color:#00abc0}.quality.ng{display:none;color:#ff3596}body.ng .ext.ng,body:not(.ng) .ext.source{background-color:var(--shown)}body.ng .quality{display:none}body.ng .quality.ng{display:block}</style>
 </head>
 <body>
 	<div id="image"></div>
 
 	<aside id="aside" title="Press space to cycle between images.">
-		<div class="aside-bit">Refraction #%count%</div>
-		<div class="aside-bit">Press the spacebar to cycle between images.</div>
+		<div class="aside-bit">
+			Refraction #%count%
+			<span class="quality source">Original</span>
+			<span class="quality ng">%ng.label%: %ng.quality%</span>
+		</div>
+		<div class="aside-bit">
+			Click the image or press [space] to cycle<br>
+			between versions. How's the %ng.ext% looking?
+		</div>
 		<div class="extensions">
 			<span class="ext source">%src.ext%</span>
 			<span class="ext ng">%ng.ext%</span>
 		</div>
 	</aside>
 
-	<script>document.body.addEventListener("keypress",(function(e){32==e.keyCode&&(e.preventDefault(),document.body.classList.toggle("ng"))}));</script>
+	<script>document.body.addEventListener("keypress",(function(e){32==e.keyCode&&(e.preventDefault(),document.body.classList.toggle("ng"))})),document.getElementById("image").addEventListener("click",(function(e){e.preventDefault(),document.body.classList.toggle("ng")}));</script>
 </body>
 </html>

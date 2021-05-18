@@ -11,6 +11,7 @@ use fyi_msg::Msg;
 use refract_core::{
 	Output,
 	OutputKind,
+	Quality,
 	RefractError,
 	Source,
 };
@@ -128,7 +129,7 @@ impl Viewer<'_> {
 		// Loop it.
 		let mut guide = self.src.encode(kind, self.flags);
 		while guide.advance()
-			.and_then(|data| self.save(kind, data).ok())
+			.and_then(|(data, quality)| self.save(quality, data).ok())
 			.is_some()
 		{
 			if prompt.prompt() {
@@ -224,7 +225,7 @@ impl Viewer<'_> {
 	/// # Save Page.
 	///
 	/// This generates and saves the test page for a given candidate image.
-	fn save(&self, kind: OutputKind, data: &[u8]) -> Result<(), RefractError> {
+	fn save(&self, quality: Quality, data: &[u8]) -> Result<(), RefractError> {
 		// Make sure we're starting at the beginning of the file.
 		self.reset_file()?;
 
@@ -232,7 +233,11 @@ impl Viewer<'_> {
 		let count = self.count.get() + 1;
 		self.count.replace(count);
 
+		let kind = quality.kind();
+
 		let keys = &[
+			"%ng.label%",
+			"%ng.quality%",
 			"%ng.type%",
 			"%ng.base64%",
 			"%ng.ext%",
@@ -240,7 +245,10 @@ impl Viewer<'_> {
 		];
 
 		let count = NiceU8::from(count);
+		let q = quality.quality().to_string();
 		let vals = &[
+			quality.label(),
+			&q,
 			unsafe { std::str::from_utf8_unchecked(kind.type_bytes()) },
 			&base64::encode(data),
 			unsafe { std::str::from_utf8_unchecked(kind.as_bytes()) },

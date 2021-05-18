@@ -228,7 +228,7 @@ impl EncodeIter<'_> {
 	/// file.
 	///
 	/// Once all qualities have been tested, this will return `None`.
-	pub fn advance(&mut self) -> Option<&[u8]> {
+	pub fn advance(&mut self) -> Option<(&[u8], Quality)> {
 		// Start a timer.
 		let now = Instant::now();
 
@@ -239,7 +239,7 @@ impl EncodeIter<'_> {
 		self.time += now.elapsed();
 
 		// Return the result!
-		if res.is_some() { self.candidate() }
+		if res.is_some() { self.candidate().zip(self.candidate_quality()) }
 		else { None }
 	}
 
