@@ -16,6 +16,8 @@ _basher___refract() {
 	[[ " ${COMP_LINE} " =~ " --no-avif " ]] || opts+=("--no-avif")
 	[[ " ${COMP_LINE} " =~ " --no-jxl " ]] || opts+=("--no-jxl")
 	[[ " ${COMP_LINE} " =~ " --no-webp " ]] || opts+=("--no-webp")
+	[[ " ${COMP_LINE} " =~ " --skip-lossless " ]] || opts+=("--skip-lossless")
+	[[ " ${COMP_LINE} " =~ " --skip-lossy " ]] || opts+=("--skip-lossy")
 	[[ " ${COMP_LINE} " =~ " --skip-ycbcr " ]] || opts+=("--skip-ycbcr")
 	if [[ ! " ${COMP_LINE} " =~ " -V " ]] && [[ ! " ${COMP_LINE} " =~ " --version " ]]; then
 		opts+=("-V")
