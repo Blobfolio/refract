@@ -16,6 +16,7 @@ use crate::{
 	Output,
 	OutputKind,
 	PUBLIC_FLAGS,
+	Quality,
 	RefractError,
 	Source,
 };
@@ -445,6 +446,14 @@ impl EncodeIter<'_> {
 	///
 	/// Get the candidate as a slice.
 	pub fn candidate(&self) -> Option<&[u8]> { self.candidate.as_slice().ok() }
+
+	#[must_use]
+	/// # Candidate Quality.
+	///
+	/// Get the candidate quality, normalized.
+	pub fn candidate_quality(&self) -> Option<Quality> {
+		self.candidate.nice_quality()
+	}
 
 	#[must_use]
 	/// # Computation Time.

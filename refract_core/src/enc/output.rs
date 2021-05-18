@@ -6,10 +6,10 @@ use crate::{
 	Candidate,
 	FLAG_LOSSLESS,
 	OutputKind,
+	Quality,
 	RefractError,
 };
 use std::{
-	borrow::Cow,
 	convert::TryFrom,
 	num::{
 		NonZeroU64,
@@ -102,23 +102,10 @@ impl Output {
 	///
 	/// This returns the quality as a string, formatted according to the type
 	/// and value.
-	pub fn nice_quality(&self) -> Cow<str> {
-		// Lossless.
-		if self.lossless() {
-			Cow::Borrowed("lossless quality")
-		}
-		// Weird AVIF.
-		else if self.kind == OutputKind::Avif {
-			Cow::Owned(format!("quantizer {:.1}", 63 - self.quality.get()))
-		}
-		// Weird JPEG XL.
-		else if self.kind == OutputKind::Jxl {
-			let f_quality = f32::from(150_u8 - self.quality.get()) / 10.0;
-			Cow::Owned(format!("quality {:.1}", f_quality))
-		}
-		// It is what it is.
+	pub const fn nice_quality(&self) -> Quality {
+		if self.lossless() { Quality::Lossless(self.kind) }
 		else {
-			Cow::Owned(format!("quality {}", self.quality))
+			Quality::Lossy(self.kind, self.quality)
 		}
 	}
 

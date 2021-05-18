@@ -37,6 +37,10 @@ pub use enc::{
 	iter::EncodeIter,
 	kind::OutputKind,
 	output::Output,
+	quality::{
+		Quality,
+		QualityValue,
+	},
 };
 pub use error::RefractError;
 pub use image::{

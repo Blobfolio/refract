@@ -4,6 +4,7 @@
 
 use crate::{
 	OutputKind,
+	Quality,
 	RefractError,
 };
 use std::{
@@ -161,8 +162,24 @@ impl Candidate {
 	pub const fn kind(&self) -> OutputKind { self.kind }
 
 	#[must_use]
-	/// # Quality.
-	pub const fn quality(&self) -> NonZeroU8 { self.quality }
+	/// # Normalized Quality.
+	///
+	/// This value is useful for printing, etc.
+	pub fn nice_quality(&self) -> Option<Quality> {
+		if self.is_verified() {
+			if self.quality == self.kind.lossless_quality() {
+				Some(Quality::Lossless(self.kind))
+			}
+			else {
+				Some(Quality::Lossy(self.kind, self.quality))
+			}
+		}
+		else { None }
+	}
+
+	#[must_use]
+	/// # Raw Quality.
+	pub(crate) const fn quality(&self) -> NonZeroU8 { self.quality }
 }
 
 /// # Setters.
