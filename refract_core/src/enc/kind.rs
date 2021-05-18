@@ -131,7 +131,7 @@ impl OutputKind {
 	/// # Lossless Quality.
 	pub const fn lossless_quality(self) -> NonZeroU8 {
 		match self {
-			Self::Avif => unsafe { NonZeroU8::new_unchecked(255) },
+			Self::Avif => unsafe { NonZeroU8::new_unchecked(63) },
 			Self::Jxl => unsafe { NonZeroU8::new_unchecked(150) },
 			Self::Webp => unsafe { NonZeroU8::new_unchecked(100) },
 		}

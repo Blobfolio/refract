@@ -376,6 +376,7 @@ const fn maybe_die(res: avifResult) -> Result<(), RefractError> {
 fn quality_to_quantizers(quality: NonZeroU8) -> (u8, u8) {
 	// Color first.
 	let q = 63 - quality.get().min(63);
+	if q == 0 { return (0, 0); }
 
 	// Alpha follows a neat little formula stolen from `ravif`. It is a lot
 	// easier on the brain to recalibrate the value to be out of 100, then

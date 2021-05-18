@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.4.4"
+version = "0.5.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -52,6 +52,14 @@ description = "Skip JPEG XL conversion."
 [[package.metadata.bashman.switches]]
 long = "--no-webp"
 description = "Skip WebP conversion."
+
+[[package.metadata.bashman.switches]]
+long = "--skip-lossless"
+description = "Only perform lossy encoding."
+
+[[package.metadata.bashman.switches]]
+long = "--skip-lossy"
+description = "Only perform lossless encoding."
 
 [[package.metadata.bashman.switches]]
 long = "--skip-ycbcr"

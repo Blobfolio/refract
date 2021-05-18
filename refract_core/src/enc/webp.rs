@@ -54,11 +54,10 @@ impl TryFrom<&Image<'_>> for LibWebpPicture {
 		let mut out = Self(unsafe { std::mem::zeroed() });
 		maybe_die(unsafe { WebPPictureInit(&mut out.0) })?;
 
-		let argb_stride = img.stride_i32()?;
 		out.0.use_argb = 1;
 		out.0.width = width;
 		out.0.height = height;
-		out.0.argb_stride = argb_stride;
+		out.0.argb_stride = width; // Stride always matches width for us.
 
 		// Fill the pixel buffers.
 		unsafe {
@@ -66,12 +65,12 @@ impl TryFrom<&Image<'_>> for LibWebpPicture {
 			maybe_die(WebPPictureImportRGBA(
 				&mut out.0,
 				raw.as_ptr().cast(), // This doesn't actually mutate.
-				argb_stride * 4,
+				width * 4,
 			))?;
 
 			// A few additional sanity checks.
 			let len = i32::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
-			let expected_size = argb_stride * height * 4;
+			let expected_size = width * height * 4;
 			if expected_size == 0 || expected_size != len {
 				return Err(RefractError::Encode);
 			}

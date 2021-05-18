@@ -12,8 +12,6 @@ use crate::{
 	RefractError,
 	SourceKind,
 };
-use imgref::ImgVec;
-use rgb::RGBA8;
 use std::{
 	borrow::{
 		Borrow,
@@ -43,7 +41,6 @@ pub struct Image<'a> {
 	pixel: PixelKind,
 	width: NonZeroUsize,
 	height: NonZeroUsize,
-	stride: NonZeroUsize,
 }
 
 impl Deref for Image<'_> {
@@ -56,90 +53,143 @@ impl Deref for Image<'_> {
 impl TryFrom<&[u8]> for Image<'_> {
 	type Error = RefractError;
 
+	#[inline]
 	/// # Try From Raw Image.
 	///
-	/// This will generate an [`Image`] from raw file bytes. If you already
-	/// a `ImgVec` copy, try from that instead as it will save a step.
+	/// This will generate an [`Image`] from raw file bytes.
 	///
 	/// ## Errors
 	///
 	/// This will return an error if the source is not a valid JPEG or PNG, or
 	/// if it uses an unsupported color scheme.
-	fn try_from(mut raw: &[u8]) -> Result<Self, Self::Error> {
-		let kind = SourceKind::try_from(raw)?;
-
-		// Parse the image into an `ImgVec` for consistency.
-		let img: ImgVec<RGBA8> = match kind {
-			SourceKind::Png => {
-				let img = lodepng::decode32(raw)
-					.map_err(|_| RefractError::Source)?;
-				ImgVec::new(img.buffer, img.width, img.height)
-			},
-			SourceKind::Jpeg => {
-				use jpeg_decoder::PixelFormat::{CMYK32, L8, RGB24};
-				use rgb::FromSlice;
-
-				let mut jecoder = jpeg_decoder::Decoder::new(&mut raw);
-				let pixels = jecoder.decode()
-					.map_err(|_| RefractError::Source)?;
-				let info = jecoder.info().ok_or(RefractError::Source)?;
-
-				// So many ways to be a JPEG...
-				let buf: Vec<_> = match info.pixel_format {
-					// Upscale greyscale to RGBA.
-					L8 => {
-						pixels.iter().copied().map(|g| RGBA8::new(g, g, g, 255)).collect()
-					},
-					// Upscale RGB to RGBA.
-					RGB24 => {
-						let rgb = pixels.as_rgb();
-						rgb.iter().map(|p| p.alpha(255)).collect()
-					},
-					// CMYK doesn't work.
-					CMYK32 => return Err(RefractError::Color),
-				};
-
-				ImgVec::new(buf, info.width.into(), info.height.into())
-			},
-		};
-
-		// Finish with `TryFrom<ImgVec>`.
-		Self::try_from(img)
+	fn try_from(raw: &[u8]) -> Result<Self, Self::Error> {
+		match SourceKind::try_from(raw)? {
+			SourceKind::Jpeg => Self::from_jpg(raw),
+			SourceKind::Png => Self::from_png(raw),
+		}
 	}
 }
 
-impl TryFrom<ImgVec<RGBA8>> for Image<'_> {
-	type Error = RefractError;
-
-	/// # Try From `ImgVec`.
+impl Image<'_> {
+	/// # Try From JPEG.
 	///
-	/// This will generate an [`Image`] from an `ImgVec`. This will attempt to
-	/// clear the alpha data before importing to improve encoding performance
-	/// down the road.
+	/// This will generate an [`Image`] from a JPEG source (already verified).
 	///
 	/// ## Errors
 	///
-	/// This will return an error if the dimensions do not fit the
-	/// `NonZeroUsize` range, otherwise it should be OK.
-	fn try_from(raw: ImgVec<RGBA8>) -> Result<Self, Self::Error> {
-		use rgb::ComponentSlice;
+	/// This will return an error if the dimensions overflow or other weird
+	/// things come up during decoding.
+	fn from_jpg(mut raw: &[u8]) -> Result<Self, RefractError> {
+		use jpeg_decoder::PixelFormat;
+		use rgb::{ComponentSlice, FromSlice};
 
-		let width: usize = raw.width();
-		let height: usize = raw.height();
-		let stride = NonZeroUsize::new(raw.stride()).ok_or(RefractError::Overflow)?;
+		// Decode the image.
+		let mut jecoder = jpeg_decoder::Decoder::new(&mut raw);
+		let pixels = jecoder.decode()
+			.map_err(|_| RefractError::Source)?;
+		let info = jecoder.info().ok_or(RefractError::Source)?;
 
-		// Build up the pixels and figure out the color scheme.
-		let mut any_color: bool = false;
-		let mut any_alpha: bool = false;
-		let img: Vec<u8> = {
-			let raw = alpha::clear_alpha(raw);
-			raw.pixels().fold(Vec::with_capacity(width * height * 4), |mut acc, p| {
-				if p.a != 255 { any_alpha = true; }
-				if ! any_color && (p.r != p.g || p.r != p.b) { any_color = true; }
-				acc.extend_from_slice(p.as_slice());
-				acc
-			})
+		let width: usize = info.width.into();
+		let height: usize = info.height.into();
+
+		// So many ways to be a JPEG...
+		let (raw, any_color): (Vec<u8>, bool) = match info.pixel_format {
+			// Upscale greyscale to RGBA.
+			PixelFormat::L8 => (
+				pixels.iter()
+					.fold(Vec::with_capacity(width * height * 4), |mut acc, &px| {
+						acc.extend_from_slice(&[px, px, px, 255]);
+						acc
+					}),
+				false
+			),
+			// Upscale RGB to RGBA.
+			PixelFormat::RGB24 =>  pixels.as_rgb()
+				.iter()
+				.map(|px| px.alpha(255))
+				.fold(
+					(Vec::with_capacity(width * height * 4), false), |mut acc, px| {
+					acc.0.extend_from_slice(px.as_slice());
+					(
+						acc.0,
+						acc.1 || px.r != px.g || px.r != px.b,
+					)
+				}),
+			// CMYK isn't supported.
+			PixelFormat::CMYK32 => return Err(RefractError::Color),
 		};
+
+		let color =
+			if any_color { ColorKind::Rgb }
+			else { ColorKind::Grey };
+
+		// One final sanity check to make sure the buffer is sized correctly!
+		if raw.len() != width * height * 4 {
+			return Err(RefractError::Overflow);
+		}
+
+		Ok(Self {
+			img: Cow::Owned(raw),
+			color,
+			pixel: PixelKind::Full,
+			width: NonZeroUsize::new(width).ok_or(RefractError::Overflow)?,
+			height: NonZeroUsize::new(height).ok_or(RefractError::Overflow)?,
+		})
+	}
+
+	/// # Try From PNG.
+	///
+	/// This will generate an [`Image`] from a PNG source (already verified).
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the dimensions overflow or other weird
+	/// things come up during decoding.
+	fn from_png(raw: &[u8]) -> Result<Self, RefractError> {
+		// Grab the RGBA pixels, width, and height.
+		let (mut raw, width, height): (Vec<u8>, usize, usize) = {
+			// Parse the file.
+			let decoder = spng::Decoder::new(raw)
+				.with_output_format(spng::Format::Rgba8)
+				.with_decode_flags(spng::DecodeFlags::TRANSPARENCY);
+			let (info, mut reader) = decoder.read_info()
+				.map_err(|_| RefractError::Source)?;
+
+			// Grab the dimensions.
+			let width = usize::try_from(info.width)
+				.map_err(|_| RefractError::Overflow)?;
+			let height = usize::try_from(info.height)
+				.map_err(|_| RefractError::Overflow)?;
+
+			// Throw the pixels into a buffer.
+			let mut out = Vec::new();
+			out.reserve_exact(info.buffer_size);
+			unsafe { out.set_len(info.buffer_size); }
+			reader.next_frame(&mut out)
+				.map_err(|_| RefractError::Source)?;
+
+			// Make sure the buffer is the right RGBA size.
+			if out.len() != width * height * 4 {
+				return Err(RefractError::Overflow);
+			}
+
+			(out, width, height)
+		};
+
+		// Figure out the color/alpha situation. We don't want to trust the
+		// source color type, as images might have been saved inappropriately.
+		let (any_color, any_alpha) = raw.chunks_exact(4)
+			.fold((false, false), |(color, alpha), px| {
+				(
+					color || px[0] != px[1] || px[0] != px[2],
+					alpha || px[3] != 255
+				)
+			});
+
+		// If we have alpha, let's take a quick detour to clean it up.
+		if any_alpha {
+			alpha::clean_alpha(&mut raw, width, height);
+		}
 
 		let color =
 			if any_alpha && any_color { ColorKind::Rgba }
@@ -148,12 +198,11 @@ impl TryFrom<ImgVec<RGBA8>> for Image<'_> {
 			else { ColorKind::Grey };
 
 		Ok(Self {
-			img: Cow::Owned(img),
+			img: Cow::Owned(raw),
 			color,
 			pixel: PixelKind::Full,
 			width: NonZeroUsize::new(width).ok_or(RefractError::Overflow)?,
 			height: NonZeroUsize::new(height).ok_or(RefractError::Overflow)?,
-			stride,
 		})
 	}
 }
@@ -181,12 +230,6 @@ impl<'a> Image<'a> {
 	pub const fn pixel_kind(&self) -> PixelKind { self.pixel }
 
 	#[must_use]
-	/// # Stride.
-	///
-	/// Return the image stride.
-	pub const fn stride(&self) -> usize { self.stride.get() }
-
-	#[must_use]
 	/// # Width.
 	///
 	/// Return the image width.
@@ -204,18 +247,6 @@ impl Image<'_> {
 	/// This will return an error if the `usize` value doesn't fit.
 	pub fn height_i32(&self) -> Result<i32, RefractError> {
 		i32::try_from(self.height.get())
-			.map_err(|_| RefractError::Overflow)
-	}
-
-	/// # Stride.
-	///
-	/// Return the image stride.
-	///
-	/// ## Errors
-	///
-	/// This will return an error if the `usize` value doesn't fit.
-	pub fn stride_i32(&self) -> Result<i32, RefractError> {
-		i32::try_from(self.stride.get())
 			.map_err(|_| RefractError::Overflow)
 	}
 
@@ -243,18 +274,6 @@ impl Image<'_> {
 	/// This will return an error if the `usize` value doesn't fit.
 	pub fn height_u32(&self) -> Result<u32, RefractError> {
 		u32::try_from(self.height.get())
-			.map_err(|_| RefractError::Overflow)
-	}
-
-	/// # Stride.
-	///
-	/// Return the image stride.
-	///
-	/// ## Errors
-	///
-	/// This will return an error if the `usize` value doesn't fit.
-	pub fn stride_u32(&self) -> Result<u32, RefractError> {
-		u32::try_from(self.stride.get())
 			.map_err(|_| RefractError::Overflow)
 	}
 
@@ -321,7 +340,6 @@ impl<'a> Image<'a> {
 					pixel: PixelKind::Compact,
 					width: self.width,
 					height: self.height,
-					stride: self.stride,
 				}
 			},
 		}
@@ -339,7 +357,6 @@ impl<'a> Image<'a> {
 			pixel: self.pixel,
 			width: self.width,
 			height: self.height,
-			stride: self.stride,
 		}
 	}
 }

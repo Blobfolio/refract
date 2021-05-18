@@ -2,6 +2,7 @@
 # `Refract` - Encoding Iterator
 */
 
+use ahash::RandomState;
 use crate::{
 	Candidate,
 	FLAG_AVIF_RGB,
@@ -9,9 +10,13 @@ use crate::{
 	FLAG_AVIF_ROUND_3,
 	FLAG_LOSSLESS,
 	FLAG_NO_AVIF_LIMITED,
+	FLAG_NO_LOSSLESS,
+	FLAG_NO_LOSSY,
 	Image,
 	Output,
 	OutputKind,
+	PUBLIC_FLAGS,
+	Quality,
 	RefractError,
 	Source,
 };
@@ -27,6 +32,17 @@ use std::{
 		Instant,
 	},
 };
+
+
+
+/// # (Not) Random State.
+///
+/// Using a fixed seed value for `AHashSet` drops a few dependencies and
+/// stops Valgrind from complaining about 64 lingering bytes from the runtime
+/// static that would be used otherwise.
+///
+/// For our purposes, the variability of truly random keys isn't really needed.
+const AHASH_STATE: RandomState = RandomState::with_seeds(13, 19, 23, 71);
 
 
 
@@ -56,7 +72,7 @@ use std::{
 pub struct EncodeIter<'a> {
 	bottom: NonZeroU8,
 	top: NonZeroU8,
-	tried: HashSet<NonZeroU8>,
+	tried: HashSet<NonZeroU8, RandomState>,
 
 	src: Image<'a>,
 	size: NonZeroU64,
@@ -77,14 +93,18 @@ impl<'a> EncodeIter<'a> {
 	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind, mut flags: u8) -> Self {
 		let (bottom, top) = kind.quality_range();
 
-		// Only AVIF requires special flags at the moment.
+		// Sanitize the flags.
+		flags &= PUBLIC_FLAGS;
 		if kind == OutputKind::Avif { flags |= FLAG_AVIF_RGB;  }
-		else { flags = 0; }
+		else {
+			// This only applies to AVIF.
+			flags &= ! FLAG_NO_AVIF_LIMITED;
+		}
 
 		let mut out = Self {
 			bottom,
 			top,
-			tried: HashSet::new(),
+			tried: HashSet::with_hasher(AHASH_STATE),
 
 			src: match kind {
 				// JPEG XL takes a compacted source.
@@ -103,12 +123,14 @@ impl<'a> EncodeIter<'a> {
 		};
 
 		// Try lossless compression.
-		let now = Instant::now();
-		out.tried.insert(out.kind.lossless_quality());
-		if out.lossless().is_ok() {
-			out.keep_candidate(true);
+		if 0 == out.flags & FLAG_NO_LOSSLESS {
+			let now = Instant::now();
+			out.tried.insert(out.kind.lossless_quality());
+			if out.lossless().is_ok() {
+				out.keep_candidate(true);
+			}
+			out.time += now.elapsed();
 		}
-		out.time += now.elapsed();
 
 		// We're done!
 		out
@@ -130,7 +152,21 @@ impl EncodeIter<'_> {
 		self.candidate.set_quality(None);
 
 		match self.kind {
-			OutputKind::Avif => Err(RefractError::NoLossless),
+			OutputKind::Avif =>
+				// Lossless compression isn't possible for greyscale images.
+				if self.src.color_kind().is_greyscale() {
+					Err(RefractError::NothingDoing)
+				}
+				// Lossless AVIF encoding works exactly the same as lossy
+				// encoding, it just uses maximum quality.
+				else {
+					super::avif::make_lossy(
+						&self.src,
+						&mut self.candidate,
+						self.kind.lossless_quality(),
+						self.flags,
+					)
+				},
 			OutputKind::Jxl => super::jxl::make_lossless(&self.src, &mut self.candidate),
 			OutputKind::Webp => super::webp::make_lossless(&self.src, &mut self.candidate),
 		}?;
@@ -192,7 +228,7 @@ impl EncodeIter<'_> {
 	/// file.
 	///
 	/// Once all qualities have been tested, this will return `None`.
-	pub fn advance(&mut self) -> Option<&[u8]> {
+	pub fn advance(&mut self) -> Option<(&[u8], Quality)> {
 		// Start a timer.
 		let now = Instant::now();
 
@@ -203,7 +239,7 @@ impl EncodeIter<'_> {
 		self.time += now.elapsed();
 
 		// Return the result!
-		if res.is_some() { self.candidate() }
+		if res.is_some() { self.candidate().zip(self.candidate_quality()) }
 		else { None }
 	}
 
@@ -324,6 +360,9 @@ impl EncodeIter<'_> {
 	fn next_quality(&mut self) -> Option<NonZeroU8> {
 		debug_assert!(self.bottom <= self.top);
 
+		// Lossy encoding is disabled.
+		if FLAG_NO_LOSSY == self.flags & FLAG_NO_LOSSY { return None; }
+
 		let min = self.bottom.get();
 		let max = self.top.get();
 		let mut diff = max - min;
@@ -407,6 +446,14 @@ impl EncodeIter<'_> {
 	///
 	/// Get the candidate as a slice.
 	pub fn candidate(&self) -> Option<&[u8]> { self.candidate.as_slice().ok() }
+
+	#[must_use]
+	/// # Candidate Quality.
+	///
+	/// Get the candidate quality, normalized.
+	pub fn candidate_quality(&self) -> Option<Quality> {
+		self.candidate.nice_quality()
+	}
 
 	#[must_use]
 	/// # Computation Time.

@@ -3,18 +3,24 @@
 */
 
 use aho_corasick::AhoCorasick;
-use dactyl::NiceU64;
+use dactyl::{
+	NiceU8,
+	NiceU64,
+};
 use fyi_msg::Msg;
 use refract_core::{
 	Output,
 	OutputKind,
+	Quality,
 	RefractError,
 	Source,
 };
 use std::{
 	borrow::Cow,
-	cell::RefCell,
-	convert::TryFrom,
+	cell::{
+		Cell,
+		RefCell,
+	},
 	ffi::OsStr,
 	io::SeekFrom,
 	os::unix::ffi::OsStrExt,
@@ -41,6 +47,7 @@ pub(super) struct Viewer<'a> {
 	template: Box<[u8]>,
 	src: Source<'a>,
 	page: RefCell<NamedTempFile>,
+	count: Cell<u8>,
 	flags: u8,
 }
 
@@ -49,8 +56,7 @@ impl Viewer<'_> {
 	///
 	/// Create a new instance from a given file.
 	pub(crate) fn new(path: PathBuf, flags: u8) -> Result<Self, RefractError> {
-		let raw: &[u8] = &std::fs::read(&path).map_err(|_| RefractError::Read)?;
-		let src = Source::try_from(path)?;
+		let (src, raw) = Source::new_and_raw(path)?;
 
 		// To save some effort, let's pre-crunch the template using all of the
 		// source-related information (as it won't change). This way we only
@@ -77,7 +83,7 @@ impl Viewer<'_> {
 				width.as_str(),
 				height.as_str(),
 				unsafe { std::str::from_utf8_unchecked(src.kind().type_bytes()) },
-				&base64::encode(raw),
+				&base64::encode(&raw),
 				unsafe { std::str::from_utf8_unchecked(src.kind().as_bytes()) },
 			];
 
@@ -96,6 +102,7 @@ impl Viewer<'_> {
 				.suffix(".html")
 				.tempfile()
 				.map_err(|_| RefractError::Write)?),
+			count: Cell::new(0),
 			flags
 		};
 
@@ -116,10 +123,13 @@ impl Viewer<'_> {
 		let prompt = Msg::plain("\x1b[2m(Reload the test page.)\x1b[0m Does the re-encoded image look good?")
 			.with_indent(1);
 
+		// Reset the count to zero.
+		self.count.replace(0);
+
 		// Loop it.
 		let mut guide = self.src.encode(kind, self.flags);
 		while guide.advance()
-			.and_then(|data| self.save(kind, data).ok())
+			.and_then(|(data, quality)| self.save(quality, data).ok())
 			.is_some()
 		{
 			if prompt.prompt() {
@@ -215,20 +225,34 @@ impl Viewer<'_> {
 	/// # Save Page.
 	///
 	/// This generates and saves the test page for a given candidate image.
-	fn save(&self, kind: OutputKind, data: &[u8]) -> Result<(), RefractError> {
+	fn save(&self, quality: Quality, data: &[u8]) -> Result<(), RefractError> {
 		// Make sure we're starting at the beginning of the file.
 		self.reset_file()?;
 
+		// Increment the count.
+		let count = self.count.get() + 1;
+		self.count.replace(count);
+
+		let kind = quality.kind();
+
 		let keys = &[
+			"%ng.label%",
+			"%ng.quality%",
 			"%ng.type%",
 			"%ng.base64%",
 			"%ng.ext%",
+			"%count%",
 		];
 
+		let count = NiceU8::from(count);
+		let q = quality.quality().to_string();
 		let vals = &[
+			quality.label(),
+			&q,
 			unsafe { std::str::from_utf8_unchecked(kind.type_bytes()) },
 			&base64::encode(data),
 			unsafe { std::str::from_utf8_unchecked(kind.as_bytes()) },
+			count.as_str()
 		];
 
 		let ac = AhoCorasick::new(keys);

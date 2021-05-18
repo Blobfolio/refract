@@ -40,15 +40,18 @@ Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjx
 
 | Encoding | Mode | Parallel | Comparable To Running |
 | -------- | ---- | -------- | --------------------- |
+| AVIF | Lossless | Y | `cavif --color rgb --speed 1 --quality 0` |
 | AVIF | Lossy | Y | `cavif --color rgb --speed 1 --quality <N>` |
 | JPEG XL | Lossless | Y | `cjxl --speed tortoise --distance 0.0` |
 | JPEG XL | Lossy | Y | `cjxl --speed tortoise --distance <N>` |
 | WebP | Lossless | N | `cwebp -lossless -z 9 -q 100` |
 | WebP | Lossy | N | `cwebp -m 6 -pass 10 -q <N>` |
 
-Refract applies lossless encoding first — for JPEG XL and WebP — then follows by testing lossy compression at various qualities until the "best" overall candidate is found.
+Unless the `--skip-lossless` CLI flag is set, Refract begins by trying to losslessly encode the image, keeping the candidate image if it comes out smaller than the original, discarding it if not.
 
-The guided feedback is only required for lossy stages. Lossless, being lossless, is assumed to be fine so long as it comes out smaller than the original source.
+From there, unless the `--skip-lossy` CLI flag is set, Refract will attempt lossy encodings at varying quality levels, asking you at each step to verify whether or not the candidate image looks acceptable.
+
+The guided feedback is only required for lossy stages. Lossless, being _lossless_, is assumed to be fine so long as it comes out smaller than the original source. (If you `--skip-lossy`, the process will be fully automated.)
 
 ### AVIF
 
@@ -61,6 +64,8 @@ To compensate for the format's slow encoding process, Refract makes two concessi
  * Images are split into "tiles" that can be processed in parallel;
 
 Because tiling tends to result in slightly larger output, the chosen candidate — if any — is re-encoded one final time with tiling optimizations disabled. If that last pass comes out smaller, great!, the candidate is replaced. If not, the original "best" is kept.
+
+Refract `0.5.0`+ supports lossless AVIF encoding for color sources — i.e. not greyscale — but it will only rarely result in file savings versus an optimized JPG or PNG. (AVIF lossy has _much_ better compression potential.)
 
 **Note:**
  >The upcoming release of Chrome `v.91` is introducing stricter requirements for AVIF images that will [prevent the rendering of many previously valid sources](https://bugs.chromium.org/p/chromium/issues/detail?id=1115483). This will break a fuckton of images, including those created with Refract < `0.3.1`. Be sure to regenerate any such images using `0.3.1+` to avoid any sadness.
@@ -76,16 +81,19 @@ Just run `refract [FLAGS] [OPTIONS] <PATH(S)>…`.
 The following flags are available:
 
 ```bash
--b, --browser     Output an HTML page that can be viewed in a web browser
-                  to preview encoded images. If omitted, preview images
-                  will be saved directly, allowing you to view them in the
-                  program of your choosing.
--h, --help        Prints help information.
-    --no-avif     Skip AVIF conversion.
-    --no-jxl      Skip JPEG XL conversion.
-    --no-webp     Skip WebP conversion.
-    --skip-ycbcr  Only test full-range RGB AVIF encoding (when encoding AVIFs).
--V, --version     Prints version information.
+-b, --browser       Output an HTML page that can be viewed in a web browser
+                    to preview encoded images. If omitted, preview images
+                    will be saved directly, allowing you to view them in the
+                    program of your choosing.
+-h, --help          Prints help information.
+    --no-avif       Skip AVIF conversion.
+    --no-jxl        Skip JPEG XL conversion.
+    --no-webp       Skip WebP conversion.
+    --skip-lossless Only perform lossy encoding.
+    --skip-lossy    Only perform lossless encoding.
+    --skip-ycbcr    Only test full-range RGB AVIF encoding (when encoding
+                    AVIFs).
+-V, --version       Prints version information.
 ```
 
 By default, Refract will generate copies in every next-gen format. If you want to skip one, use the corresponding `--no-*` flag.
@@ -121,14 +129,22 @@ Regardless of how you preview the images, if your answers and the file sizes wor
 
 Pre-built `.deb` packages are added to each [release](https://github.com/Blobfolio/refract/releases/latest) for Debian and Ubuntu users (or in a Docker container, etc.).
 
+### Building From Source
+
 The program is written in [Rust](https://www.rust-lang.org/) and so can be built from source using [Cargo](https://github.com/rust-lang/cargo) on most other x86-64 Unix platforms (Mac, etc.).
 
 ```bash
-# Compile it. You can specify additional flags as desired.
+# Clone the source.
+git clone https://github.com/Blobfolio/refract.git
+
+# Move to the directory.
+cd refract
+
+# Compile it. You can specify additional Rust/Cargo flags as desired.
 cargo build --release
 ```
 
-Cargo _will_ take care of the entire build for you, but your system will need modern versions of Clang, GCC, NASM, and Ninja installed to make it through the image library `build.rs` hell. (Who would have thought convoluted formats would have so many build dependencies?)
+Cargo _will_ take care of the entire build for you, but your system will need modern versions of Clang, GCC, NASM, and Ninja installed to make it through the image library `build.rs` hell. Depending on your system, there might be additional dependencies. (Who would have thought convoluted formats would have so many build dependencies?)
 
 
 

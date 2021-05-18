@@ -30,7 +30,7 @@ body.ng #image { --src: url(data:%ng.type%;base64,%ng.base64%); }
 	left: 0;
 
 	display: flex;
-	align-items: center;
+	align-items: stretch;
 	justify-content: space-between;
 
 	padding: 10px 0 10px 10px;
@@ -42,7 +42,7 @@ body.ng #image { --src: url(data:%ng.type%;base64,%ng.base64%); }
 
 .extensions {
 	display: flex;
-	align-items: center;
+	align-items: stretch;
 	justify-content: center;
 
 	margin: -10px 0;
@@ -51,6 +51,10 @@ body.ng #image { --src: url(data:%ng.type%;base64,%ng.base64%); }
 .ext {
 	--shown: #00abc0;
 
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
 	padding: 10px;
 
 	background-color: transparent;
@@ -59,5 +63,21 @@ body.ng #image { --src: url(data:%ng.type%;base64,%ng.base64%); }
 	&.ng { --shown: #ff3596; }
 }
 
+.quality {
+	display: block;
+	text-transform: capitalize;
+	color: #00abc0;
+
+	&.ng {
+		display: none;
+		color: #ff3596;
+	}
+}
+
 body.ng .ext.ng,
 body:not(.ng) .ext.source { background-color: var(--shown); }
+
+body.ng .quality {
+	display: none;
+	&.ng { display: block; }
+}

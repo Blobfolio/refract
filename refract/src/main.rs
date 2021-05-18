@@ -40,6 +40,8 @@ use argyle::{
 use image::ImageCli;
 use refract_core::{
 	FLAG_NO_AVIF_LIMITED,
+	FLAG_NO_LOSSLESS,
+	FLAG_NO_LOSSY,
 	OutputKind,
 	RefractError,
 	Source,
@@ -92,6 +94,22 @@ fn _main() -> Result<(), RefractError> {
 
 	// We'll get to these in a bit.
 	let mut flags: u8 = 0;
+
+	// General encoding modes.
+	if args.switch(b"--skip-lossy") {
+		flags |= FLAG_NO_LOSSY;
+	}
+	if args.switch(b"--skip-lossless") {
+		flags |= FLAG_NO_LOSSLESS;
+	}
+
+	// Make sure the user didn't do something stupid.
+	if
+		(FLAG_NO_LOSSY == flags & FLAG_NO_LOSSY) &&
+		(FLAG_NO_LOSSLESS == flags & FLAG_NO_LOSSLESS)
+	{
+		return Err(RefractError::NoLosslessLossy);
+	}
 
 	// Figure out which types we're dealing with.
 	let mut encoders: Vec<OutputKind> = Vec::with_capacity(2);
@@ -196,23 +214,25 @@ USAGE:
     refract [FLAGS] [OPTIONS] <PATH(S)>...
 
 FLAGS:
-    -b, --browser     Output an HTML page that can be viewed in a web browser", "\x1b[91;1m*\x1b[0m", r"
-                      to preview encoded images. If omitted, preview images
-                      will be saved directly, allowing you to view them in the
-                      program of your choosing.
-    -h, --help        Prints help information.
-        --no-avif     Skip AVIF conversion.
-        --no-jxl      Skip JPEG XL conversion.
-        --no-webp     Skip WebP conversion.
-        --skip-ycbcr  Only test full-range RGB AVIF encoding (when encoding
-                      AVIFs).
-    -V, --version     Prints version information.
+    -b, --browser       Output an HTML page that can be viewed in a web
+                        browser", "\x1b[91;1m*\x1b[0m", r" to preview encoded images. If omitted, preview
+                        images will be saved directly, allowing you to view
+                        them in the program of your choosing.
+    -h, --help          Prints help information.
+        --no-avif       Skip AVIF conversion.
+        --no-jxl        Skip JPEG XL conversion.
+        --no-webp       Skip WebP conversion.
+        --skip-lossless Only perform lossy encoding.
+        --skip-lossy    Only perform lossless encoding.
+        --skip-ycbcr    Only test full-range RGB AVIF encoding (when encoding
+                        AVIFs).
+    -V, --version       Prints version information.
 
 OPTIONS:
-    -l, --list <list> Read image/dir paths from this text file.
+    -l, --list <list>   Read image/dir paths from this text file.
 
 ARGS:
-    <PATH(S)>...      One or more images or directories to crawl and crunch.
+    <PATH(S)>...        One or more images or directories to crawl and crunch.
 
 -----
 
