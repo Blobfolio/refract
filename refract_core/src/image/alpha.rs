@@ -338,6 +338,20 @@ where Cb: FnMut(Nine) {
 mod tests {
 	use super::*;
 
+	/// # Min/Max Abstraction.
+	///
+	/// This is the min/max portion of [`Nine::clamp`] copy-and-pasted into a
+	/// standalone method so we can verify the operations without having to
+	/// look at the rest.
+	fn premultiplied_minmax(px_old: u8, alpha: u8) -> (u8, u8) {
+		let alpha = u16::from(alpha);
+		let rounded = num_integer::div_floor(u16::from(px_old) * alpha, 255) * 255;
+		let low = px_old.min(num_integer::div_floor(rounded + 16, alpha) as u8);
+		let high = px_old.max(num_integer::div_floor(rounded + 239, alpha) as u8);
+
+		(low, high)
+	}
+
 	#[test]
 	fn t_preminmax() {
 		assert_eq!((100, 100), premultiplied_minmax(100, 255));
