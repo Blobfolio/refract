@@ -2,7 +2,6 @@
 # `Refract` - Encoding Iterator.
 */
 
-use ahash::RandomState;
 use crate::{
 	FLAG_AVIF_RGB,
 	FLAG_AVIF_ROUND_2,
@@ -16,10 +15,10 @@ use crate::{
 	Output,
 	PUBLIC_FLAGS,
 	Quality,
+	QualityRange,
 	RefractError,
 };
 use std::{
-	collections::HashSet,
 	num::{
 		NonZeroU8,
 		NonZeroUsize,
@@ -29,17 +28,6 @@ use std::{
 		Instant,
 	},
 };
-
-
-
-/// # (Not) Random State.
-///
-/// Using a fixed seed value for `AHashSet` drops a few dependencies and
-/// stops Valgrind from complaining about 64 lingering bytes from the runtime
-/// static that would be used otherwise.
-///
-/// For our purposes, the variability of truly random keys isn't really needed.
-const AHASH_STATE: RandomState = RandomState::with_seeds(13, 19, 23, 71);
 
 
 
@@ -65,14 +53,11 @@ const AHASH_STATE: RandomState = RandomState::with_seeds(13, 19, 23, 71);
 /// [`EncodeIter::time`] if you're interested, otherwise the instance can be
 /// consumed, returning the "best" [`Output`] by calling [`EncodeIter::take`].
 pub struct EncodeIter<'a> {
-	bottom: NonZeroU8,
-	top: NonZeroU8,
-	tried: HashSet<NonZeroU8, RandomState>,
-
 	src: Input<'a>,
 	best: Output,
 	candidate: Output,
 
+	steps: QualityRange,
 	time: Duration,
 	flags: u8,
 }
@@ -105,10 +90,6 @@ impl<'a> EncodeIter<'a> {
 		}
 
 		Ok(Self {
-			bottom: kind.min_encoder_quality(),
-			top: kind.max_encoder_quality(),
-			tried: HashSet::with_hasher(AHASH_STATE),
-
 			src: match kind {
 				// JPEG XL takes a compacted buffer.
 				ImageKind::Jxl => src.as_native(),
@@ -118,6 +99,7 @@ impl<'a> EncodeIter<'a> {
 			best: Output::new(kind),
 			candidate: Output::new(kind),
 
+			steps: QualityRange::from(kind),
 			time: Duration::from_secs(0),
 			flags
 		})
@@ -312,7 +294,7 @@ impl EncodeIter<'_> {
 	/// This will in turn raise the floor of the range so that the next
 	/// iteration will test a higher quality.
 	pub fn discard(&mut self) {
-		self.set_bottom(self.candidate.quality().raw());
+		self.steps.set_bottom(self.candidate.quality().raw());
 	}
 
 	/// # Keep Candidate.
@@ -322,7 +304,7 @@ impl EncodeIter<'_> {
 	/// This will lower the ceiling of the range so that the next iteration
 	/// will test a lower quality.
 	pub fn keep(&mut self) {
-		self.set_top(self.candidate.quality().raw());
+		self.steps.set_top(self.candidate.quality().raw());
 		self.keep_candidate();
 	}
 
@@ -351,7 +333,8 @@ impl EncodeIter<'_> {
 	/// once using full-range `RGB`, once using limited-range `YCbCr`, and one
 	/// final (single) re-encoding of the best candidate with tiling disabled.
 	fn next_avif(&mut self) -> Option<()> {
-		if self.output_kind() != ImageKind::Avif { return None; }
+		let kind = self.output_kind();
+		if kind != ImageKind::Avif { return None; }
 
 		// The second round is a partial reboot, retrying encoding with
 		// limited YCbCr range. If we haven't done that yet, let's do it
@@ -363,14 +346,12 @@ impl EncodeIter<'_> {
 			// start again (using the existing best as the size cap) in
 			// limited-range mode.
 			if 0 == self.flags & FLAG_NO_AVIF_YCBCR {
-				let kind = self.output_kind();
-				self.bottom = kind.min_encoder_quality();
-				self.top = kind.max_encoder_quality();
-				self.tried.clear();
+				self.steps.reboot(kind.min_encoder_quality(), kind.max_encoder_quality());
 				self.flags &= ! FLAG_AVIF_RGB;
 
-				// Recurse to pull the next result.
-				return self.next_inner();
+				// Recurse to pull the next result. If there isn't one, we can
+				// continue onto step three.
+				if self.next_inner().is_some() { return Some(()); }
 			}
 		}
 
@@ -405,7 +386,7 @@ impl EncodeIter<'_> {
 		if 0 == self.flags & FLAG_DID_LOSSLESS {
 			self.flags |= FLAG_DID_LOSSLESS;
 			if 0 == self.flags & FLAG_NO_LOSSLESS {
-				self.tried.insert(self.top);
+				self.steps.ignore(self.steps.top());
 				if self.lossless().is_ok() {
 					self.keep_candidate();
 				}
@@ -413,55 +394,19 @@ impl EncodeIter<'_> {
 		}
 
 		// Okay, now lossy.
-		let quality = self.next_quality()?;
-		match self.lossy(quality, self.flags) {
-			Ok(_) => Some(()),
-			Err(RefractError::TooBig) => {
-				// Recurse to see if the next-next quality works out OK.
-				self.set_top_minus_one(quality);
-				self.next_inner()
-			},
-			Err(_) => None,
-		}
-	}
-
-	/// # Next Quality.
-	///
-	/// This will choose an untested quality from the moving range, preferring
-	/// a value somewhere in the middle of the boundaries.
-	fn next_quality(&mut self) -> Option<NonZeroU8> {
-		debug_assert!(self.bottom <= self.top);
-
-		// Lossy encoding is disabled.
-		if FLAG_NO_LOSSY == self.flags & FLAG_NO_LOSSY { return None; }
-
-		let min = self.bottom.get();
-		let max = self.top.get();
-		let mut diff = max - min;
-
-		// If the difference is greater than one, try a value near the middle.
-		if diff > 1 {
-			diff = num_integer::div_floor(diff, 2);
-		}
-
-		// See if this is new! We can't exceed u8::MAX here, so unsafe is fine.
-		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
-		if self.tried.insert(next) {
-			return Some(next);
-		}
-
-		// If the above didn't work, let's see if there are any untested values
-		// left and just run with the first.
-		for i in min..=max {
-			// Again, we can't exceed u8::MAX here, so unsafe is fine.
-			let next = unsafe { NonZeroU8::new_unchecked(i) };
-			if self.tried.insert(next) {
-				return Some(next);
+		if 0 == self.flags & FLAG_NO_LOSSY {
+			let quality = self.steps.next()?;
+			match self.lossy(quality, self.flags) {
+				Ok(_) => Some(()),
+				Err(RefractError::TooBig) => {
+					// Recurse to see if the next-next quality works out OK.
+					self.steps.set_top_minus_one(quality);
+					self.next_inner()
+				},
+				Err(_) => None,
 			}
 		}
-
-		// Looks like we're done!
-		None
+		else { None }
 	}
 
 	#[inline]
@@ -474,51 +419,5 @@ impl EncodeIter<'_> {
 			Quality::new(self.output_kind(), quality),
 			self.flags,
 		);
-	}
-
-	/// # Set Bottom.
-	///
-	/// Raise the range's floor because e.g. the image tested at this quality
-	/// was not good enough (no point going lower).
-	///
-	/// This cannot go backwards or drop below the lower end of the range.
-	/// Rather than panic, stupid values will be clamped accordingly.
-	fn set_bottom(&mut self, quality: NonZeroU8) {
-		self.bottom = quality
-			.max(self.bottom)
-			.min(self.top);
-	}
-
-	/// # Set Top.
-	///
-	/// Lower the range's ceiling because e.g. the image tested at this quality
-	/// was fine (no point going higher).
-	///
-	/// This cannot go backwards or drop below the lower end of the range.
-	/// Rather than panic, stupid values will be clamped accordingly.
-	fn set_top(&mut self, quality: NonZeroU8) {
-		self.top = quality
-			.min(self.top)
-			.max(self.bottom);
-	}
-
-	/// # Set Top Minus One.
-	///
-	/// Lower the range's ceiling to the provided quality minus one because
-	/// e.g. the image tested at this quality came out too big.
-	///
-	/// The same could be achieved via [`EncodeIter::set_top`], but saves the
-	/// wrapping maths.
-	fn set_top_minus_one(&mut self, quality: NonZeroU8) {
-		// We can't go lower than one. Short-circuit the process by setting
-		// min and max to one. The iter will return `None` on the next run.
-		if quality == unsafe { NonZeroU8::new_unchecked(1) } {
-			self.top = self.bottom;
-		}
-		else {
-			// We've already checked quality is bigger than one, so minus one
-			// will fit just fine.
-			self.set_top(unsafe { NonZeroU8::new_unchecked(quality.get() - 1) });
-		}
 	}
 }

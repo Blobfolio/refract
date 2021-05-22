@@ -41,6 +41,7 @@ pub use enc::{
 	iter::EncodeIter,
 	output::Output,
 	quality::Quality,
+	range::QualityRange,
 };
 pub use error::RefractError;
 pub use kind::{
