@@ -28,6 +28,7 @@ pub enum ColorKind {
 
 /// # Getters.
 impl ColorKind {
+	#[inline]
 	#[must_use]
 	/// # Total Channels.
 	///
@@ -41,6 +42,7 @@ impl ColorKind {
 		}
 	}
 
+	#[inline]
 	#[must_use]
 	/// # Color Channels.
 	///
@@ -52,6 +54,7 @@ impl ColorKind {
 		}
 	}
 
+	#[inline]
 	#[must_use]
 	/// # Extra Channels.
 	///
@@ -63,6 +66,7 @@ impl ColorKind {
 		}
 	}
 
+	#[inline]
 	#[must_use]
 	/// # Is Color?
 	///
@@ -72,6 +76,7 @@ impl ColorKind {
 		matches!(self, Self::Rgb | Self::Rgba)
 	}
 
+	#[inline]
 	#[must_use]
 	/// # Is Greyscale?
 	///
@@ -81,11 +86,41 @@ impl ColorKind {
 		matches!(self, Self::Grey | Self::GreyAlpha)
 	}
 
+	#[inline]
 	#[must_use]
 	/// # Has Alpha?
 	///
 	/// If any pixel has alpha data associated with it, this is true.
 	pub const fn has_alpha(self) -> bool {
 		matches!(self, Self::GreyAlpha | Self::Rgba)
+	}
+}
+
+/// # Setters.
+impl ColorKind {
+	#[must_use]
+	/// # From RGBA.
+	///
+	/// Find out whether the 4-byte pixel slice is using any color or alpha
+	/// channels.
+	pub fn from_rgba(src: &[u8]) -> Self {
+		let mut color: bool = false;
+		let mut alpha: bool = false;
+		for px in src.chunks_exact(4) {
+			if ! color && (px[0] != px[1] || px[0] != px[2]) {
+				color = true;
+				if alpha { return Self::Rgba; }
+			}
+			if ! alpha && px[3] != 255 {
+				alpha = true;
+				if color { return Self::Rgba; }
+			}
+		}
+
+		// RGBA will have already been returned if applicable. If we're here,
+		// it's one of the other three.
+		if color { Self::Rgb }
+		else if alpha { Self::GreyAlpha }
+		else { Self::Grey }
 	}
 }

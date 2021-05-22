@@ -1,0 +1,173 @@
+/*!
+# `Refract` - Image Kind
+*/
+
+use crate::RefractError;
+use std::{
+	convert::TryFrom,
+	fmt,
+	num::NonZeroU8,
+};
+
+
+
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// # Image Kind.
+pub enum ImageKind {
+	Avif,
+	Jpeg,
+	Jxl,
+	Png,
+	Webp,
+}
+
+impl AsRef<str> for ImageKind {
+	#[inline]
+	fn as_ref(&self) -> &str { self.as_str() }
+}
+
+impl fmt::Display for ImageKind {
+	#[inline]
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+
+impl TryFrom<&[u8]> for ImageKind {
+	type Error = RefractError;
+
+	/// # From Raw Bytes.
+	///
+	/// This examines the first 12 bytes of the raw image file to see what
+	/// magic its headers contain.
+	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
+		// We need at least twelve bytes to hold header info!
+
+		if src.len() > 12 {
+			// PNG has just one way to be!
+			if src[..8] == [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1A, b'\n'] {
+				return Ok(Self::Png);
+			}
+
+			// WebP is fairly straightforward.
+			if src[..4] == *b"RIFF" && src[8..12] == *b"WEBP" {
+				return Ok(Self::Webp);
+			}
+
+			// AVIF has a few ways to be. We're ignoring sequences since we
+			// aren't building them.
+			if
+				src[4..8] == *b"ftyp" &&
+				matches!(&src[8..12], b"avif" | b"MA1B" | b"MA1A")
+			{
+				return Ok(Self::Avif);
+			}
+
+			// JPEG XL can either be a codestream or containerized.
+			if
+				src[..2] == [0xFF, 0x0A] ||
+				src[..12] == [0x00, 0x00, 0x00, 0x0C, b'J', b'X', b'L', 0x20, 0x0D, 0x0A, 0x87, 0x0A]
+			{
+				return Ok(Self::Jxl);
+			}
+
+			// JPEG can look a few different ways, particularly in the middle.
+			if
+				src[..3] == [0xFF, 0xD8, 0xFF] &&
+				src[src.len() - 2..] == [0xFF, 0xD9] &&
+				(
+					src[3] == 0xDB ||
+					src[3] == 0xEE ||
+					(src[3..12] == [0xE0, 0x00, 0x10, b'J', b'F', b'I', b'F', 0x00, 0x01]) ||
+					(src[3] == 0xE1 && src[6..12] == [b'E', b'x', b'i', b'f', 0x00, 0x00])
+				)
+			{
+				return Ok(Self::Jpeg);
+			}
+		}
+
+		Err(RefractError::Image)
+	}
+}
+
+/// ## Information.
+impl ImageKind {
+	#[inline]
+	#[must_use]
+	/// # Can Decode?
+	///
+	/// Returns `true` if decoding is supported for this image type.
+	pub const fn can_decode(self) -> bool { matches!(self, Self::Jpeg | Self::Png) }
+
+	#[inline]
+	#[must_use]
+	/// # Can Encode?
+	///
+	/// Returns `true` if encoding is supported for this image type.
+	pub const fn can_encode(self) -> bool {
+		matches!(self, Self::Avif | Self::Jxl | Self::Webp)
+	}
+}
+
+/// ## Getters.
+impl ImageKind {
+	#[must_use]
+	/// # As String Slice.
+	pub const fn as_str(self) -> &'static str {
+		match self {
+			Self::Avif => "AVIF",
+			Self::Jpeg => "JPEG",
+			Self::Jxl => "JPEG XL",
+			Self::Png => "PNG",
+			Self::Webp => "WebP",
+		}
+	}
+
+	#[must_use]
+	/// # File Extension.
+	pub const fn extension(self) -> &'static str {
+		match self {
+			Self::Avif => "avif",
+			Self::Jpeg => "jpg",
+			Self::Jxl => "jxl",
+			Self::Png => "png",
+			Self::Webp => "webp",
+		}
+	}
+
+	#[must_use]
+	/// # Media Type.
+	pub const fn mime(self) -> &'static str {
+		match self {
+			Self::Avif => "image/avif",
+			Self::Jpeg => "image/jpeg",
+			Self::Jxl => "image/jxl",
+			Self::Png => "image/png",
+			Self::Webp => "image/webp",
+		}
+	}
+
+	#[allow(clippy::unused_self)] // We may need to reference `self` in the future.
+	#[must_use]
+	/// # Encoding Minimum Quality.
+	///
+	/// At the moment, this always returns `1`.
+	pub(crate) const fn min_encoder_quality(self) -> NonZeroU8 {
+		unsafe { NonZeroU8::new_unchecked(1) }
+	}
+
+	#[allow(clippy::unused_self)] // We may need to reference `self` in the future.
+	#[must_use]
+	/// # Encoding Minimum Quality.
+	///
+	/// This returns the maximum encoding quality value for the given format,
+	/// or a default of `100`.
+	pub(crate) const fn max_encoder_quality(self) -> NonZeroU8 {
+		match self {
+			Self::Avif => unsafe { NonZeroU8::new_unchecked(63) },
+			Self::Jxl => unsafe { NonZeroU8::new_unchecked(150) },
+			_ => unsafe { NonZeroU8::new_unchecked(100) },
+		}
+	}
+}

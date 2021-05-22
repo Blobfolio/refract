@@ -6,8 +6,8 @@ This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Go
 */
 
 use crate::{
-	Candidate,
-	Image,
+	Input,
+	Output,
 	RefractError,
 };
 use libwebp_sys::{
@@ -39,10 +39,10 @@ use std::{
 /// we're here, may as well provide initialization code too.
 struct LibWebpPicture(WebPPicture);
 
-impl TryFrom<&Image<'_>> for LibWebpPicture {
+impl TryFrom<&Input<'_>> for LibWebpPicture {
 	type Error = RefractError;
 
-	fn try_from(img: &Image) -> Result<Self, Self::Error> {
+	fn try_from(img: &Input) -> Result<Self, Self::Error> {
 		// Check the source dimensions.
 		let width = img.width_i32()?;
 		let height = img.height_i32()?;
@@ -141,8 +141,8 @@ impl Drop for LibWebpWriter {
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
 pub(super) fn make_lossy(
-	img: &Image,
-	candidate: &mut Candidate,
+	img: &Input,
+	candidate: &mut Output,
 	quality: NonZeroU8,
 ) -> Result<(), RefractError> {
 	encode(img, candidate, Some(quality))
@@ -159,7 +159,7 @@ pub(super) fn make_lossy(
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossless(img: &Image, candidate: &mut Candidate) -> Result<(), RefractError> {
+pub(super) fn make_lossless(img: &Input, candidate: &mut Output) -> Result<(), RefractError> {
 	encode(img, candidate, None)
 }
 
@@ -175,8 +175,8 @@ pub(super) fn make_lossless(img: &Image, candidate: &mut Candidate) -> Result<()
 /// This will return an error if there are any problems along the way or if
 /// the resulting image is empty (for some reason).
 fn encode(
-	img: &Image,
-	candidate: &mut Candidate,
+	img: &Input,
+	candidate: &mut Output,
 	quality: Option<NonZeroU8>,
 ) -> Result<(), RefractError> {
 	// Setup.

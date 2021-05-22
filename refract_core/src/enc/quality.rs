@@ -1,8 +1,8 @@
 /*!
-# `Refract` - Encoded Candidate
+# `Refract` - Encoding Quality.
 */
 
-use crate::OutputKind;
+use crate::ImageKind;
 use std::{
 	fmt,
 	num::NonZeroU8,
@@ -13,13 +13,15 @@ use std::{
 #[derive(Debug, Clone, Copy)]
 /// # Encoding Quality.
 ///
-/// This is a simple enum used to present encoder quality settings in a
-/// consistent way.
+/// Refract internally uses `NonZeroU8` values to represent encoding qualities,
+/// but individual encoders have their own ideas about how things should be.
+///
+/// This enum provides a consistent interface for everyone to work with.
 pub enum Quality {
 	/// # Lossless.
-	Lossless(OutputKind),
+	Lossless(ImageKind),
 	/// # Lossy.
-	Lossy(OutputKind, NonZeroU8),
+	Lossy(ImageKind, NonZeroU8),
 }
 
 impl fmt::Display for Quality {
@@ -33,16 +35,11 @@ impl fmt::Display for Quality {
 
 /// ## Instantiation.
 impl Quality {
-	#[allow(clippy::option_if_let_else)] // Doesn't work with const.
+	#[inline]
 	#[must_use]
 	/// # New.
-	pub const fn new(kind: OutputKind, quality: Option<NonZeroU8>) -> Self {
-		if let Some(q) = quality {
-			Self::Lossy(kind, q)
-		}
-		else {
-			Self::Lossless(kind)
-		}
+	pub(crate) fn new(kind: ImageKind, quality: Option<NonZeroU8>) -> Self {
+		quality.map_or_else(|| Self::Lossless(kind), |q| Self::Lossy(kind, q))
 	}
 }
 
@@ -50,7 +47,10 @@ impl Quality {
 impl Quality {
 	#[must_use]
 	/// # Kind.
-	pub const fn kind(self) -> OutputKind {
+	///
+	/// This is a pass-through method for returning the output image format
+	/// associated with the value.
+	pub const fn kind(self) -> ImageKind {
 		match self {
 			Self::Lossless(k) | Self::Lossy(k, _) => k,
 		}
@@ -59,10 +59,14 @@ impl Quality {
 	#[must_use]
 	/// # Label.
 	///
-	/// This is what to call the quality. (AVIF uses the fancy word "quantizer".)
+	/// This returns the word used by the encoder to signify quality, because
+	/// encoders can't even agree on that. Haha.
+	///
+	/// At the moment, AVIF calls it "quantizer", but everyone else calls it
+	/// "quality".
 	pub const fn label(self) -> &'static str {
 		match self.kind() {
-			OutputKind::Avif => "quantizer",
+			ImageKind::Avif => "quantizer",
 			_ => "quality",
 		}
 	}
@@ -70,26 +74,27 @@ impl Quality {
 	#[must_use]
 	/// # Normalized Quality Value.
 	///
-	/// This returns the quality value in the native format of the encoder.
+	/// This returns the quality value in the native format of the encoder. See
+	/// [`QualityValue`] for more information.
 	pub fn quality(self) -> QualityValue {
 		match self {
 			Self::Lossless(_) => QualityValue::Lossless,
 			Self::Lossy(k, q) => match k {
-				OutputKind::Avif => QualityValue::Int(63 - q.get()),
-				OutputKind::Jxl => QualityValue::Float(f32::from(150_u8 - q.get()) / 10.0),
-				OutputKind::Webp => QualityValue::Int(q.get()),
-			}
+				ImageKind::Avif => QualityValue::Int(63 - q.get()),
+				ImageKind::Jxl => QualityValue::Float(f32::from(150_u8 - q.get()) / 10.0),
+				_ => QualityValue::Int(q.get()),
+			},
 		}
 	}
 
 	#[must_use]
 	/// # Raw Quality Value.
 	///
-	/// This is not particularly useful outside the crate, but provided just in
-	/// case.
-	pub const fn raw(self) -> NonZeroU8 {
+	/// This returns the raw — `NonZeroU8` — quality value. This method is
+	/// only used internally by this crate.
+	pub(crate) const fn raw(self) -> NonZeroU8 {
 		match self {
-			Self::Lossless(k) => k.lossless_quality(),
+			Self::Lossless(k) => k.max_encoder_quality(),
 			Self::Lossy(_, q) => q,
 		}
 	}
@@ -100,8 +105,10 @@ impl Quality {
 #[derive(Debug, Clone, Copy)]
 /// # Quality Value.
 ///
-/// This holds a formatted quality value, necessary because every encoder does
-/// shit its own way.
+/// This holds a formatted quality value, which might be an integer, float, or
+/// nothing (in the case of lossless).
+///
+/// It implements the `Display` trait, providing nice access for printing, etc.
 pub enum QualityValue {
 	/// # Float.
 	///
@@ -110,7 +117,8 @@ pub enum QualityValue {
 
 	/// # Integer.
 	///
-	/// This is used by AVIF and WebP.
+	/// This is used by AVIF and WebP, and also serves as a default for kinds
+	/// that don't actually support encoding.
 	Int(u8),
 
 	/// # Lossless.

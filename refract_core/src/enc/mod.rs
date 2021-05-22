@@ -2,12 +2,9 @@
 # `Refract` - Encoding!
 */
 
-pub(super) mod candidate;
+pub(self) mod avif;
+pub(self) mod jxl;
+pub(self) mod webp;
 pub(super) mod iter;
-pub(super) mod kind;
 pub(super) mod output;
 pub(super) mod quality;
-
-mod avif;
-mod jxl;
-mod webp;

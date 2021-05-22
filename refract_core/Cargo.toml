@@ -37,4 +37,4 @@ features = [ "1_1", "static" ]
 
 [features]
 default = []
-menu = [ "argyle" ] # Passthrough menu errors.
+bin = [ "argyle" ] # Passthrough menu errors.

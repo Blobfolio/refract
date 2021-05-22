@@ -3,8 +3,8 @@
 */
 
 use crate::{
-	Candidate,
-	Image,
+	Input,
+	Output,
 	RefractError,
 };
 use jpegxl_sys::{
@@ -85,7 +85,7 @@ impl LibJxlEncoder {
 	}
 
 	/// # Write.
-	fn write(&self, candidate: &mut Candidate) -> Result<(), RefractError> {
+	fn write(&self, candidate: &mut Output) -> Result<(), RefractError> {
 		// Grab the buffer.
 		let buf = candidate.as_mut_vec();
 
@@ -121,9 +121,6 @@ impl LibJxlEncoder {
 			// We're done!
 			if JxlEncoderStatus::Success == res { break; }
 		}
-
-		// Let the candidate know we finished.
-		candidate.finish_mut_vec();
 
 		Ok(())
 	}
@@ -172,8 +169,8 @@ impl Drop for LibJxlThreadParallelRunner {
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
 pub(super) fn make_lossy(
-	img: &Image,
-	candidate: &mut Candidate,
+	img: &Input,
+	candidate: &mut Output,
 	quality: NonZeroU8
 ) -> Result<(), RefractError> {
 	encode(img, candidate, Some(quality))
@@ -189,7 +186,7 @@ pub(super) fn make_lossy(
 /// This returns an error in cases where the resulting file size is larger
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
-pub(super) fn make_lossless(img: &Image, candidate: &mut Candidate) -> Result<(), RefractError> {
+pub(super) fn make_lossless(img: &Input, candidate: &mut Output) -> Result<(), RefractError> {
 	encode(img, candidate, None)
 }
 
@@ -200,14 +197,14 @@ pub(super) fn make_lossless(img: &Image, candidate: &mut Candidate) -> Result<()
 /// This stitches all the pieces together. Who would have thought a
 /// convoluted format like JPEG XL would require so many steps to produce?!
 fn encode(
-	img: &Image,
-	candidate: &mut Candidate,
+	img: &Input,
+	candidate: &mut Output,
 	quality: Option<NonZeroU8>
 ) -> Result<(), RefractError> {
 	// Initialize the encoder.
 	let enc = LibJxlEncoder::new()?;
 
-	let color = img.color_kind();
+	let color = img.color();
 
 	// Hook in parallelism.
 	let runner = LibJxlThreadParallelRunner::new()?;
@@ -254,7 +251,7 @@ fn encode(
 	maybe_die(&unsafe { JxlEncoderOptionsSetDecodingSpeed(options, 0) })?;
 
 	// Set up JPEG XL's "basic info" struct.
-	enc.set_basic_info(img.width_u32()?, img.height_u32()?, color.has_alpha())?;
+	enc.set_basic_info(img.width_u32(), img.height_u32(), color.has_alpha())?;
 
 	// Set up a "frame".
 	let pixel_format = JxlPixelFormat {

@@ -25,9 +25,9 @@
 #![allow(clippy::module_name_repetitions)]
 
 
-pub(self) mod cli;
-mod image;
-mod viewer;
+pub(self) mod utility;
+mod source;
+mod browser;
 
 
 use argyle::{
@@ -37,14 +37,12 @@ use argyle::{
 	FLAG_REQUIRED,
 	FLAG_VERSION,
 };
-use image::ImageCli;
 use refract_core::{
-	FLAG_NO_AVIF_LIMITED,
+	FLAG_NO_AVIF_YCBCR,
 	FLAG_NO_LOSSLESS,
 	FLAG_NO_LOSSY,
-	OutputKind,
+	ImageKind,
 	RefractError,
-	Source,
 };
 use dowser::{
 	Dowser,
@@ -57,7 +55,6 @@ use std::{
 	os::unix::ffi::OsStrExt,
 	path::PathBuf,
 };
-use viewer::Viewer;
 
 
 
@@ -108,24 +105,28 @@ fn _main() -> Result<(), RefractError> {
 		(FLAG_NO_LOSSY == flags & FLAG_NO_LOSSY) &&
 		(FLAG_NO_LOSSLESS == flags & FLAG_NO_LOSSLESS)
 	{
-		return Err(RefractError::NoLosslessLossy);
+		return Err(RefractError::NoCompression);
 	}
 
 	// Figure out which types we're dealing with.
-	let mut encoders: Vec<OutputKind> = Vec::with_capacity(2);
-	if ! args.switch(b"--no-webp") {
-		encoders.push(OutputKind::Webp);
-	}
-	if ! args.switch(b"--no-avif") {
-		encoders.push(OutputKind::Avif);
-
-		if args.switch(b"--skip-ycbcr") {
-			flags |= FLAG_NO_AVIF_LIMITED;
+	let encoders: Box<[ImageKind]> = {
+		let mut encoders: Vec<ImageKind> = Vec::with_capacity(3);
+		if ! args.switch(b"--no-webp") {
+			encoders.push(ImageKind::Webp);
 		}
-	}
-	if ! args.switch(b"--no-jxl") {
-		encoders.push(OutputKind::Jxl);
-	}
+		if ! args.switch(b"--no-avif") {
+			encoders.push(ImageKind::Avif);
+
+			// Deal with the AVIF-specific flag while we're here.
+			if args.switch(b"--skip-ycbcr") {
+				flags |= FLAG_NO_AVIF_YCBCR;
+			}
+		}
+		if ! args.switch(b"--no-jxl") {
+			encoders.push(ImageKind::Jxl);
+		}
+		encoders.into_boxed_slice()
+	};
 
 	if encoders.is_empty() {
 		return Err(RefractError::NoEncoders);
@@ -146,34 +147,23 @@ fn _main() -> Result<(), RefractError> {
 	// Sort the paths to make it easier for people to follow.
 	paths.sort();
 
-	// Run through the set to see what gets created!
+	// Save candidate images to a preview web page.
 	if args.switch2(b"-b", b"--browser") {
 		paths.into_iter()
-			.for_each(|x| {
-				cli::print_header_path(&x);
-
-				match Viewer::new(x, flags) {
-					Ok(viewer) => encoders.iter()
-						.for_each(|&e| viewer.encode(e)),
-					Err(e) => Msg::error(e.as_str()).print(),
+			.for_each(|p| {
+				if let Some(s) = browser::Source::new(p, flags) {
+					encoders.iter().for_each(|e| s.encode(*e));
 				}
-
 				println!();
 			});
-
 	}
+	// Save candidate images to disk.
 	else {
 		paths.into_iter()
-			.for_each(|x| {
-				cli::print_header_path(&x);
-
-				match Source::try_from(x) {
-					Ok(img) => encoders.iter()
-						.map(|&e| ImageCli::new(&img, e, flags))
-						.for_each(ImageCli::encode),
-					Err(e) => Msg::error(e.as_str()).print(),
+			.for_each(|p| {
+				if let Some(s) = source::Source::new(p, flags) {
+					encoders.iter().for_each(|e| s.encode(*e));
 				}
-
 				println!();
 			});
 	}

@@ -3,10 +3,10 @@
 */
 
 use crate::{
-	Candidate,
 	FLAG_AVIF_RGB,
 	FLAG_AVIF_ROUND_3,
-	Image,
+	Input,
+	Output,
 	RefractError,
 };
 use libavif_sys::{
@@ -109,10 +109,10 @@ struct LibAvifImage(*mut avifImage);
 
 impl LibAvifImage {
 	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
-	fn new(src: &Image, flags: u8) -> Result<Self, RefractError> {
+	fn new(src: &Input, flags: u8) -> Result<Self, RefractError> {
 		// Make sure dimensions fit u32.
-		let width = src.width_u32()?;
-		let height = src.height_u32()?;
+		let width = src.width_u32();
+		let height = src.height_u32();
 
 		// AVIF dimensions can't exceed this amount. We might as well bail as
 		// early as possible.
@@ -121,7 +121,7 @@ impl LibAvifImage {
 		}
 
 		let limited = 0 == flags & FLAG_AVIF_RGB;
-		let greyscale: bool = src.color_kind().is_greyscale();
+		let greyscale: bool = src.is_greyscale();
 
 		// Make an "avifRGBImage" from our buffer.
 		let raw: &[u8] = &*src;
@@ -131,7 +131,7 @@ impl LibAvifImage {
 			depth: 8,
 			format: AVIF_RGB_FORMAT_RGBA,
 			chromaUpsampling: AVIF_CHROMA_UPSAMPLING_BILINEAR,
-			ignoreAlpha: ! src.color_kind().has_alpha() as _,
+			ignoreAlpha: ! src.has_alpha() as _,
 			alphaPremultiplied: 0,
 			pixels: raw.as_ptr() as *mut u8,
 			rowBytes: 4 * width,
@@ -299,8 +299,8 @@ impl LibAvifTiles {
 /// than the source or previous best, or if there are any problems
 /// encountered during encoding or saving.
 pub(super) fn make_lossy(
-	img: &Image,
-	candidate: &mut Candidate,
+	img: &Input,
+	candidate: &mut Output,
 	quality: NonZeroU8,
 	flags: u8
 ) -> Result<(), RefractError> {
