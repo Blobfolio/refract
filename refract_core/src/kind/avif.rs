@@ -53,6 +53,8 @@ use crate::{
 
 #[cfg(feature = "decode_ng")]
 use libavif_sys::{
+	AVIF_CODEC_CHOICE_DAV1D,
+	avifDecoder,
 	avifDecoderCreate,
 	avifDecoderDestroy,
 	avifDecoderReadMemory,
@@ -83,21 +85,13 @@ impl Decoder for ImageAvif {
 		let rgb = unsafe {
 			// Decode the raw image to an avifImage.
 			let image = LibAvifImage::empty()?;
-			let decoder = avifDecoderCreate();
-			if decoder.is_null() {
-				return Err(RefractError::Decode);
-			}
-
-			let result = avifDecoderReadMemory(
-				decoder,
+			let decoder = LibAvifDecoder::new()?;
+			if AVIF_RESULT_OK != avifDecoderReadMemory(
+				decoder.0,
 				image.0,
 				raw.as_ptr(),
 				raw.len(),
-			);
-
-			avifDecoderDestroy(decoder);
-
-			if AVIF_RESULT_OK != result {
+			) {
 				return Err(RefractError::Decode);
 			}
 
@@ -189,7 +183,44 @@ impl Encoder for ImageAvif {
 
 
 
-/// # AVIF Encoer.
+#[cfg(feature = "decode_ng")]
+/// # AVIF Decoder.
+///
+/// This wraps the AVIF decoder. It exists solely for garbage cleanup.
+struct LibAvifDecoder(*mut avifDecoder);
+
+#[cfg(feature = "decode_ng")]
+impl LibAvifDecoder {
+	/// # New.
+	fn new() -> Result<Self, RefractError> {
+		let decoder = unsafe { avifDecoderCreate() };
+		if decoder.is_null() {
+			return Err(RefractError::Decode);
+		}
+
+		// Set up the threads.
+		let threads = i32::try_from(num_cpus::get())
+			.unwrap_or(1)
+			.max(1);
+
+		unsafe {
+			(*decoder).codecChoice = AVIF_CODEC_CHOICE_DAV1D;
+			(*decoder).maxThreads = threads;
+		}
+
+		Ok(Self(decoder))
+	}
+}
+
+#[cfg(feature = "decode_ng")]
+impl Drop for LibAvifDecoder {
+	#[inline]
+	fn drop(&mut self) { unsafe { avifDecoderDestroy(self.0); } }
+}
+
+
+
+/// # AVIF Encoder.
 ///
 /// This wraps the AVIF encoder. It primarily exists to give us a way to free
 /// resources on drop, but also handles setup.

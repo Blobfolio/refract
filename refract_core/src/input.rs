@@ -21,6 +21,18 @@ use std::{
 	ops::Deref,
 };
 
+#[cfg(feature = "dssim")]
+use crate::Output;
+
+#[cfg(feature = "dssim")]
+use dssim_core::{
+	Dssim,
+	DssimImage,
+};
+
+#[cfg(feature = "dssim")]
+use std::rc::Rc;
+
 
 
 #[derive(Clone)]
@@ -65,6 +77,7 @@ pub struct Input<'a> {
 	color: ColorKind,
 	depth: ColorKind,
 	kind: ImageKind,
+	#[cfg(feature = "dssim")] dssim: Rc<DssimImage<f32>>,
 }
 
 impl AsRef<[u8]> for Input<'_> {
@@ -99,6 +112,14 @@ impl TryFrom<&[u8]> for Input<'_> {
 		let kind = ImageKind::try_from(src)?;
 		let (buf, width, height, color) = kind.decode(src)?;
 
+		#[cfg(feature = "dssim")]
+		let dssim = {
+			use rgb::FromSlice;
+			let ds = Dssim::new();
+			ds.create_image_rgba(buf.as_slice().as_rgba(), width, height)
+				.ok_or(RefractError::Decode)?
+		};
+
 		// Make sure the dimensions are in range.
 		let width = u32::try_from(width).ok()
 			.and_then(NonZeroU32::new)
@@ -119,6 +140,7 @@ impl TryFrom<&[u8]> for Input<'_> {
 			color,
 			depth: ColorKind::Rgba,
 			kind,
+			#[cfg(feature = "dssim")] dssim: Rc::new(dssim),
 		})
 	}
 }
@@ -263,6 +285,26 @@ impl Input<'_> {
 	pub const fn width_u32(&self) -> u32 { self.width.get() }
 }
 
+#[cfg(feature = "dssim")]
+/// ## DSSIM Wrappers.
+///
+/// These are enabled with the `dssim` crate feature.
+impl Input<'_> {
+	#[must_use]
+	/// # Calculate Output DSSIM.
+	///
+	/// This method takes a reference to an [`Output`] and tries to calculate
+	/// its dissimiliarity from the source (`self`).
+	///
+	/// This may not always work, in which case `None` will be returned.
+	pub fn dssim_output(&self, output: &Output) -> Option<f64> {
+		let other = Self::try_from(output.as_ref()).ok()?;
+		let ds = Dssim::new();
+		let (diff, _) = ds.compare(&self.dssim, &*other.dssim);
+		Some(diff.into())
+	}
+}
+
 /// ## Copying and Mutation.
 impl<'a> Input<'a> {
 	#[must_use]
@@ -328,6 +370,7 @@ impl<'a> Input<'a> {
 			color: self.color,
 			depth,
 			kind: self.kind,
+			#[cfg(feature = "dssim")] dssim: self.dssim.clone(),
 		}
 	}
 
@@ -386,6 +429,7 @@ impl<'a> Input<'a> {
 			color: self.color,
 			depth: ColorKind::Rgba,
 			kind: self.kind,
+			#[cfg(feature = "dssim")] dssim: self.dssim.clone(),
 		}
 	}
 
@@ -404,6 +448,7 @@ impl<'a> Input<'a> {
 			color: self.color,
 			depth: self.depth,
 			kind: self.kind,
+			#[cfg(feature = "dssim")] dssim: self.dssim.clone(),
 		}
 	}
 }

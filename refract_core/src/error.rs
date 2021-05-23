@@ -25,6 +25,8 @@ pub enum RefractError {
 	NothingDoing,
 	Overflow,
 	TooBig,
+
+	#[cfg(feature = "dssim")]
 	TooDissimilar,
 
 	#[cfg(feature = "bin")]
@@ -92,6 +94,8 @@ impl RefractError {
 			Self::NothingDoing => "There is nothing else to do.",
 			Self::Overflow => "The image dimensions are out of range.",
 			Self::TooBig => "The encoded image was too big.",
+
+			#[cfg(feature = "dssim")]
 			Self::TooDissimilar => "The DSSIM for the encoded image is too big.",
 
 			#[cfg(feature = "bin")]

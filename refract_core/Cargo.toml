@@ -21,6 +21,10 @@ spng = "0.1.0"
 version = "0.4.*"
 optional = true
 
+[dependencies.dssim-core]
+version = "3.1.*"
+optional = true
+
 [dependencies.jpegxl-sys]
 version = "0.3.7"
 default-features = false
@@ -45,3 +49,6 @@ bin = [ "argyle" ]
 # This feature enables decoding support for the next-gen image formats, i.e.
 # WebP, AVIF, and JPEG XL.
 decode_ng = [ "libavif-sys/codec-dav1d" ]
+
+# This feature enables DSSIM support.
+dssim = [ "decode_ng", "dssim-core" ]

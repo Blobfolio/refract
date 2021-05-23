@@ -101,7 +101,7 @@ impl<'a> EncodeIter<'a> {
 
 			steps: QualityRange::from(kind),
 			time: Duration::from_secs(0),
-			flags
+			flags,
 		})
 	}
 }
@@ -219,9 +219,7 @@ impl EncodeIter<'_> {
 		}
 		else { return Err(RefractError::NothingDoing); }
 
-		self.finish_candidate()?;
-
-		Ok(())
+		self.finish_candidate()
 	}
 }
 
@@ -251,6 +249,7 @@ impl EncodeIter<'_> {
 		else { None }
 	}
 
+	#[inline]
 	/// # Discard Candidate.
 	///
 	/// Use this method to reject the last candidate because e.g. it looked
@@ -364,7 +363,8 @@ impl EncodeIter<'_> {
 			match self.lossy(quality, self.flags) {
 				Ok(_) => Some(()),
 				Err(RefractError::TooBig) => {
-					// Recurse to see if the next-next quality works out OK.
+					// This was too big, so drop a step and see if the
+					// next-next quality works out.
 					self.steps.set_top_minus_one(quality);
 					self.next_inner()
 				},
