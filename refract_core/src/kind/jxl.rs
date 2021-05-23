@@ -6,6 +6,7 @@ use crate::{
 	Input,
 	Output,
 	RefractError,
+	traits::Encoder,
 };
 use jpegxl_sys::{
 	JxlBasicInfo,
@@ -43,6 +44,236 @@ use std::{
 	num::NonZeroU8,
 };
 
+#[cfg(feature = "decode_ng")]
+use crate::{
+	ColorKind,
+	traits::{
+		Decoder,
+		DecoderResult,
+	},
+};
+
+#[cfg(feature = "decode_ng")]
+use jpegxl_sys::{
+	JxlColorProfileTarget,
+	JxlDecoder,
+	JxlDecoderCreate,
+	JxlDecoderDestroy,
+	JxlDecoderGetBasicInfo,
+	JxlDecoderGetColorAsICCProfile,
+	JxlDecoderGetICCProfileSize,
+	JxlDecoderImageOutBufferSize,
+	JxlDecoderProcessInput,
+	JxlDecoderReset,
+	JxlDecoderSetImageOutBuffer,
+	JxlDecoderSetInput,
+	JxlDecoderSetKeepOrientation,
+	JxlDecoderStatus,
+	JxlDecoderSubscribeEvents,
+};
+
+
+
+#[allow(unreachable_pub)] // Unsolvable?
+/// # JPEG XL Image.
+pub struct ImageJxl;
+
+#[cfg(feature = "decode_ng")]
+impl Decoder for ImageJxl {
+	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
+		let decoder = LibJxlDecoder::new()?;
+		let mut basic_info: Option<JxlBasicInfo> = None;
+		let mut pixel_format: Option<JxlPixelFormat> = None;
+		let mut icc_profile: Vec<u8> = Vec::new();
+
+		// Get the buffer going.
+		let mut buffer: Vec<u8> = Vec::new();
+		let next_in = raw.as_ptr();
+		let avail_in: usize = std::mem::size_of_val(raw);
+		maybe_die_dec(&unsafe { JxlDecoderSetInput(decoder.0, next_in, avail_in) })?;
+
+		loop {
+			match unsafe { JxlDecoderProcessInput(decoder.0) } {
+				JxlDecoderStatus::BasicInfo => decoder.get_basic_info(
+					&mut basic_info,
+					&mut pixel_format
+				)?,
+				JxlDecoderStatus::ColorEncoding => {
+					decoder.get_icc_profile(
+						pixel_format.as_ref().ok_or(RefractError::Decode)?,
+						&mut icc_profile
+					)?
+				},
+				JxlDecoderStatus::NeedImageOutBuffer => {
+					decoder.output(
+						pixel_format.as_ref().ok_or(RefractError::Decode)?,
+						&mut buffer
+					)?;
+				},
+				JxlDecoderStatus::FullImage => continue,
+				JxlDecoderStatus::Success => {
+					unsafe { JxlDecoderReset(decoder.0) };
+
+					let info = basic_info.ok_or(RefractError::Decode)?;
+					let width = usize::try_from(info.xsize)
+						.map_err(|_| RefractError::Overflow)?;
+					let height = usize::try_from(info.ysize)
+						.map_err(|_| RefractError::Overflow)?;
+					let size = width.checked_mul(height)
+						.and_then(|x| x.checked_mul(4))
+						.ok_or(RefractError::Overflow)?;
+
+					if buffer.len() == size {
+						let color = ColorKind::from_rgba(&buffer);
+						return Ok((buffer, width, height, color));
+					}
+
+					return Err(RefractError::Decode);
+				},
+				_ => return Err(RefractError::Decode),
+			}
+		}
+	}
+}
+
+impl Encoder for ImageJxl {
+	/// # Maximum Quality.
+	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(150) };
+
+	#[inline]
+	/// # Encode Lossy.
+	fn encode_lossy(input: &Input, output: &mut Output, quality: NonZeroU8, _flags: u8)
+	-> Result<(), RefractError> {
+		encode(input, output, Some(quality))
+	}
+
+	#[inline]
+	/// # Encode Lossless.
+	fn encode_lossless(input: &Input, output: &mut Output, _flags: u8)
+	-> Result<(), RefractError> {
+		encode(input, output, None)
+	}
+}
+
+
+
+#[cfg(feature = "decode_ng")]
+/// # Hold the Decoder.
+///
+/// This wrapper exists solely to help with drop cleanup.
+struct LibJxlDecoder(*mut JxlDecoder);
+
+#[cfg(feature = "decode_ng")]
+impl LibJxlDecoder {
+	/// # New Decoder.
+	fn new() -> Result<Self, RefractError> {
+		let dec = unsafe { JxlDecoderCreate(std::ptr::null()) };
+		if dec.is_null() {
+			return Err(RefractError::Decode);
+		}
+
+		maybe_die_dec(
+			&unsafe {
+				JxlDecoderSubscribeEvents(
+					dec,
+					JxlDecoderStatus::BasicInfo as i32 |
+					JxlDecoderStatus::ColorEncoding as i32 |
+					JxlDecoderStatus::FullImage as i32
+				)
+			}
+		)?;
+
+		maybe_die_dec(&unsafe { JxlDecoderSetKeepOrientation(dec, true) })?;
+
+		Ok(Self(dec))
+	}
+
+	/// # Load Basic Info.
+	fn get_basic_info(
+		&self,
+		basic_info: &mut Option<JxlBasicInfo>,
+		pixel_format: &mut Option<JxlPixelFormat>,
+	) -> Result<(), RefractError> {
+		*basic_info = Some(unsafe {
+			let mut info = JxlBasicInfo::new_uninit();
+			maybe_die_dec(&JxlDecoderGetBasicInfo(self.0, info.as_mut_ptr()))?;
+			info.assume_init()
+		});
+
+		*pixel_format = Some(JxlPixelFormat {
+			num_channels: 4,
+			data_type: JxlDataType::Uint8,
+			endianness: JxlEndianness::Native,
+			align: 0,
+		});
+
+		Ok(())
+	}
+
+	/// # Load ICC Profile.
+	fn get_icc_profile(&self, format: &JxlPixelFormat, icc_profile: &mut Vec<u8>)
+	-> Result<(), RefractError> {
+		let mut icc_size = 0;
+
+		maybe_die_dec(
+			&unsafe {
+				JxlDecoderGetICCProfileSize(
+					self.0,
+					format,
+					JxlColorProfileTarget::Data,
+					&mut icc_size,
+				)
+			}
+		)?;
+
+		icc_profile.resize(icc_size, 0);
+
+		maybe_die_dec(
+			&unsafe {
+				JxlDecoderGetColorAsICCProfile(
+					self.0,
+					format,
+					JxlColorProfileTarget::Data,
+					icc_profile.as_mut_ptr(),
+					icc_size,
+				)
+			}
+		)?;
+
+		Ok(())
+	}
+
+	fn output(
+		&self,
+		pixel_format: &JxlPixelFormat,
+		buffer: &mut Vec<u8>,
+	) -> Result<(), RefractError> {
+		let mut size = 0;
+		maybe_die_dec(&unsafe {
+			JxlDecoderImageOutBufferSize(self.0, pixel_format, &mut size)
+		})?;
+
+		buffer.resize(size, 0);
+		maybe_die_dec(
+			&unsafe {
+				JxlDecoderSetImageOutBuffer(
+					self.0,
+					pixel_format,
+					buffer.as_mut_ptr().cast(),
+					size,
+				)
+			}
+		)?;
+
+		Ok(())
+	}
+}
+
+#[cfg(feature = "decode_ng")]
+impl Drop for LibJxlDecoder {
+	#[inline]
+	fn drop(&mut self) { unsafe { JxlDecoderDestroy(self.0) }; }
+}
 
 
 /// # Hold the Encoder.
@@ -158,40 +389,6 @@ impl Drop for LibJxlThreadParallelRunner {
 
 
 
-#[inline]
-/// # Make Lossy.
-///
-/// Generate a lossy `JPEG XL` image at a given quality size.
-///
-/// ## Errors
-///
-/// This returns an error in cases where the resulting file size is larger
-/// than the source or previous best, or if there are any problems
-/// encountered during encoding or saving.
-pub(super) fn make_lossy(
-	img: &Input,
-	candidate: &mut Output,
-	quality: NonZeroU8
-) -> Result<(), RefractError> {
-	encode(img, candidate, Some(quality))
-}
-
-#[inline]
-/// # Make Lossy.
-///
-/// Generate a lossless `JPEG XL`.
-///
-/// ## Errors
-///
-/// This returns an error in cases where the resulting file size is larger
-/// than the source or previous best, or if there are any problems
-/// encountered during encoding or saving.
-pub(super) fn make_lossless(img: &Input, candidate: &mut Output) -> Result<(), RefractError> {
-	encode(img, candidate, None)
-}
-
-
-
 /// # Encode.
 ///
 /// This stitches all the pieces together. Who would have thought a
@@ -285,5 +482,14 @@ const fn maybe_die(res: &JxlEncoderStatus) -> Result<(), RefractError> {
 	match res {
 		JxlEncoderStatus::Success => Ok(()),
 		_ => Err(RefractError::Encode),
+	}
+}
+
+#[cfg(feature = "decode_ng")]
+/// # Verify Decoder Status.
+const fn maybe_die_dec(res: &JxlDecoderStatus) -> Result<(), RefractError> {
+	match res {
+		JxlDecoderStatus::Success => Ok(()),
+		_ => Err(RefractError::Decode),
 	}
 }

@@ -8,6 +8,7 @@ use crate::{
 	Input,
 	Output,
 	RefractError,
+	traits::Encoder,
 };
 use libavif_sys::{
 	AVIF_CHROMA_SAMPLE_POSITION_COLOCATED,
@@ -41,6 +42,26 @@ use std::{
 	num::NonZeroU8,
 };
 
+#[cfg(feature = "decode_ng")]
+use crate::{
+	ColorKind,
+	traits::{
+		Decoder,
+		DecoderResult,
+	},
+};
+
+#[cfg(feature = "decode_ng")]
+use libavif_sys::{
+	avifDecoderCreate,
+	avifDecoderDestroy,
+	avifDecoderReadMemory,
+	avifImageCreateEmpty,
+	avifImageYUVToRGB,
+	avifRGBImageAllocatePixels,
+	avifRGBImageFreePixels,
+	avifRGBImageSetDefaults,
+};
 
 
 // These constants are used by the tiling functions.
@@ -49,6 +70,122 @@ const MAX_TILE_COLS: usize = 64;
 const MAX_TILE_ROWS: usize = 64;
 const MAX_TILE_WIDTH: usize = 4096;
 const SB_SIZE_LOG2: usize = 6;
+
+
+
+#[allow(unreachable_pub)] // Unsolvable?
+/// # AVIF Image.
+pub struct ImageAvif;
+
+#[cfg(feature = "decode_ng")]
+impl Decoder for ImageAvif {
+	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
+		let rgb = unsafe {
+			// Decode the raw image to an avifImage.
+			let image = LibAvifImage::empty()?;
+			let decoder = avifDecoderCreate();
+			if decoder.is_null() {
+				return Err(RefractError::Decode);
+			}
+
+			let result = avifDecoderReadMemory(
+				decoder,
+				image.0,
+				raw.as_ptr(),
+				raw.len(),
+			);
+
+			avifDecoderDestroy(decoder);
+
+			if AVIF_RESULT_OK != result {
+				return Err(RefractError::Decode);
+			}
+
+			// Turn the avifImage into an avifRGB.
+			let mut rgb = LibAvifRGBImage::default();
+			avifRGBImageSetDefaults(&mut rgb.0, image.0);
+			rgb.0.format = AVIF_RGB_FORMAT_RGBA;
+			rgb.0.depth = 8;
+			avifRGBImageAllocatePixels(&mut rgb.0);
+			if AVIF_RESULT_OK != avifImageYUVToRGB(image.0, &mut rgb.0) {
+				return Err(RefractError::Decode);
+			}
+
+			// Done!
+			rgb
+		};
+
+		// Make sure the dimensions fit `usize`.
+		let width = usize::try_from(rgb.0.width)
+			.map_err(|_| RefractError::Overflow)?;
+
+		let height = usize::try_from(rgb.0.height)
+			.map_err(|_| RefractError::Overflow)?;
+
+		let size = width.checked_mul(height)
+			.and_then(|x| x.checked_mul(4))
+			.ok_or(RefractError::Overflow)?;
+
+		// Steal the buffer.
+		let buf: Vec<u8> = unsafe {
+			std::slice::from_raw_parts_mut(rgb.0.pixels, size)
+		}.to_vec();
+
+		// If it all checks out, return it!
+		if buf.len() == size {
+			let color = ColorKind::from_rgba(&buf);
+			Ok((buf, width, height, color))
+		}
+		else { Err(RefractError::Decode) }
+	}
+}
+
+impl Encoder for ImageAvif {
+	/// # Maximum Quality.
+	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(63) };
+
+	/// # Encode Lossy.
+	fn encode_lossy(img: &Input, candidate: &mut Output, quality: NonZeroU8, flags: u8)
+	-> Result<(), RefractError> {
+		let image = LibAvifImage::new(img, flags)?;
+		let encoder = LibAvifEncoder::try_from(quality)?;
+
+		// Configure tiling.
+		if 0 == FLAG_AVIF_ROUND_3 & flags {
+			if let Some((x, y)) = tiles(img.width(), img.height()) {
+				unsafe {
+					(*encoder.0).tileRowsLog2 = x;
+					(*encoder.0).tileColsLog2 = y;
+				}
+			}
+		}
+
+		// Encode!
+		let mut data = LibAvifRwData(avifRWData::default());
+		maybe_die(unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) })?;
+
+		// Grab the output.
+		candidate.set_slice(unsafe {
+			std::slice::from_raw_parts(data.0.data, data.0.size)
+		});
+
+		drop(data);
+		drop(encoder);
+		drop(image);
+
+		Ok(())
+	}
+
+	#[inline]
+	/// # Encode Lossless.
+	fn encode_lossless(input: &Input, output: &mut Output, flags: u8)
+	-> Result<(), RefractError> {
+		if input.is_greyscale() { Err(RefractError::NothingDoing) }
+		else {
+			Self::encode_lossy(input, output, Self::MAX_QUALITY, flags)
+		}
+	}
+}
 
 
 
@@ -169,11 +306,39 @@ impl LibAvifImage {
 
 		Ok(Self(yuv))
 	}
+
+	#[cfg(feature = "decode_ng")]
+	/// # Empty.
+	fn empty() -> Result<Self, RefractError> {
+		let image = unsafe { avifImageCreateEmpty() };
+		if image.is_null() { Err(RefractError::Decode) }
+		else { Ok(Self(image)) }
+	}
 }
 
 impl Drop for LibAvifImage {
 	#[inline]
 	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
+}
+
+
+
+#[cfg(feature = "decode_ng")]
+/// # Avif RGB Image.
+///
+/// This struct exists only for garbage collection purposes. It is used for
+/// decoding.
+struct LibAvifRGBImage(avifRGBImage);
+
+#[cfg(feature = "decode_ng")]
+impl Default for LibAvifRGBImage {
+	#[inline]
+	fn default() -> Self { Self(avifRGBImage::default()) }
+}
+
+#[cfg(feature = "decode_ng")]
+impl Drop for LibAvifRGBImage {
+	fn drop(&mut self) { unsafe { avifRGBImageFreePixels(&mut self.0); } }
 }
 
 
@@ -279,58 +444,6 @@ impl LibAvifTiles {
 			tile_height_sb,
 		})
 	}
-}
-
-
-
-/// # Make Lossy.
-///
-/// Generate an `AVIF` image at a given quality size.
-///
-/// The quality passed should be the opposite of the quantizer scale used by
-/// `libavif`, i.e. 0 is the worst and 63 is the best. (We'll flip it later
-/// on.)
-///
-/// See [`quality_to_quantizers`] for more information.
-///
-/// ## Errors
-///
-/// This returns an error in cases where the resulting file size is larger
-/// than the source or previous best, or if there are any problems
-/// encountered during encoding or saving.
-pub(super) fn make_lossy(
-	img: &Input,
-	candidate: &mut Output,
-	quality: NonZeroU8,
-	flags: u8
-) -> Result<(), RefractError> {
-	let image = LibAvifImage::new(img, flags)?;
-	let encoder = LibAvifEncoder::try_from(quality)?;
-
-	// Configure tiling.
-	if 0 == FLAG_AVIF_ROUND_3 & flags {
-		if let Some((x, y)) = tiles(img.width(), img.height()) {
-			unsafe {
-				(*encoder.0).tileRowsLog2 = x;
-				(*encoder.0).tileColsLog2 = y;
-			}
-		}
-	}
-
-	// Encode!
-	let mut data = LibAvifRwData(avifRWData::default());
-	maybe_die(unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) })?;
-
-	// Grab the output.
-	candidate.set_slice(unsafe {
-		std::slice::from_raw_parts(data.0.data, data.0.size)
-	});
-
-	drop(data);
-	drop(encoder);
-	drop(image);
-
-	Ok(())
 }
 
 

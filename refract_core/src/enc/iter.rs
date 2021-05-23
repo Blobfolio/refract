@@ -197,26 +197,7 @@ impl EncodeIter<'_> {
 		self.set_candidate_quality(None);
 
 		let kind = self.output_kind();
-		match kind {
-			ImageKind::Avif =>
-				// Lossless compression isn't possible for greyscale images.
-				if self.src.is_greyscale() {
-					Err(RefractError::NothingDoing)
-				}
-				// Lossless AVIF encoding works exactly the same as lossy
-				// encoding, it just uses maximum quality.
-				else {
-					super::avif::make_lossy(
-						&self.src,
-						&mut self.candidate,
-						kind.max_encoder_quality(),
-						self.flags,
-					)
-				},
-			ImageKind::Jxl => super::jxl::make_lossless(&self.src, &mut self.candidate),
-			ImageKind::Webp => super::webp::make_lossless(&self.src, &mut self.candidate),
-			_ => Err(RefractError::NothingDoing),
-		}?;
+		kind.encode_lossless(&self.src, &mut self.candidate, self.flags)?;
 
 		self.finish_candidate()
 	}
@@ -232,31 +213,15 @@ impl EncodeIter<'_> {
 	fn lossy(&mut self, quality: NonZeroU8, flags: u8) -> Result<(), RefractError> {
 		self.set_candidate_quality(Some(quality));
 
-		// No tiling is done as a final pass at the end; it only applies to
-		// AVIF sessions.
-		let normal = 0 == flags & FLAG_AVIF_ROUND_3;
+		let kind = self.output_kind();
+		if (0 == flags & FLAG_AVIF_ROUND_3) || kind == ImageKind::Avif {
+			kind.encode_lossy(&self.src, &mut self.candidate, quality, flags)?;
+		}
+		else { return Err(RefractError::NothingDoing); }
 
-		match self.output_kind() {
-			ImageKind::Avif => super::avif::make_lossy(
-				&self.src,
-				&mut self.candidate,
-				quality,
-				flags,
-			),
-			ImageKind::Jxl if normal => super::jxl::make_lossy(
-				&self.src,
-				&mut self.candidate,
-				quality,
-			),
-			ImageKind::Webp if normal => super::webp::make_lossy(
-				&self.src,
-				&mut self.candidate,
-				quality,
-			),
-			_ => Err(RefractError::NothingDoing),
-		}?;
+		self.finish_candidate()?;
 
-		self.finish_candidate()
+		Ok(())
 	}
 }
 

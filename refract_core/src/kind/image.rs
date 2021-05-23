@@ -2,7 +2,17 @@
 # `Refract` - Image Kind
 */
 
-use crate::RefractError;
+use crate::{
+	ImageAvif,
+	ImageJpeg,
+	ImageJxl,
+	ImagePng,
+	ImageWebp,
+	Input,
+	Output,
+	RefractError,
+	traits::DecoderResult,
+};
 use std::{
 	convert::TryFrom,
 	fmt,
@@ -43,7 +53,6 @@ impl TryFrom<&[u8]> for ImageKind {
 	/// magic its headers contain.
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
 		// We need at least twelve bytes to hold header info!
-
 		if src.len() > 12 {
 			// PNG has just one way to be!
 			if src[..8] == [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1A, b'\n'] {
@@ -93,12 +102,26 @@ impl TryFrom<&[u8]> for ImageKind {
 
 /// ## Information.
 impl ImageKind {
+	#[cfg(not(feature = "decode_ng"))]
 	#[inline]
 	#[must_use]
 	/// # Can Decode?
 	///
 	/// Returns `true` if decoding is supported for this image type.
+	///
+	/// When the feature flag `decode_ng` is used, this always returns `true`.
 	pub const fn can_decode(self) -> bool { matches!(self, Self::Jpeg | Self::Png) }
+
+	#[cfg(feature = "decode_ng")]
+	#[allow(clippy::unused_self)]
+	#[inline]
+	#[must_use]
+	/// # Can Decode?
+	///
+	/// Returns `true` if decoding is supported for this image type.
+	///
+	/// When the feature flag `decode_ng` is used, this always returns `true`.
+	pub const fn can_decode(self) -> bool { true }
 
 	#[inline]
 	#[must_use]
@@ -164,10 +187,94 @@ impl ImageKind {
 	/// This returns the maximum encoding quality value for the given format,
 	/// or a default of `100`.
 	pub(crate) const fn max_encoder_quality(self) -> NonZeroU8 {
+		use crate::traits::Encoder;
+
 		match self {
-			Self::Avif => unsafe { NonZeroU8::new_unchecked(63) },
-			Self::Jxl => unsafe { NonZeroU8::new_unchecked(150) },
+			Self::Avif => ImageAvif::MAX_QUALITY,
+			Self::Jxl => ImageJxl::MAX_QUALITY,
 			_ => unsafe { NonZeroU8::new_unchecked(100) },
+		}
+	}
+}
+
+/// ## Decoding.
+impl ImageKind {
+	/// # Decode.
+	///
+	/// Decode a raw image of this kind into RGBA pixels (and width, height,
+	/// and color type).
+	///
+	/// Decoding support for the next-gen formats can be enabled with the
+	/// feature flag `decode_ng`. Otherwise only JPEG and PNG image sources
+	/// can be decoded.
+	///
+	/// ## Errors
+	///
+	/// This will bubble up any decoder errors encountered, including cases
+	/// where decoding is unsupported for the format.
+	pub fn decode(self, raw: &[u8]) -> Result<DecoderResult, RefractError> {
+		use crate::traits::Decoder;
+
+		match self {
+			Self::Jpeg => ImageJpeg::decode(raw),
+			Self::Png => ImagePng::decode(raw),
+
+			#[cfg(feature = "decode_ng")] Self::Avif => ImageAvif::decode(raw),
+			#[cfg(feature = "decode_ng")] Self::Jxl => ImageJxl::decode(raw),
+			#[cfg(feature = "decode_ng")] Self::Webp => ImageWebp::decode(raw),
+			#[cfg(not(feature = "decode_ng"))] _ => Err(RefractError::ImageDecode(self)),
+		}
+	}
+}
+
+/// ## Encoding.
+impl ImageKind {
+	/// # Encode Lossy.
+	///
+	/// Encode pixels into a raw image using lossy compression.
+	///
+	/// ## Errors
+	///
+	/// This will bubble up any encoder errors encountered, including cases
+	/// where encoding is unsupported for the format.
+	pub fn encode_lossy(
+		self,
+		input: &Input,
+		output: &mut Output,
+		quality: NonZeroU8,
+		flags: u8
+	) -> Result<(), RefractError> {
+		use crate::traits::Encoder;
+
+		match self {
+			Self::Avif => ImageAvif::encode_lossy(input, output, quality, flags),
+			Self::Jxl => ImageJxl::encode_lossy(input, output, quality, flags),
+			Self::Webp => ImageWebp::encode_lossy(input, output, quality, flags),
+			_ => Err(RefractError::ImageEncode(self)),
+		}
+	}
+
+	/// # Encode Lossless.
+	///
+	/// Encode pixels into a raw image using lossless compression.
+	///
+	/// ## Errors
+	///
+	/// This will bubble up any encoder errors encountered, including cases
+	/// where encoding is unsupported for the format.
+	pub fn encode_lossless(
+		self,
+		input: &Input,
+		output: &mut Output,
+		flags: u8
+	) -> Result<(), RefractError> {
+		use crate::traits::Encoder;
+
+		match self {
+			Self::Avif => ImageAvif::encode_lossless(input, output, flags),
+			Self::Jxl => ImageJxl::encode_lossless(input, output, flags),
+			Self::Webp => ImageWebp::encode_lossless(input, output, flags),
+			_ => Err(RefractError::ImageEncode(self)),
 		}
 	}
 }

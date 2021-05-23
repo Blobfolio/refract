@@ -28,15 +28,14 @@ This is the library powering [Refract](https://github.com/Blobfolio/refract), a 
 
 
 
-mod dec;
 mod enc;
 mod error;
 mod input;
 mod kind;
+pub(crate) mod traits;
 
 
 
-pub use dec::decode;
 pub use enc::{
 	iter::EncodeIter,
 	output::Output,
@@ -44,11 +43,18 @@ pub use enc::{
 	range::QualityRange,
 };
 pub use error::RefractError;
+pub use input::Input;
 pub use kind::{
 	color::ColorKind,
 	image::ImageKind,
 };
-pub use input::Input;
+pub(crate) use kind::{
+	avif::ImageAvif,
+	jpeg::ImageJpeg,
+	jxl::ImageJxl,
+	png::ImagePng,
+	webp::ImageWebp,
+};
 
 
 

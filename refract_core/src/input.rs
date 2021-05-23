@@ -13,6 +13,7 @@ use std::{
 		Cow,
 	},
 	convert::TryFrom,
+	fmt,
 	num::{
 		NonZeroU32,
 		NonZeroUsize,
@@ -22,7 +23,7 @@ use std::{
 
 
 
-#[derive(Debug)]
+#[derive(Clone)]
 /// # Input Image.
 ///
 /// This struct holds _decoded_ image data, usually but not always, in the form
@@ -71,6 +72,19 @@ impl AsRef<[u8]> for Input<'_> {
 	fn as_ref(&self) -> &[u8] { self }
 }
 
+impl fmt::Debug for Input<'_> {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("Input")
+		.field("width", &self.width)
+		.field("height", &self.height)
+		.field("size", &self.size)
+		.field("color", &self.color)
+		.field("depth", &self.depth)
+		.field("kind", &self.kind)
+		.finish()
+	}
+}
+
 impl Deref for Input<'_> {
 	type Target = [u8];
 
@@ -82,7 +96,8 @@ impl TryFrom<&[u8]> for Input<'_> {
 	type Error = RefractError;
 
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
-		let (buf, width, height, color, kind) = super::decode(src)?;
+		let kind = ImageKind::try_from(src)?;
+		let (buf, width, height, color) = kind.decode(src)?;
 
 		// Make sure the dimensions are in range.
 		let width = u32::try_from(width).ok()

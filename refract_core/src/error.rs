@@ -25,6 +25,7 @@ pub enum RefractError {
 	NothingDoing,
 	Overflow,
 	TooBig,
+	TooDissimilar,
 
 	#[cfg(feature = "bin")]
 	/// # Passthrough menu error.
@@ -91,6 +92,7 @@ impl RefractError {
 			Self::NothingDoing => "There is nothing else to do.",
 			Self::Overflow => "The image dimensions are out of range.",
 			Self::TooBig => "The encoded image was too big.",
+			Self::TooDissimilar => "The DSSIM for the encoded image is too big.",
 
 			#[cfg(feature = "bin")]
 			Self::Menu(e) => e.as_str(),

@@ -16,7 +16,7 @@ use std::{
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// # Output Image.
 ///
 /// This struct holds the raw file data for an encoded image along with

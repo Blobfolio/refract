@@ -9,6 +9,7 @@ use crate::{
 	Input,
 	Output,
 	RefractError,
+	traits::Encoder,
 };
 use libwebp_sys::{
 	WEBP_MAX_DIMENSION,
@@ -30,6 +31,101 @@ use std::{
 	convert::TryFrom,
 	num::NonZeroU8,
 };
+
+#[cfg(feature = "decode_ng")]
+use crate::{
+	ColorKind,
+	traits::{
+		Decoder,
+		DecoderResult,
+	},
+};
+
+
+
+#[allow(unreachable_pub)] // Unsolvable?
+/// # `WebP` Image.
+pub struct ImageWebp;
+
+#[cfg(feature = "decode_ng")]
+impl Decoder for ImageWebp {
+	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
+		let d = LibWebPDecode::try_from(raw)?;
+
+		let width = usize::try_from(d.width).map_err(|_| RefractError::Overflow)?;
+		let height = usize::try_from(d.height).map_err(|_| RefractError::Overflow)?;
+		let size = width.checked_mul(height)
+			.and_then(|x| x.checked_mul(4))
+			.ok_or(RefractError::Overflow)?;
+
+		let buf: Vec<u8> = unsafe { std::slice::from_raw_parts_mut(d.ptr, size) }
+			.to_vec();
+
+		if buf.len() == size {
+			let color = ColorKind::from_rgba(&buf);
+			Ok((buf, width, height, color))
+		}
+		else { Err(RefractError::Decode) }
+	}
+}
+
+impl Encoder for ImageWebp {
+	#[inline]
+	/// # Encode Lossy.
+	fn encode_lossy(input: &Input, output: &mut Output, quality: NonZeroU8, _flags: u8)
+	-> Result<(), RefractError> {
+		encode(input, output, Some(quality))
+	}
+
+	#[inline]
+	/// # Encode Lossless.
+	fn encode_lossless(input: &Input, output: &mut Output, _flags: u8)
+	-> Result<(), RefractError> {
+		encode(input, output, None)
+	}
+}
+
+
+
+#[cfg(feature = "decode_ng")]
+/// # Decode Wrapper.
+///
+/// This exists solely to help with garbage cleanup.
+struct LibWebPDecode {
+	width: i32,
+	height: i32,
+	ptr: *mut u8,
+}
+
+#[cfg(feature = "decode_ng")]
+impl TryFrom<&[u8]> for LibWebPDecode {
+	type Error = RefractError;
+	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
+		use std::os::raw::c_int;
+		use libwebp_sys::WebPDecodeRGBA;
+
+		let mut width: c_int = 0;
+		let mut height: c_int = 0;
+		let result = unsafe {
+			WebPDecodeRGBA(src.as_ptr(), src.len(), &mut width, &mut height)
+		};
+
+		if result.is_null() { Err(RefractError::Decode) }
+		else {
+			Ok(Self {
+				width,
+				height,
+				ptr: result,
+			})
+		}
+	}
+}
+
+#[cfg(feature = "decode_ng")]
+impl Drop for LibWebPDecode {
+	#[inline]
+	fn drop(&mut self) { unsafe { libwebp_sys::WebPFree(self.ptr.cast()); } }
+}
 
 
 
@@ -126,41 +222,6 @@ impl From<&mut WebPPicture> for LibWebpWriter {
 impl Drop for LibWebpWriter {
 	#[inline]
 	fn drop(&mut self) { unsafe { WebPMemoryWriterClear(self.0); } }
-}
-
-
-
-#[inline]
-/// # Make Lossy.
-///
-/// Generate a lossy `WebP` image at a given quality size.
-///
-/// ## Errors
-///
-/// This returns an error in cases where the resulting file size is larger
-/// than the source or previous best, or if there are any problems
-/// encountered during encoding or saving.
-pub(super) fn make_lossy(
-	img: &Input,
-	candidate: &mut Output,
-	quality: NonZeroU8,
-) -> Result<(), RefractError> {
-	encode(img, candidate, Some(quality))
-}
-
-#[inline]
-/// # Make Lossy.
-///
-/// Generate a lossless `WebP`. This is tested for all images, but will usually
-/// only result in savings for PNG sources.
-///
-/// ## Errors
-///
-/// This returns an error in cases where the resulting file size is larger
-/// than the source or previous best, or if there are any problems
-/// encountered during encoding or saving.
-pub(super) fn make_lossless(img: &Input, candidate: &mut Output) -> Result<(), RefractError> {
-	encode(img, candidate, None)
 }
 
 

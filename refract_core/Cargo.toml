@@ -37,4 +37,11 @@ features = [ "1_1", "static" ]
 
 [features]
 default = []
-bin = [ "argyle" ] # Passthrough menu errors.
+
+# This feature is used by the refract binary to add a few error types to the
+# RefractError type. Probably not useful in other contexts.
+bin = [ "argyle" ]
+
+# This feature enables decoding support for the next-gen image formats, i.e.
+# WebP, AVIF, and JPEG XL.
+decode_ng = [ "libavif-sys/codec-dav1d" ]
