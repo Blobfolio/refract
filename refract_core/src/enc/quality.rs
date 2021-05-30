@@ -46,6 +46,10 @@ impl Quality {
 /// ## Getters.
 impl Quality {
 	#[must_use]
+	/// # Is Lossless?
+	pub const fn is_lossless(self) -> bool { matches!(self, Self::Lossless(_)) }
+
+	#[must_use]
 	/// # Kind.
 	///
 	/// This is a pass-through method for returning the output image format
@@ -68,6 +72,18 @@ impl Quality {
 		match self.kind() {
 			ImageKind::Avif => "quantizer",
 			_ => "quality",
+		}
+	}
+
+	#[must_use]
+	/// # Label (Title Case).
+	///
+	/// This is the same as [`Quality::label`] except it is in title case
+	/// rather than lower case.
+	pub const fn label_title(self) -> &'static str {
+		match self.kind() {
+			ImageKind::Avif => "Quantizer",
+			_ => "Quality",
 		}
 	}
 

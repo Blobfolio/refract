@@ -21,18 +21,6 @@ use std::{
 	ops::Deref,
 };
 
-#[cfg(feature = "dssim")]
-use crate::Output;
-
-#[cfg(feature = "dssim")]
-use dssim_core::{
-	Dssim,
-	DssimImage,
-};
-
-#[cfg(feature = "dssim")]
-use std::rc::Rc;
-
 
 
 #[derive(Clone)]
@@ -77,7 +65,6 @@ pub struct Input<'a> {
 	color: ColorKind,
 	depth: ColorKind,
 	kind: ImageKind,
-	#[cfg(feature = "dssim")] dssim: Rc<DssimImage<f32>>,
 }
 
 impl AsRef<[u8]> for Input<'_> {
@@ -112,14 +99,6 @@ impl TryFrom<&[u8]> for Input<'_> {
 		let kind = ImageKind::try_from(src)?;
 		let (buf, width, height, color) = kind.decode(src)?;
 
-		#[cfg(feature = "dssim")]
-		let dssim = {
-			use rgb::FromSlice;
-			let ds = Dssim::new();
-			ds.create_image_rgba(buf.as_slice().as_rgba(), width, height)
-				.ok_or(RefractError::Decode)?
-		};
-
 		// Make sure the dimensions are in range.
 		let width = u32::try_from(width).ok()
 			.and_then(NonZeroU32::new)
@@ -140,7 +119,6 @@ impl TryFrom<&[u8]> for Input<'_> {
 			color,
 			depth: ColorKind::Rgba,
 			kind,
-			#[cfg(feature = "dssim")] dssim: Rc::new(dssim),
 		})
 	}
 }
@@ -223,6 +201,13 @@ impl<'a> Input<'a> {
 
 	#[inline]
 	#[must_use]
+	/// # Take Pixels.
+	///
+	/// Consume the instance, stealing the pixels as an owned buffer.
+	pub fn take_pixels(self) -> Vec<u8> { self.pixels.into_owned() }
+
+	#[inline]
+	#[must_use]
 	/// # Width.
 	pub const fn width(&self) -> usize { self.width.get() as usize }
 }
@@ -244,6 +229,20 @@ impl Input<'_> {
 	/// range.
 	pub fn height_i32(&self) -> Result<i32, RefractError> {
 		i32::try_from(self.height.get()).map_err(|_| RefractError::Overflow)
+	}
+
+	#[inline]
+	/// # Row Size.
+	///
+	/// This is equivalent to `width * bytes-per-pixel`. Depending on the
+	/// underlying storage, "bytes-per-pixel" can be any of `1..=4`.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the result does not fit within the `i32`
+	/// range.
+	pub fn row_size_i32(&self) -> Result<i32, RefractError> {
+		i32::try_from(self.row_size()).map_err(|_| RefractError::Overflow)
 	}
 
 	#[inline]
@@ -283,26 +282,6 @@ impl Input<'_> {
 	/// initialized, the width will always be valid for both `u32` and `usize`
 	/// ranges.
 	pub const fn width_u32(&self) -> u32 { self.width.get() }
-}
-
-#[cfg(feature = "dssim")]
-/// ## DSSIM Wrappers.
-///
-/// These are enabled with the `dssim` crate feature.
-impl Input<'_> {
-	#[must_use]
-	/// # Calculate Output DSSIM.
-	///
-	/// This method takes a reference to an [`Output`] and tries to calculate
-	/// its dissimiliarity from the source (`self`).
-	///
-	/// This may not always work, in which case `None` will be returned.
-	pub fn dssim_output(&self, output: &Output) -> Option<f64> {
-		let other = Self::try_from(output.as_ref()).ok()?;
-		let ds = Dssim::new();
-		let (diff, _) = ds.compare(&self.dssim, &*other.dssim);
-		Some(diff.into())
-	}
 }
 
 /// ## Copying and Mutation.
@@ -370,7 +349,6 @@ impl<'a> Input<'a> {
 			color: self.color,
 			depth,
 			kind: self.kind,
-			#[cfg(feature = "dssim")] dssim: self.dssim.clone(),
 		}
 	}
 
@@ -429,7 +407,6 @@ impl<'a> Input<'a> {
 			color: self.color,
 			depth: ColorKind::Rgba,
 			kind: self.kind,
-			#[cfg(feature = "dssim")] dssim: self.dssim.clone(),
 		}
 	}
 
@@ -448,7 +425,6 @@ impl<'a> Input<'a> {
 			color: self.color,
 			depth: self.depth,
 			kind: self.kind,
-			#[cfg(feature = "dssim")] dssim: self.dssim.clone(),
 		}
 	}
 }

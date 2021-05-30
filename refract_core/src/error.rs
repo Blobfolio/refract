@@ -2,7 +2,7 @@
 # `Refract` - Error
 */
 
-#[cfg(feature = "bin")] use argyle::ArgyleError;
+#[cfg(feature = "cli")] use argyle::ArgyleError;
 use crate::ImageKind;
 use std::{
 	error::Error,
@@ -26,27 +26,33 @@ pub enum RefractError {
 	Overflow,
 	TooBig,
 
-	#[cfg(feature = "dssim")]
-	TooDissimilar,
-
-	#[cfg(feature = "bin")]
+	#[cfg(feature = "cli")]
 	/// # Passthrough menu error.
 	Menu(ArgyleError),
 
-	#[cfg(feature = "bin")]
+	#[cfg(feature = "cli")]
 	NoCompression,
 
-	#[cfg(feature = "bin")]
+	#[cfg(any(feature = "cli", feature = "gtk"))]
 	NoEncoders,
 
-	#[cfg(feature = "bin")]
+	#[cfg(feature = "cli")]
 	NoImages,
 
-	#[cfg(feature = "bin")]
+	#[cfg(any(feature = "cli", feature = "gtk"))]
 	Read,
 
-	#[cfg(feature = "bin")]
+	#[cfg(any(feature = "cli", feature = "gtk"))]
 	Write,
+
+	#[cfg(feature = "gtk")]
+	AlreadyRunning,
+
+	#[cfg(feature = "gtk")]
+	GtkInit,
+
+	#[cfg(feature = "gtk")]
+	MissingSource,
 }
 
 impl Error for RefractError {}
@@ -95,21 +101,32 @@ impl RefractError {
 			Self::Overflow => "The image dimensions are out of range.",
 			Self::TooBig => "The encoded image was too big.",
 
-			#[cfg(feature = "dssim")]
-			Self::TooDissimilar => "The DSSIM for the encoded image is too big.",
-
-			#[cfg(feature = "bin")]
+			#[cfg(feature = "cli")]
 			Self::Menu(e) => e.as_str(),
-			#[cfg(feature = "bin")]
+
+			#[cfg(feature = "cli")]
 			Self::NoCompression => "Lossless and lossy encoding cannot both be disabled.",
-			#[cfg(feature = "bin")]
+
+			#[cfg(any(feature = "cli", feature = "gtk"))]
 			Self::NoEncoders => "At least one encoder must be enabled.",
-			#[cfg(feature = "bin")]
+
+			#[cfg(feature = "cli")]
 			Self::NoImages => "No images were found.",
-			#[cfg(feature = "bin")]
+
+			#[cfg(any(feature = "cli", feature = "gtk"))]
 			Self::Read => "Unable to read the source file.",
-			#[cfg(feature = "bin")]
+
+			#[cfg(any(feature = "cli", feature = "gtk"))]
 			Self::Write => "Unable to save the file.",
+
+			#[cfg(feature = "gtk")]
+			Self::AlreadyRunning => "The encoder is already running.",
+
+			#[cfg(feature = "gtk")]
+			Self::GtkInit => "Failed to initialize GTK.",
+
+			#[cfg(feature = "gtk")]
+			Self::MissingSource => "A source image must be set before a candidate image.",
 		}
 	}
 }

@@ -39,7 +39,10 @@ pub(crate) mod traits;
 pub use enc::{
 	iter::EncodeIter,
 	output::Output,
-	quality::Quality,
+	quality::{
+		Quality,
+		QualityValue,
+	},
 	range::QualityRange,
 };
 pub use error::RefractError;

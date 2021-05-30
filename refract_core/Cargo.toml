@@ -21,10 +21,6 @@ spng = "0.1.0"
 version = "0.4.*"
 optional = true
 
-[dependencies.dssim-core]
-version = "3.1.*"
-optional = true
-
 [dependencies.jpegxl-sys]
 version = "0.3.7"
 default-features = false
@@ -42,13 +38,14 @@ features = [ "1_1", "static" ]
 [features]
 default = []
 
-# This feature is used by the refract binary to add a few error types to the
-# RefractError type. Probably not useful in other contexts.
-bin = [ "argyle" ]
+# This feature is used by the Refract CLI binary and adds a handful of
+# additional error types.
+cli = [ "argyle" ]
+
+# This feature is used by the Refract GTK binary and again, just adds some
+# useful error types.
+gtk = []
 
 # This feature enables decoding support for the next-gen image formats, i.e.
 # WebP, AVIF, and JPEG XL.
 decode_ng = [ "libavif-sys/codec-dav1d" ]
-
-# This feature enables DSSIM support.
-dssim = [ "decode_ng", "dssim-core" ]
