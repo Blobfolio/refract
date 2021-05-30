@@ -3,8 +3,11 @@
 **.deb
 **.gz
 **.jxl
-**.webp
 **/target/
 /Cargo.lock
 /doc/
 /jpegxl-rs
+/refract_gtk/skel/\#refract.glade\#
+/refract_gtk/skel/refract.glade~
+/skel/assets/**.webp
+/skel/png-test-suite/**.webp

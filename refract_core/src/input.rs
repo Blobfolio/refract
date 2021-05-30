@@ -50,7 +50,7 @@ use std::{
 ///
 /// ## Examples
 ///
-/// ```
+/// ```no_run
 /// use refract_core::Input;
 /// use std::convert::TryFrom;
 ///

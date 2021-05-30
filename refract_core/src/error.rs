@@ -30,19 +30,19 @@ pub enum RefractError {
 	/// # Passthrough menu error.
 	Menu(ArgyleError),
 
-	#[cfg(feature = "cli")]
+	#[cfg(feature = "bin")]
 	NoCompression,
 
-	#[cfg(any(feature = "cli", feature = "gtk"))]
+	#[cfg(feature = "bin")]
 	NoEncoders,
 
-	#[cfg(feature = "cli")]
+	#[cfg(feature = "bin")]
 	NoImages,
 
-	#[cfg(any(feature = "cli", feature = "gtk"))]
+	#[cfg(feature = "bin")]
 	Read,
 
-	#[cfg(any(feature = "cli", feature = "gtk"))]
+	#[cfg(feature = "bin")]
 	Write,
 
 	#[cfg(feature = "gtk")]
@@ -53,6 +53,9 @@ pub enum RefractError {
 
 	#[cfg(feature = "gtk")]
 	MissingSource,
+
+	#[cfg(feature = "gtk")]
+	NoSave,
 }
 
 impl Error for RefractError {}
@@ -104,19 +107,19 @@ impl RefractError {
 			#[cfg(feature = "cli")]
 			Self::Menu(e) => e.as_str(),
 
-			#[cfg(feature = "cli")]
+			#[cfg(feature = "bin")]
 			Self::NoCompression => "Lossless and lossy encoding cannot both be disabled.",
 
-			#[cfg(any(feature = "cli", feature = "gtk"))]
+			#[cfg(feature = "bin")]
 			Self::NoEncoders => "At least one encoder must be enabled.",
 
-			#[cfg(feature = "cli")]
+			#[cfg(feature = "bin")]
 			Self::NoImages => "No images were found.",
 
-			#[cfg(any(feature = "cli", feature = "gtk"))]
+			#[cfg(feature = "bin")]
 			Self::Read => "Unable to read the source file.",
 
-			#[cfg(any(feature = "cli", feature = "gtk"))]
+			#[cfg(feature = "bin")]
 			Self::Write => "Unable to save the file.",
 
 			#[cfg(feature = "gtk")]
@@ -127,6 +130,9 @@ impl RefractError {
 
 			#[cfg(feature = "gtk")]
 			Self::MissingSource => "A source image must be set before a candidate image.",
+
+			#[cfg(feature = "gtk")]
+			Self::NoSave => "The result was not saved.",
 		}
 	}
 }

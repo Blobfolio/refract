@@ -19,6 +19,7 @@ pkg_id      := "refract"
 pkg_name    := "Refract"
 pkg_dir1    := justfile_directory() + "/refract"
 pkg_dir2    := justfile_directory() + "/refract_core"
+pkg_dir3    := justfile_directory() + "/refract_gtk"
 
 cargo_dir   := "/tmp/" + pkg_id + "-cargo"
 cargo_bin   := cargo_dir + "/x86_64-unknown-linux-gnu/release/" + pkg_id
@@ -31,16 +32,23 @@ rustflags   := "-C link-arg=-s"
 
 
 # Build Release!
-@build: clean
+@build BIN="refract":
 	RUSTFLAGS="--emit asm {{ rustflags }}" cargo build \
-		--bin "{{ pkg_id }}" \
+		--bin "{{ BIN }}" \
+		-p "{{ BIN }}" \
 		--release \
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
 
 
+# Build Debian packages.
+@build-deb:
+	just build-deb-cli
+	just build-deb-gtk
+
+
 # Build Debian package!
-@build-deb: credits build
+@build-deb-cli: credits clean build
 	# Do completions/man.
 	cargo bashman -m "{{ pkg_dir1 }}/Cargo.toml"
 
@@ -52,6 +60,24 @@ rustflags   := "-C link-arg=-s"
 	cargo-deb \
 		--no-build \
 		-p {{ pkg_id }} \
+		-o "{{ justfile_directory() }}/release"
+
+	just _fix-chown "{{ release_dir }}"
+	mv "{{ justfile_directory() }}/target" "{{ cargo_dir }}"
+
+
+# Build Debian package!
+@build-deb-gtk: clean
+	just build "refract-gtk"
+
+	# cargo-deb doesn't support target_dir flags yet.
+	[ ! -d "{{ justfile_directory() }}/target" ] || rm -rf "{{ justfile_directory() }}/target"
+	mv "{{ cargo_dir }}" "{{ justfile_directory() }}/target"
+
+	# Build the deb.
+	cargo-deb \
+		--no-build \
+		-p refract-gtk \
 		-o "{{ justfile_directory() }}/release"
 
 	just _fix-chown "{{ release_dir }}"
@@ -77,6 +103,7 @@ rustflags   := "-C link-arg=-s"
 	[ ! -d "{{ justfile_directory() }}/target" ] || rm -rf "{{ justfile_directory() }}/target"
 	[ ! -d "{{ pkg_dir1 }}/target" ] || rm -rf "{{ pkg_dir1 }}/target"
 	[ ! -d "{{ pkg_dir2 }}/target" ] || rm -rf "{{ pkg_dir2 }}/target"
+	[ ! -d "{{ pkg_dir3 }}/target" ] || rm -rf "{{ pkg_dir3 }}/target"
 
 
 # Clippy.
@@ -119,30 +146,6 @@ rustflags   := "-C link-arg=-s"
 	exit 0
 
 
-# Frontend.
-@frontend:
-	just _scss "{{ pkg_dir1 }}/skel/scss/main.scss" "{{ pkg_dir1 }}/skel/css/main.css"
-	just _scss "{{ pkg_dir1 }}/skel/scss/pending.scss" "{{ pkg_dir1 }}/skel/css/pending.css"
-	just _terser "{{ pkg_dir1 }}/skel/js/main.js" "{{ pkg_dir1 }}/skel/js/main.min.js"
-
-	# If the CSS or JS change, they'll need to be manually re-copied to the
-	# readable HTML, and then this just recipe will need to be run again to
-	# minify the HTML.
-
-	just _html "{{ pkg_dir1 }}/skel/main.html" "{{ pkg_dir1 }}/skel/main.min.html"
-	just _html "{{ pkg_dir1 }}/skel/pending.html" "{{ pkg_dir1 }}/skel/pending.min.html"
-
-	just _fix-chown "{{ pkg_dir1 }}/skel"
-	just _fix-chmod "{{ pkg_dir1 }}/skel"
-
-
-# Minify HTML.
-@_html IN OUT:
-	cp -a "{{ IN }}" "{{ OUT }}"
-	htminl "{{ OUT }}"
-	sd -s '> <' '><' "{{ OUT }}"
-
-
 # Test Run.
 @run +ARGS:
 	RUSTFLAGS="{{ rustflags }}" cargo run \
@@ -151,17 +154,6 @@ rustflags   := "-C link-arg=-s"
 		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}" \
 		-- {{ ARGS }}
-
-
-# SCSS.
-@_scss IN OUT:
-	sassc --style=compressed "{{ IN }}" "{{ OUT }}"
-	csso -i "{{ OUT }}" -o "{{ OUT }}"
-
-
-# Terser.
-@_terser IN OUT:
-	cat "{{ IN }}" | terser -c -m -o "{{ OUT }}"
 
 
 # Unit tests!
@@ -195,6 +187,7 @@ version:
 	# Set the release version!
 	just _version "{{ pkg_dir1 }}" "$_ver2"
 	just _version "{{ pkg_dir2 }}" "$_ver2"
+	just _version "{{ pkg_dir3 }}" "$_ver2"
 
 
 # Set version for real.
@@ -209,7 +202,9 @@ version:
 
 # Init dependencies.
 @_init:
-	# Nothing here just now.
+	# GTK requirements.
+	apt-get update
+	apt-fast install -y librust-gtk-dev librust-gdk-dev
 
 
 # Fix file/directory permissions.

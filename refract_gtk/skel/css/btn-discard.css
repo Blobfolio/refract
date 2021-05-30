@@ -1,0 +1,15 @@
+button {
+	color: white;
+	background: none;
+	background-color: #e74c3c;
+	font-weight: bold;
+	transition: all .3s ease 0s;
+}
+
+button:hover {
+	background-color: #e67e22;
+}
+
+button:disabled {
+	background-color: #ccc;
+}

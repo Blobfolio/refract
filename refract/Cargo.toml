@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.5.0"
+version = "0.6.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -95,7 +95,7 @@ tag = "v0.7.1"
 
 [dependencies.refract_core]
 path = "../refract_core"
-features = [ "cli" ]
+features = [ "bin", "cli" ]
 
 [dependencies.tempfile-fast]
 git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
