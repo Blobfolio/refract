@@ -163,8 +163,10 @@ impl WindowStatus {
 	}
 
 	/// # Append Done.
+	///
+	/// This happens when an encoding session finishes.
 	fn add_done(&mut self) {
-		self.add_line(r##"<span foreground="#999">That's all, folks!</span>"##);
+		self.add_line(concat!(r##"<span foreground="#999">----</span>"##, "\n", r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Encoding has finished! <span foreground="#999">(That's all, folks!)</span>"##));
 	}
 
 	/// # Append Error.
@@ -175,13 +177,19 @@ impl WindowStatus {
 		let err = err.as_str();
 		if ! err.is_empty() {
 			self.add_line(format!(
-				r##"<span foreground="#e74c3c" weight="bold">Error:</span> {}"##,
+				r##"{} <span foreground="#e74c3c" weight="bold">Error:</span> {}"##,
+				// Try to match the indentation style without making things
+				// too complicated.
+				if self.0.starts_with(' ') { r##"      <span foreground="#00abc0">↱</span>"## }
+				else { r##"  <span foreground="#9b59b6">↱</span>"## },
 				err
 			));
 		}
 	}
 
 	/// # Add Saved.
+	///
+	/// This is used to indicate a new image has been saved.
 	fn add_saved<P>(&mut self, path: P, quality: Quality, old_size: usize, new_size: usize)
 	where P: AsRef<Path> {
 		let path = path.as_ref();
@@ -190,7 +198,7 @@ impl WindowStatus {
 			let per = dactyl::int_div_float(diff, old_size).unwrap_or(0.0);
 
 			self.add_line(format!(
-				r##"<span foreground="#2ecc71" weight="bold">Success:</span> Created <b>{}</b> with {}. <span foreground="#999">(Saved {} bytes, {}.)</span>"##,
+				r##"      <span foreground="#00abc0">↱</span> <span foreground="#2ecc71" weight="bold">Success:</span> Created <b>{}</b> with {}. <span foreground="#999">(Saved {} bytes, {}.)</span>"##,
 				path.to_string_lossy(),
 				quality,
 				NiceU64::from(diff).as_str(),
@@ -206,8 +214,27 @@ impl WindowStatus {
 	where P: AsRef<Path> {
 		let src = src.as_ref();
 		self.add_line(format!(
-			"<span foreground=\"#00abc0\" weight=\"bold\">Source:</span> {}\n<span foreground=\"#999\">-----</span>",
+			r##"  <span foreground="#9b59b6">↱</span> <span foreground="#00abc0" weight="bold">Source:</span> <b>{}</b>."##,
 			src.to_string_lossy(),
+		));
+	}
+
+	/// # Add Start.
+	///
+	/// This triggers when an encoding session starts.
+	fn add_start(&mut self, count: usize, encoders: &[ImageKind]) {
+		if encoders.is_empty() || count == 0 { return; }
+
+		// Format the encoder bit first.
+		let enc_list = crate::l10n::oxford_join(encoders, "and");
+		let images = crate::l10n::inflect(count, "image", "images");
+		let encoders = crate::l10n::inflect(encoders.len(), "encoder", "encoders");
+
+		self.add_line(format!(
+			r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Refracting {} using {}! <span foreground="#999">({}.)</span>"##,
+			images,
+			encoders,
+			enc_list,
 		));
 	}
 
@@ -222,9 +249,12 @@ impl Default for WindowStatus {
 	/// Start the log with the program name and version.
 	fn default() -> Self {
 		Self(String::from(concat!(
+			r##"<span foreground="#999">----</span>"##,
+			"\n",
 			r##"<span foreground="#9b59b6" weight="bold">Refract GTK</span> <span foreground="#ff3596" weight="bold">v"##,
 			env!("CARGO_PKG_VERSION"),
-			"</span>\n<span foreground=\"#999\">Tweak the settings (if you want to), then select an image or directory to encode!</span>",
+			"</span>\n",
+			r##"<span foreground="#999">Tweak the settings (if you want to), then select an image or directory to encode!</span>"##,
 		)))
 	}
 }
@@ -429,6 +459,9 @@ impl Window {
 		let paths: Vec<PathBuf> = self.paths.borrow_mut().split_off(0);
 		let encoders: Box<[ImageKind]> = self.encoders();
 		let flags: u8 = self.encoder_flags();
+
+		// Mention that we're starting.
+		self.log_start(paths.len(), &encoders);
 
 		// Shove the actual work into a separate thread.
 		let tx2 = tx.clone();
@@ -969,6 +1002,12 @@ impl Window {
 	fn log_saved<P>(&self, path: P, quality: Quality, old_size: usize, new_size: usize)
 	where P: AsRef<Path> {
 		self.status.borrow_mut().add_saved(path, quality, old_size, new_size);
+	}
+
+	#[inline]
+	/// # Log start.
+	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
+		self.status.borrow_mut().add_start(count, encoders);
 	}
 
 	#[inline]
