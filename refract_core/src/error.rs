@@ -12,7 +12,7 @@ use std::{
 
 
 #[allow(missing_docs)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # Errors.
 pub enum RefractError {
 	Color,
