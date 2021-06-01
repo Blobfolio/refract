@@ -151,6 +151,7 @@ impl WindowSource {
 /// scrollable `lbl_status` area (so i.e. they aren't missed by the user).
 pub(super) struct WindowStatus(String);
 
+#[allow(clippy::non_ascii_literal)] // We can't do this with r#literals.
 impl WindowStatus {
 	/// # Add Line.
 	fn add_line<S>(&mut self, line: S)
@@ -790,15 +791,24 @@ impl Window {
 		);
 
 		window.set_do_overwrite_confirmation(true);
-		match kind {
-			ImageKind::Avif => { window.set_filter(&self.flt_avif); },
-			ImageKind::Jxl => { window.set_filter(&self.flt_jxl); },
-			ImageKind::Webp => { window.set_filter(&self.flt_webp); },
+		let ext: Extension = match kind {
+			ImageKind::Avif => {
+				window.set_filter(&self.flt_avif);
+				E_AVIF
+			},
+			ImageKind::Jxl => {
+				window.set_filter(&self.flt_jxl);
+				E_JXL
+			},
+			ImageKind::Webp => {
+				window.set_filter(&self.flt_webp);
+				E_WEBP
+			},
 			// It should not be possible to trigger this.
 			_ => {
 				return Err(RefractError::NoSave);
 			},
-		}
+		};
 
 		// Start in the source's directory.
 		if let Some(parent) = path.parent() {
@@ -834,12 +844,7 @@ impl Window {
 		// Make sure the chosen path has an appropriate extension. If not, toss
 		// it onto the end.
 		let mut path = path.unwrap();
-		if ! match kind {
-			ImageKind::Avif => Extension::try_from4(&path).map_or(false, |e| e == E_AVIF),
-			ImageKind::Jxl => Extension::try_from3(&path).map_or(false, |e| e == E_JXL),
-			ImageKind::Webp => Extension::try_from4(&path).map_or(false, |e| e == E_WEBP),
-			_ => unreachable!(),
-		} {
+		if ext != path {
 			path = PathBuf::from(OsStr::from_bytes(&[
 				path.as_os_str().as_bytes(),
 				b".",
