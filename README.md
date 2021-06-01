@@ -117,15 +117,13 @@ The GUI version of Refract helps streamline the process by providing a built-in 
 
 ![Example GTK screen.](https://github.com/Blobfolio/refract/raw/master/skel/gtk.webp)
 
-This version also allows you to specify the output path for any "best" candidates found; you aren't forced to use the `image.jpg.webp`-style naming pattern used by the CLI version.
-
-Other than that, it works pretty much the same way. You can select and encode a single image, or queue up an entire directory tree of images, and it will run through each, one at a time, prompting you for feedback at each step of the way.
-
 ### Usage
 
-The GTK version supports the same settings as the CLI version; they're just listed under the `Settings` menu.
+As with the CLI version, you can load and encode a single source image, or queue up an entire directory to process multiple images en masse.
 
-There are some hot-keys worth mentioning, though:
+Unlike the CLI version, a `Save` prompt is popped whenever a "best" candidate has been found, allowing you to specify any arbitrary output destination.
+
+For keyboard afficionados, the following hot-keys are provided:
 
 | Action | Key(s) |
 | ------ | ------ |
@@ -158,7 +156,7 @@ cargo build \
 
 Image formats are… complicated, and many of the decoders have `build.rs` system dependencies that need to be present on the system when compiling from source, including up-to-date versions of Clang, GCC, NASM, and Ninja. (If you end up needing to install anything else, please open a ticket so I can update this README.)
 
-GTK is also a monster. You're going to need `-dev` packages for ATK, GTK, GDK, Pango, Pixbuf, and probably a few other things. Thankfully many distributions offer meta packages to bundle away the tedium. On Debian Buster, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover it.
+GTK is also a monster. You're going to need `-dev` packages for ATK, Cairo, GDK, GLIB, GTK, Pango, Pixbuf, and probably a few other things. Thankfully many distributions offer meta packages to bundle away the tedium. On Debian Buster, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover it.
 
 
 
