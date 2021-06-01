@@ -60,9 +60,12 @@ use std::{
 
 
 // The extensions we're going to be looking for.
-const E_JPG: Extension = Extension::new3(*b"jpg");
-const E_PNG: Extension = Extension::new3(*b"png");
+const E_AVIF: Extension = Extension::new4(*b"avif");
 const E_JPEG: Extension = Extension::new4(*b"jpeg");
+const E_JPG: Extension = Extension::new3(*b"jpg");
+const E_JXL: Extension = Extension::new3(*b"jxl");
+const E_PNG: Extension = Extension::new3(*b"png");
+const E_WEBP: Extension = Extension::new4(*b"webp");
 
 // State flags.
 const FLAG_LOCK_ENCODING: u8 = 0b0000_0010; // We're in the middle of encoding.
@@ -758,7 +761,10 @@ impl Window {
 			ImageKind::Avif => { window.set_filter(&self.flt_avif); },
 			ImageKind::Jxl => { window.set_filter(&self.flt_jxl); },
 			ImageKind::Webp => { window.set_filter(&self.flt_webp); },
-			_ => {},
+			// It should not be possible to trigger this.
+			_ => {
+				return Err(RefractError::NoSave);
+			},
 		}
 
 		// Start in the source's directory.
@@ -781,19 +787,34 @@ impl Window {
 			].concat()));
 		}
 
-		let res = window.run();
-		if ResponseType::None == res { return Err(RefractError::NoSave); }
-
-		let path: Option<PathBuf> =
-			if ResponseType::Accept == res { window.get_filename() }
-			else { None };
+		// Read the result!
+		let path: Option<PathBuf> = match window.run() {
+			ResponseType::Accept => window.get_filename(),
+			ResponseType::None => { return Err(RefractError::NoSave); },
+			_ => None,
+		};
 
 		// Close the window.
 		window.emit_close();
 		if path.is_none() { return Err(RefractError::NoSave); }
 
+		// Make sure the chosen path has an appropriate extension. If not, toss
+		// it onto the end.
+		let mut path = path.unwrap();
+		if ! match kind {
+			ImageKind::Avif => Extension::try_from4(&path).map_or(false, |e| e == E_AVIF),
+			ImageKind::Jxl => Extension::try_from3(&path).map_or(false, |e| e == E_JXL),
+			ImageKind::Webp => Extension::try_from4(&path).map_or(false, |e| e == E_WEBP),
+			_ => unreachable!(),
+		} {
+			path = PathBuf::from(OsStr::from_bytes(&[
+				path.as_os_str().as_bytes(),
+				b".",
+				kind.extension().as_bytes()
+			].concat()));
+		}
+
 		// Touch the file to set sane default permissions.
-		let path = path.unwrap();
 		if ! path.exists() {
 			std::fs::File::create(&path).map_err(|_| RefractError::Write)?;
 		}
