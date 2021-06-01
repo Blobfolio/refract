@@ -429,12 +429,13 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="btn_keep">
-                        <property name="label" translatable="yes">Keep</property>
+                        <property name="label" translatable="yes">_Keep</property>
                         <property name="name">btn_keep</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
                         <property name="tooltip-text" translatable="yes">If the re-encoded image looks good to you, click this button to hold it as a potential "best".</property>
+                        <property name="use-underline">True</property>
                         <accelerator key="k" signal="clicked"/>
                       </object>
                       <packing>
@@ -446,12 +447,13 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="btn_discard">
-                        <property name="label" translatable="yes">Discard</property>
+                        <property name="label" translatable="yes">_Discard</property>
                         <property name="name">btn_discard</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
                         <property name="tooltip-text" translatable="yes">If the re-encoded image doesn't look good enough, click this button to discard it.</property>
+                        <property name="use-underline">True</property>
                         <accelerator key="d" signal="clicked"/>
                       </object>
                       <packing>
