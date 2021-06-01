@@ -27,7 +27,6 @@
 
 pub(self) mod utility;
 mod source;
-mod browser;
 
 
 use argyle::{
@@ -147,26 +146,14 @@ fn _main() -> Result<(), RefractError> {
 	// Sort the paths to make it easier for people to follow.
 	paths.sort();
 
-	// Save candidate images to a preview web page.
-	if args.switch2(b"-b", b"--browser") {
-		paths.into_iter()
-			.for_each(|p| {
-				if let Some(s) = browser::Source::new(p, flags) {
-					encoders.iter().for_each(|e| s.encode(*e));
-				}
-				println!();
-			});
-	}
-	// Save candidate images to disk.
-	else {
-		paths.into_iter()
-			.for_each(|p| {
-				if let Some(s) = source::Source::new(p, flags) {
-					encoders.iter().for_each(|e| s.encode(*e));
-				}
-				println!();
-			});
-	}
+	// Process the images!
+	paths.into_iter()
+		.for_each(|p| {
+			if let Some(s) = source::Source::new(p, flags) {
+				encoders.iter().for_each(|e| s.encode(*e));
+			}
+			println!();
+		});
 
 	Ok(())
 }
@@ -204,10 +191,6 @@ USAGE:
     refract [FLAGS] [OPTIONS] <PATH(S)>...
 
 FLAGS:
-    -b, --browser       Output an HTML page that can be viewed in a web
-                        browser", "\x1b[91;1m*\x1b[0m", r" to preview encoded images. If omitted, preview
-                        images will be saved directly, allowing you to view
-                        them in the program of your choosing.
     -h, --help          Prints help information.
         --no-avif       Skip AVIF conversion.
         --no-jxl        Skip JPEG XL conversion.
@@ -223,11 +206,6 @@ OPTIONS:
 
 ARGS:
     <PATH(S)>...        One or more images or directories to crawl and crunch.
-
------
-
-", "\x1b[91;1m*\x1b[0mVisit \x1b[34mhttps://blobfolio.com/image-test/\x1b[0m", r" to see which next-generation
- image formats are supported by your web browser.
 "
 	));
 }
