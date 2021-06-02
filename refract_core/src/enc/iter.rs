@@ -1,31 +1,27 @@
 /*!
-# `Refract` - Encoding Iterator
+# `Refract` - Encoding Iterator.
 */
 
-use ahash::RandomState;
 use crate::{
-	Candidate,
 	FLAG_AVIF_RGB,
 	FLAG_AVIF_ROUND_2,
 	FLAG_AVIF_ROUND_3,
-	FLAG_LOSSLESS,
-	FLAG_NO_AVIF_LIMITED,
+	FLAG_NO_AVIF_YCBCR,
 	FLAG_NO_LOSSLESS,
 	FLAG_NO_LOSSY,
-	Image,
+	FLAG_DID_LOSSLESS,
+	ImageKind,
+	Input,
 	Output,
-	OutputKind,
 	PUBLIC_FLAGS,
 	Quality,
+	QualityRange,
 	RefractError,
-	Source,
 };
 use std::{
-	collections::HashSet,
-	convert::TryFrom,
 	num::{
-		NonZeroU64,
 		NonZeroU8,
+		NonZeroUsize,
 	},
 	time::{
 		Duration,
@@ -35,111 +31,160 @@ use std::{
 
 
 
-/// # (Not) Random State.
-///
-/// Using a fixed seed value for `AHashSet` drops a few dependencies and
-/// stops Valgrind from complaining about 64 lingering bytes from the runtime
-/// static that would be used otherwise.
-///
-/// For our purposes, the variability of truly random keys isn't really needed.
-const AHASH_STATE: RandomState = RandomState::with_seeds(13, 19, 23, 71);
-
-
-
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 /// # Encoding Iterator.
 ///
-/// This is a guided encoding "iterator" generated from [`Source::encode`].
+/// This is a guided encoding "iterator" produced by providing an [`Input`]
+/// source and an [`ImageKind`] output kind.
 ///
-/// If the encoder supports lossless encoding, that is attempted first, right
-/// out the gate.
+/// It attempts lossless and/or lossy encoding at varying qualities with each
+/// call to [`EncodeIter::advance`], keeping track of the best candidate found
+/// along the way, if any.
 ///
-/// From there, [`EncodeIter::advance`] can be repeatedly called to produce
-/// candidate images at various encoding qualities, returning a byte slice of
-/// the last encoded image so you can e.g. write it to a file.
+/// Each result should be inspected for Quality Assurance before continuing,
+/// with a call to either [`EncodeIter::keep`] or [`EncodeIter::discard`] if it
+/// looked good or bad respectively.
 ///
-/// Each result should be expected for Quality Assurance before continuing,
-/// with a call to either [`EncodeIter::keep`] if it looked good or
-/// [`EncodeIter::discard`] if it sucked.
+/// Feedback from [`EncodeIter::keep`] and [`EncodeIter::discard`] are factored
+/// into each step, reducing the quality range to step over by roughly half
+/// each time, avoiding pointless busy work.
 ///
-/// Feedback from keep/discard operations is factored into the iterator,
-/// allowing it to adjust the min/max quality boundaries to avoid pointless
-/// operations.
-///
-/// Once the iterator has finished, you can collect the total computation
-/// duration by calling [`EncodeIter::time`] and/or call [`EncodeIter::take`]
-/// to obtain the best candidate image discovered, if any.
+/// Once iteration has finished, the computation time can be collected via
+/// [`EncodeIter::time`] if you're interested, otherwise the instance can be
+/// consumed, returning the "best" [`Output`] by calling [`EncodeIter::take`].
 pub struct EncodeIter<'a> {
-	bottom: NonZeroU8,
-	top: NonZeroU8,
-	tried: HashSet<NonZeroU8, RandomState>,
+	src: Input<'a>,
+	best: Output,
+	candidate: Output,
 
-	src: Image<'a>,
-	size: NonZeroU64,
-	kind: OutputKind,
-
-	best: Option<Output>,
-	candidate: Candidate,
-
+	steps: QualityRange,
 	time: Duration,
 	flags: u8,
 }
 
+/// ## Instantiation.
 impl<'a> EncodeIter<'a> {
-	#[must_use]
 	/// # New.
 	///
-	/// Start a new iterator with a given source and output format.
-	pub(crate) fn new(src: &'a Source<'a>, kind: OutputKind, mut flags: u8) -> Self {
-		let (bottom, top) = kind.quality_range();
+	/// Start a new iterator given a source and output format.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if the output format does not support
+	/// encoding.
+	pub fn new(
+		src: &'a Input<'a>,
+		kind: ImageKind,
+		mut flags: u8,
+	) -> Result<Self, RefractError> {
+		if ! kind.can_encode() {
+			return Err(RefractError::ImageEncode(kind));
+		}
 
 		// Sanitize the flags.
 		flags &= PUBLIC_FLAGS;
-		if kind == OutputKind::Avif { flags |= FLAG_AVIF_RGB;  }
+		if kind == ImageKind::Avif { flags |= FLAG_AVIF_RGB;  }
 		else {
 			// This only applies to AVIF.
-			flags &= ! FLAG_NO_AVIF_LIMITED;
+			flags &= ! FLAG_NO_AVIF_YCBCR;
 		}
 
-		let mut out = Self {
-			bottom,
-			top,
-			tried: HashSet::with_hasher(AHASH_STATE),
-
+		Ok(Self {
 			src: match kind {
-				// JPEG XL takes a compacted source.
-				OutputKind::Jxl => src.img_compact(),
-				// AVIF and WebP work from full buffers.
-				OutputKind::Avif | OutputKind::Webp => src.img(),
+				// JPEG XL takes a compacted buffer.
+				ImageKind::Jxl => src.as_native(),
+				// Everybody else works from full RGBA.
+				_ => src.as_rgba(),
 			},
-			size: src.size(),
-			kind,
+			best: Output::new(kind),
+			candidate: Output::new(kind),
 
-			best: None,
-			candidate: Candidate::new(kind),
-
+			steps: QualityRange::from(kind),
 			time: Duration::from_secs(0),
-			flags
-		};
-
-		// Try lossless compression.
-		if 0 == out.flags & FLAG_NO_LOSSLESS {
-			let now = Instant::now();
-			out.tried.insert(out.kind.lossless_quality());
-			if out.lossless().is_ok() {
-				out.keep_candidate(true);
-			}
-			out.time += now.elapsed();
-		}
-
-		// We're done!
-		out
+			flags,
+		})
 	}
+}
+
+/// ## Getters.
+impl EncodeIter<'_> {
+	#[inline]
+	#[must_use]
+	/// # Candidate.
+	///
+	/// This returns a reference to the most recent candidate image, if any.
+	pub const fn candidate(&self) -> Option<&Output> {
+		if self.candidate.is_valid() { Some(&self.candidate) }
+		else { None }
+	}
+
+	#[inline]
+	#[must_use]
+	/// # Input Kind.
+	///
+	/// This is a pass-through method for returning the kind of image used as
+	/// the input source.
+	pub const fn input_kind(&self) -> ImageKind { self.src.kind() }
+
+	#[inline]
+	#[must_use]
+	/// # Input Size.
+	///
+	/// This is a pass-through method for returning the original file size of
+	/// the source image.
+	pub const fn input_size(&self) -> usize { self.src.size() }
+
+	#[inline]
+	#[must_use]
+	/// # Output Kind.
+	///
+	/// This returns the output image format.
+	pub const fn output_kind(&self) -> ImageKind { self.candidate.kind() }
+
+	#[inline]
+	#[must_use]
+	/// # Output Size.
+	///
+	/// This returns the size of the current best output image, if any.
+	pub fn output_size(&self) -> Option<NonZeroUsize> { self.best.size() }
+
+	#[allow(clippy::missing_const_for_fn)] // Doesn't work.
+	/// # Take the Best!
+	///
+	/// Consume the iterator and return the best candidate found, if any.
+	///
+	/// ## Errors
+	///
+	/// This will return an error if no best candidate was found.
+	pub fn take(self) -> Result<Output, RefractError> {
+		if self.best.is_valid() { Ok(self.best) }
+		else { Err(RefractError::NoBest(self.output_kind())) }
+	}
+
+	/// # Target Size.
+	///
+	/// This returns the smaller of the input size and best size. Any time a
+	/// new candidate is created, it must be smaller than these two or we'll
+	/// just chuck it in the garbage.
+	fn target_size(&self) -> usize {
+		self.output_size()
+			.map_or_else(|| self.input_size(), |s| s.get().min(self.input_size()))
+	}
+
+	#[inline]
+	#[must_use]
+	/// # Computation Time.
+	///
+	/// This method returns the total amount of time spent encoding the image,
+	/// including lossless and lossy modes.
+	///
+	/// It makes for interesting data…
+	pub const fn time(&self) -> Duration { self.time }
 }
 
 /// ## Encoding.
 impl EncodeIter<'_> {
-	/// # Lossless encoding.
+	/// # Lossless Encoding.
 	///
 	/// Attempt to losslessly encode the image.
 	///
@@ -149,73 +194,32 @@ impl EncodeIter<'_> {
 	/// encoding, if there are errors during encoding, or if the resulting
 	/// file offers no savings over the original.
 	fn lossless(&mut self) -> Result<(), RefractError> {
-		self.candidate.set_quality(None);
+		self.set_candidate_quality(None);
 
-		match self.kind {
-			OutputKind::Avif =>
-				// Lossless compression isn't possible for greyscale images.
-				if self.src.color_kind().is_greyscale() {
-					Err(RefractError::NothingDoing)
-				}
-				// Lossless AVIF encoding works exactly the same as lossy
-				// encoding, it just uses maximum quality.
-				else {
-					super::avif::make_lossy(
-						&self.src,
-						&mut self.candidate,
-						self.kind.lossless_quality(),
-						self.flags,
-					)
-				},
-			OutputKind::Jxl => super::jxl::make_lossless(&self.src, &mut self.candidate),
-			OutputKind::Webp => super::webp::make_lossless(&self.src, &mut self.candidate),
-		}?;
+		let kind = self.output_kind();
+		kind.encode_lossless(&self.src, &mut self.candidate, self.flags)?;
 
-		self.candidate.verify(self.size)?;
-
-		Ok(())
+		self.finish_candidate()
 	}
 
-	/// # Lossy encoding.
+	/// # Lossy Encoding.
 	///
 	/// Attempt to lossily encode the image at the given quality setting.
-	///
-	/// The `main` parameter is used to differentiate between normal operations
-	/// when `true` (i.e. [`EncodeIter::next`]) and the special final pass used
-	/// by AVIF when `false`.
 	///
 	/// ## Errors
 	///
 	/// This bubbles up encoding-related errors, and will also return an error
 	/// if the resulting file offers no savings over the current best.
 	fn lossy(&mut self, quality: NonZeroU8, flags: u8) -> Result<(), RefractError> {
-		self.candidate.set_quality(Some(quality));
+		self.set_candidate_quality(Some(quality));
 
-		// No tiling is done as a final pass at the end; it only applies to
-		// AVIF sessions.
-		let normal = 0 == flags & FLAG_AVIF_ROUND_3;
+		let kind = self.output_kind();
+		if (0 == flags & FLAG_AVIF_ROUND_3) || kind == ImageKind::Avif {
+			kind.encode_lossy(&self.src, &mut self.candidate, quality, flags)?;
+		}
+		else { return Err(RefractError::NothingDoing); }
 
-		match self.kind {
-			OutputKind::Avif => super::avif::make_lossy(
-				&self.src,
-				&mut self.candidate,
-				quality,
-				flags,
-			),
-			OutputKind::Jxl if normal => super::jxl::make_lossy(
-				&self.src,
-				&mut self.candidate,
-				quality,
-			),
-			OutputKind::Webp if normal => super::webp::make_lossy(
-				&self.src,
-				&mut self.candidate,
-				quality,
-			),
-			_ => Err(RefractError::NothingDoing),
-		}?;
-
-		self.candidate.verify(self.size)
+		self.finish_candidate()
 	}
 }
 
@@ -223,12 +227,14 @@ impl EncodeIter<'_> {
 impl EncodeIter<'_> {
 	/// # Crunch the Next Quality!
 	///
-	/// This method will attempt to re-encode the source using the next
-	/// quality. If successful, it will return a byte slice of the raw image
-	/// file.
+	/// This is the tick method for the "iterator". Each call to it will
+	/// work to produce a new candidate image at a new quality, returning a
+	/// reference to it if successful, or `None` once it has finished.
 	///
-	/// Once all qualities have been tested, this will return `None`.
-	pub fn advance(&mut self) -> Option<(&[u8], Quality)> {
+	/// Unlike standard Rust iterators, this is meant to take feedback between
+	/// runs. See [`EncodeIter::discard`] and [`EncodeIter::keep`] for more
+	/// information.
+	pub fn advance(&mut self) -> Option<&Output> {
 		// Start a timer.
 		let now = Instant::now();
 
@@ -239,48 +245,48 @@ impl EncodeIter<'_> {
 		self.time += now.elapsed();
 
 		// Return the result!
-		if res.is_some() { self.candidate().zip(self.candidate_quality()) }
+		if res.is_some() { self.candidate() }
 		else { None }
 	}
 
+	#[inline]
 	/// # Discard Candidate.
 	///
-	/// Use this method to reject a given candidate because e.g. it didn't look
-	/// good enough. This will in turn raise the floor of the range so that the
-	/// next iteration will test a higher quality.
+	/// Use this method to reject the last candidate because e.g. it looked
+	/// terrible.
+	///
+	/// This will in turn raise the floor of the range so that the next
+	/// iteration will test a higher quality.
 	pub fn discard(&mut self) {
-		self.set_bottom(self.candidate.quality());
+		self.steps.set_bottom(self.candidate.quality().raw());
 	}
 
 	/// # Keep Candidate.
 	///
-	/// Use this method to store a given candidate as the current best. This
-	/// will lower the ceiling of the range so that the next iteration will
-	/// test a lower quality.
+	/// Use this method to store the last candidate as the current best.
+	///
+	/// This will lower the ceiling of the range so that the next iteration
+	/// will test a lower quality.
 	pub fn keep(&mut self) {
-		self.set_top(self.candidate.quality());
-		self.keep_candidate(false);
+		self.steps.set_top(self.candidate.quality().raw());
+		self.keep_candidate();
+	}
+
+	#[inline]
+	/// # Finish Writing Candidate.
+	///
+	/// This is a convenience method for validating a newly-generated
+	/// candidate after lossy or lossless encoding.
+	fn finish_candidate(&mut self) -> Result<(), RefractError> {
+		self.candidate.finish(self.target_size())
 	}
 
 	/// # Keep Candidate.
-	fn keep_candidate(&mut self, lossless: bool) {
-		let mut flags = self.flags;
-		if lossless { flags |= FLAG_LOSSLESS; }
-
-		if self.candidate.is_verified() {
-			// Replace the existing best.
-			if let Some(ref mut output) = self.best {
-				if output.update(&self.candidate).is_ok() {
-					self.size = output.size();
-					output.set_flags(flags);
-				}
-			}
-			// Insert a first best.
-			else if let Ok(mut output) = Output::try_from(&self.candidate) {
-				output.set_flags(flags);
-				self.size = output.size();
-				self.best.replace(output);
-			}
+	///
+	/// This internal method does the actual keeping.
+	fn keep_candidate(&mut self) {
+		if self.candidate.is_valid() {
+			self.candidate.copy_to(&mut self.best);
 		}
 	}
 
@@ -288,10 +294,11 @@ impl EncodeIter<'_> {
 	///
 	/// `AVIF` is complicated, even by next-gen image standards. Haha. Unlike
 	/// `WebP` and `JPEG XL`, we need to test `AVIF` encoding in three rounds:
-	/// once using full-range RGB, once using limited-range RGB, and one final
-	/// (single) re-encoding of the best found with tiling disabled.
+	/// once using full-range `RGB`, once using limited-range `YCbCr`, and one
+	/// final (single) re-encoding of the best candidate with tiling disabled.
 	fn next_avif(&mut self) -> Option<()> {
-		if self.kind != OutputKind::Avif { return None; }
+		let kind = self.output_kind();
+		if kind != ImageKind::Avif { return None; }
 
 		// The second round is a partial reboot, retrying encoding with
 		// limited YCbCr range. If we haven't done that yet, let's do it
@@ -302,15 +309,13 @@ impl EncodeIter<'_> {
 			// Reset the range and remove the RGB flag so that it can
 			// start again (using the existing best as the size cap) in
 			// limited-range mode.
-			if 0 == self.flags & FLAG_NO_AVIF_LIMITED {
-				let (bottom, top) = self.kind.quality_range();
-				self.bottom = bottom;
-				self.top = top;
-				self.tried.clear();
+			if 0 == self.flags & FLAG_NO_AVIF_YCBCR {
+				self.steps.reboot(kind.min_encoder_quality(), kind.max_encoder_quality());
 				self.flags &= ! FLAG_AVIF_RGB;
 
-				// Recurse to pull the next result.
-				return self.next_inner();
+				// Recurse to pull the next result. If there isn't one, we can
+				// continue onto step three.
+				if self.next_inner().is_some() { return Some(()); }
 			}
 		}
 
@@ -323,11 +328,11 @@ impl EncodeIter<'_> {
 		if 0 == self.flags & FLAG_AVIF_ROUND_3 {
 			self.flags |= FLAG_AVIF_ROUND_3;
 
-			if let Some(best) = self.best.as_ref() {
-				let quality = best.quality();
-				let flags = best.flags() | FLAG_AVIF_ROUND_3;
+			if self.best.is_valid() {
+				let quality = self.best.quality().raw();
+				let flags = self.best.flags() | FLAG_AVIF_ROUND_3;
 				self.lossy(quality, flags).ok()?;
-				self.keep_candidate(false);
+				self.keep_candidate();
 			}
 		}
 
@@ -337,143 +342,47 @@ impl EncodeIter<'_> {
 	#[inline]
 	/// # (True) Next.
 	///
-	/// This is the actual worker method for [`EncodeIter::next`]. It is
+	/// This is the actual worker method for [`EncodeIter::advance`]. It is
 	/// offloaded to a separate function to make it easier to track execution
 	/// time.
 	fn next_inner(&mut self) -> Option<()> {
-		let quality = self.next_quality()?;
-		match self.lossy(quality, self.flags) {
-			Ok(_) => Some(()),
-			Err(RefractError::TooBig) => {
-				// Recurse to see if the next-next quality works out OK.
-				self.set_top_minus_one(quality);
-				self.next_inner()
-			},
-			Err(_) => None,
-		}
-	}
-
-	/// # Next Quality.
-	///
-	/// This will choose an untested quality from the moving range, preferring
-	/// a value somewhere in the middle.
-	fn next_quality(&mut self) -> Option<NonZeroU8> {
-		debug_assert!(self.bottom <= self.top);
-
-		// Lossy encoding is disabled.
-		if FLAG_NO_LOSSY == self.flags & FLAG_NO_LOSSY { return None; }
-
-		let min = self.bottom.get();
-		let max = self.top.get();
-		let mut diff = max - min;
-
-		// If the difference is greater than one, try a value near the middle.
-		if diff > 1 {
-			diff = num_integer::div_floor(diff, 2);
-		}
-
-		// See if this is new! We can't exceed u8::MAX here, so unsafe is fine.
-		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
-		if self.tried.insert(next) {
-			return Some(next);
-		}
-
-		// If the above didn't work, let's see if there are any untested values
-		// left and just run with the first.
-		for i in min..=max {
-			// Again, we can't exceed u8::MAX here, so unsafe is fine.
-			let next = unsafe { NonZeroU8::new_unchecked(i) };
-			if self.tried.insert(next) {
-				return Some(next);
+		// Before we try lossy, we might lossless to do.
+		if 0 == self.flags & FLAG_DID_LOSSLESS {
+			self.flags |= FLAG_DID_LOSSLESS;
+			if 0 == self.flags & FLAG_NO_LOSSLESS {
+				self.steps.ignore(self.steps.top());
+				if self.lossless().is_ok() {
+					self.keep_candidate();
+				}
 			}
 		}
 
-		// Looks like we're done!
-		None
-	}
-
-	/// # Set Bottom.
-	///
-	/// Raise the range's floor because e.g. the image tested at this quality
-	/// was not good enough (no point going lower).
-	///
-	/// This cannot go backwards or drop below the lower end of the range.
-	/// Rather than panic, stupid values will be clamped accordingly.
-	fn set_bottom(&mut self, quality: NonZeroU8) {
-		self.bottom = quality
-			.max(self.bottom)
-			.min(self.top);
-	}
-
-	/// # Set Top.
-	///
-	/// Lower the range's ceiling because e.g. the image tested at this quality
-	/// was fine (no point going higher).
-	///
-	/// This cannot go backwards or drop below the lower end of the range.
-	/// Rather than panic, stupid values will be clamped accordingly.
-	fn set_top(&mut self, quality: NonZeroU8) {
-		self.top = quality
-			.min(self.top)
-			.max(self.bottom);
-	}
-
-	/// # Set Top Minus One.
-	///
-	/// Loewr the range's ceiling to the provided quality minus one because
-	/// e.g. the image tested at this quality came out too big.
-	///
-	/// The same could be achieved via [`EncodeIter::set_top`], but saves the
-	/// wrapping maths.
-	fn set_top_minus_one(&mut self, quality: NonZeroU8) {
-		// We can't go lower than one. Short-circuit the process by setting
-		// min and max to one. The iter will return `None` on the next run.
-		if quality == unsafe { NonZeroU8::new_unchecked(1) } {
-			self.top = self.bottom;
+		// Okay, now lossy.
+		if 0 == self.flags & FLAG_NO_LOSSY {
+			let quality = self.steps.next()?;
+			match self.lossy(quality, self.flags) {
+				Ok(_) => Some(()),
+				Err(RefractError::TooBig) => {
+					// This was too big, so drop a step and see if the
+					// next-next quality works out.
+					self.steps.set_top_minus_one(quality);
+					self.next_inner()
+				},
+				Err(_) => None,
+			}
 		}
-		else {
-			// We've already checked quality is bigger than one, so minus one
-			// will fit just fine.
-			self.set_top(unsafe { NonZeroU8::new_unchecked(quality.get() - 1) });
-		}
-	}
-}
-
-/// ## Getters.
-impl EncodeIter<'_> {
-	#[must_use]
-	/// # Candidate Slice.
-	///
-	/// Get the candidate as a slice.
-	pub fn candidate(&self) -> Option<&[u8]> { self.candidate.as_slice().ok() }
-
-	#[must_use]
-	/// # Candidate Quality.
-	///
-	/// Get the candidate quality, normalized.
-	pub fn candidate_quality(&self) -> Option<Quality> {
-		self.candidate.nice_quality()
+		else { None }
 	}
 
-	#[must_use]
-	/// # Computation Time.
+	#[inline]
+	/// # Set Candidate Quality.
 	///
-	/// This method returns the total amount of time spent encoding the image,
-	/// including lossless and lossy modes.
-	///
-	/// It makes for interesting data…
-	pub const fn time(&self) -> Duration { self.time }
-
-	/// # Take It.
-	///
-	/// Consume the iterator and return the best candidate found, if any. This
-	/// should be called after iteration has finished, unless you don't
-	/// actually care about the results.
-	///
-	/// ## Errors
-	///
-	/// This will return an error if no best candidate was found.
-	pub fn take(self) -> Result<Output, RefractError> {
-		self.best.ok_or(RefractError::NoBest(self.kind))
+	/// This is a convenience method for populating the candidate quality for
+	/// each new lossy or lossless run.
+	fn set_candidate_quality(&mut self, quality: Option<NonZeroU8>) {
+		self.candidate.set_quality(
+			Quality::new(self.output_kind(), quality),
+			self.flags,
+		);
 	}
 }

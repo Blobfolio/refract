@@ -2,8 +2,8 @@
 # `Refract` - Error
 */
 
-#[cfg(feature = "menu")] use argyle::ArgyleError;
-use crate::OutputKind;
+#[cfg(feature = "cli")] use argyle::ArgyleError;
+use crate::ImageKind;
 use std::{
 	error::Error,
 	fmt,
@@ -12,26 +12,50 @@ use std::{
 
 
 #[allow(missing_docs)]
-#[derive(Debug, Copy, Clone)]
-/// # Error.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+/// # Errors.
 pub enum RefractError {
 	Color,
+	Decode,
 	Encode,
-	NoBest(OutputKind),
-	NoEncoders,
-	NoImages,
-	NoLosslessLossy,
+	Image,
+	ImageDecode(ImageKind),
+	ImageEncode(ImageKind),
+	NoBest(ImageKind),
 	NothingDoing,
-	Output,
 	Overflow,
-	Read,
-	Source,
 	TooBig,
-	Write,
 
-	#[cfg(feature = "menu")]
+	#[cfg(feature = "cli")]
 	/// # Passthrough menu error.
 	Menu(ArgyleError),
+
+	#[cfg(feature = "bin")]
+	NoCompression,
+
+	#[cfg(feature = "bin")]
+	NoEncoders,
+
+	#[cfg(feature = "bin")]
+	NoImages,
+
+	#[cfg(feature = "bin")]
+	Read,
+
+	#[cfg(feature = "bin")]
+	Write,
+
+	#[cfg(feature = "gtk")]
+	AlreadyRunning,
+
+	#[cfg(feature = "gtk")]
+	GtkInit,
+
+	#[cfg(feature = "gtk")]
+	MissingSource,
+
+	#[cfg(feature = "gtk")]
+	NoSave,
 }
 
 impl Error for RefractError {}
@@ -56,25 +80,59 @@ impl RefractError {
 	pub const fn as_str(self) -> &'static str {
 		match self {
 			Self::Color => "Unsupported color encoding.",
-			Self::Encode => "Unable to encode the image.",
-			Self::NoBest(k) => match k {
-				OutputKind::Avif => "No acceptable AVIF candidate was found.",
-				OutputKind::Jxl => "No acceptable JPEG XL candidate was found.",
-				OutputKind::Webp => "No acceptable WebP candidate was found.",
+			Self::Decode => "The image could not be decoded.",
+			Self::Encode => "The image could not be encoded.",
+			Self::Image => "Invalid image.",
+			Self::ImageDecode(k) => match k {
+				ImageKind::Avif => "Refract cannot decode AVIF images.",
+				ImageKind::Jxl => "Refract cannot decode JPEG XL images.",
+				ImageKind::Webp => "Refract cannot decode WebP images.",
+				_ => "",
 			},
-			Self::NoEncoders => "No encoders were selected.",
-			Self::NoImages => "No images were found.",
-			Self::NoLosslessLossy => "Lossless and lossy cannot both be disabled. Haha.",
+			Self::ImageEncode(k) => match k {
+				ImageKind::Jpeg => "Refract cannot encode JPEG files.",
+				ImageKind::Png => "Refract cannot encode PNG files.",
+				_ => "",
+			},
+			Self::NoBest(k) => match k {
+				ImageKind::Avif => "No acceptable AVIF candidate was found.",
+				ImageKind::Jxl => "No acceptable JPEG XL candidate was found.",
+				ImageKind::Webp => "No acceptable WebP candidate was found.",
+				_ => "",
+			},
 			Self::NothingDoing => "There is nothing else to do.",
-			Self::Output => "Invalid output format.",
-			Self::Overflow => "The numeric value is out of range.",
-			Self::Read => "Unable to read the source file.",
-			Self::Source => "Invalid source image.",
+			Self::Overflow => "The image dimensions are out of range.",
 			Self::TooBig => "The encoded image was too big.",
+
+			#[cfg(feature = "cli")]
+			Self::Menu(e) => e.as_str(),
+
+			#[cfg(feature = "bin")]
+			Self::NoCompression => "Lossless and lossy encoding cannot both be disabled.",
+
+			#[cfg(feature = "bin")]
+			Self::NoEncoders => "At least one encoder must be enabled.",
+
+			#[cfg(feature = "bin")]
+			Self::NoImages => "No images were found.",
+
+			#[cfg(feature = "bin")]
+			Self::Read => "Unable to read the source file.",
+
+			#[cfg(feature = "bin")]
 			Self::Write => "Unable to save the file.",
 
-			#[cfg(feature = "menu")]
-			Self::Menu(e) => e.as_str(),
+			#[cfg(feature = "gtk")]
+			Self::AlreadyRunning => "The encoder is already running.",
+
+			#[cfg(feature = "gtk")]
+			Self::GtkInit => "Failed to initialize GTK.",
+
+			#[cfg(feature = "gtk")]
+			Self::MissingSource => "A source image must be set before a candidate image.",
+
+			#[cfg(feature = "gtk")]
+			Self::NoSave => "The result was not saved.",
 		}
 	}
 }

@@ -25,9 +25,8 @@
 #![allow(clippy::module_name_repetitions)]
 
 
-pub(self) mod cli;
-mod image;
-mod viewer;
+pub(self) mod utility;
+mod source;
 
 
 use argyle::{
@@ -37,14 +36,12 @@ use argyle::{
 	FLAG_REQUIRED,
 	FLAG_VERSION,
 };
-use image::ImageCli;
 use refract_core::{
-	FLAG_NO_AVIF_LIMITED,
+	FLAG_NO_AVIF_YCBCR,
 	FLAG_NO_LOSSLESS,
 	FLAG_NO_LOSSY,
-	OutputKind,
+	ImageKind,
 	RefractError,
-	Source,
 };
 use dowser::{
 	Dowser,
@@ -57,7 +54,6 @@ use std::{
 	os::unix::ffi::OsStrExt,
 	path::PathBuf,
 };
-use viewer::Viewer;
 
 
 
@@ -108,24 +104,28 @@ fn _main() -> Result<(), RefractError> {
 		(FLAG_NO_LOSSY == flags & FLAG_NO_LOSSY) &&
 		(FLAG_NO_LOSSLESS == flags & FLAG_NO_LOSSLESS)
 	{
-		return Err(RefractError::NoLosslessLossy);
+		return Err(RefractError::NoCompression);
 	}
 
 	// Figure out which types we're dealing with.
-	let mut encoders: Vec<OutputKind> = Vec::with_capacity(2);
-	if ! args.switch(b"--no-webp") {
-		encoders.push(OutputKind::Webp);
-	}
-	if ! args.switch(b"--no-avif") {
-		encoders.push(OutputKind::Avif);
-
-		if args.switch(b"--skip-ycbcr") {
-			flags |= FLAG_NO_AVIF_LIMITED;
+	let encoders: Box<[ImageKind]> = {
+		let mut encoders: Vec<ImageKind> = Vec::with_capacity(3);
+		if ! args.switch(b"--no-webp") {
+			encoders.push(ImageKind::Webp);
 		}
-	}
-	if ! args.switch(b"--no-jxl") {
-		encoders.push(OutputKind::Jxl);
-	}
+		if ! args.switch(b"--no-avif") {
+			encoders.push(ImageKind::Avif);
+
+			// Deal with the AVIF-specific flag while we're here.
+			if args.switch(b"--skip-ycbcr") {
+				flags |= FLAG_NO_AVIF_YCBCR;
+			}
+		}
+		if ! args.switch(b"--no-jxl") {
+			encoders.push(ImageKind::Jxl);
+		}
+		encoders.into_boxed_slice()
+	};
 
 	if encoders.is_empty() {
 		return Err(RefractError::NoEncoders);
@@ -146,37 +146,14 @@ fn _main() -> Result<(), RefractError> {
 	// Sort the paths to make it easier for people to follow.
 	paths.sort();
 
-	// Run through the set to see what gets created!
-	if args.switch2(b"-b", b"--browser") {
-		paths.into_iter()
-			.for_each(|x| {
-				cli::print_header_path(&x);
-
-				match Viewer::new(x, flags) {
-					Ok(viewer) => encoders.iter()
-						.for_each(|&e| viewer.encode(e)),
-					Err(e) => Msg::error(e.as_str()).print(),
-				}
-
-				println!();
-			});
-
-	}
-	else {
-		paths.into_iter()
-			.for_each(|x| {
-				cli::print_header_path(&x);
-
-				match Source::try_from(x) {
-					Ok(img) => encoders.iter()
-						.map(|&e| ImageCli::new(&img, e, flags))
-						.for_each(ImageCli::encode),
-					Err(e) => Msg::error(e.as_str()).print(),
-				}
-
-				println!();
-			});
-	}
+	// Process the images!
+	paths.into_iter()
+		.for_each(|p| {
+			if let Some(s) = source::Source::new(p, flags) {
+				encoders.iter().for_each(|e| s.encode(*e));
+			}
+			println!();
+		});
 
 	Ok(())
 }
@@ -214,10 +191,6 @@ USAGE:
     refract [FLAGS] [OPTIONS] <PATH(S)>...
 
 FLAGS:
-    -b, --browser       Output an HTML page that can be viewed in a web
-                        browser", "\x1b[91;1m*\x1b[0m", r" to preview encoded images. If omitted, preview
-                        images will be saved directly, allowing you to view
-                        them in the program of your choosing.
     -h, --help          Prints help information.
         --no-avif       Skip AVIF conversion.
         --no-jxl        Skip JPEG XL conversion.
@@ -233,11 +206,6 @@ OPTIONS:
 
 ARGS:
     <PATH(S)>...        One or more images or directories to crawl and crunch.
-
------
-
-", "\x1b[91;1m*\x1b[0mVisit \x1b[34mhttps://blobfolio.com/image-test/\x1b[0m", r" to see which next-generation
- image formats are supported by your web browser.
 "
 	));
 }

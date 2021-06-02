@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "0.5.0"
+version = "0.6.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -37,4 +37,18 @@ features = [ "1_1", "static" ]
 
 [features]
 default = []
-menu = [ "argyle" ] # Passthrough menu errors.
+
+# This feature adds a few generic RefractError types for binaries. It is used
+# by both the CLI and GTK builds.
+bin = []
+
+# This feature adds a RefractError wrapper for ArgyleError.
+cli = [ "argyle" ]
+
+# This feature is used by the Refract GTK binary and again, just adds some
+# useful error types.
+gtk = []
+
+# This feature enables decoding support for the next-gen image formats, i.e.
+# WebP, AVIF, and JPEG XL.
+decode_ng = [ "libavif-sys/codec-dav1d" ]

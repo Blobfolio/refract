@@ -5,8 +5,8 @@ License details for project dependencies are listed below.
 ## Overview of Licenses:
 
 * Apache License 2.0 (7)
-* MIT License (7)
-* BSD 2-Clause &quot;Simplified&quot; License (2)
+* MIT License (6)
+* BSD 2-Clause &quot;Simplified&quot; License (3)
 * BSD 3-Clause &quot;New&quot; or &quot;Revised&quot; License (1)
 * GNU General Public License v3.0 only (1)
 * Do What The F*ck You Want To Public License (1)
@@ -18,22 +18,21 @@ License details for project dependencies are listed below.
 
 **Used By:**
 
-* [ahash 0.7.2](https://github.com/tkaitchuck/ahash)
+* [ahash 0.7.4](https://github.com/tkaitchuck/ahash)
 * [arrayvec 0.5.2](https://github.com/bluss/arrayvec)
-* [base64 0.13.0](https://github.com/marshallpierce/rust-base64)
 * [bitflags 1.2.1](https://github.com/bitflags/bitflags)
 * [bitstream-io 1.0.0](https://github.com/tuffy/bitstream-io)
 * [cfg-if 0.1.10](https://github.com/alexcrichton/cfg-if)
 * [cfg-if 1.0.0](https://github.com/alexcrichton/cfg-if)
 * [crossbeam-channel 0.5.1](https://github.com/crossbeam-rs/crossbeam)
 * [crossbeam-deque 0.8.0](https://github.com/crossbeam-rs/crossbeam)
-* [crossbeam-epoch 0.9.4](https://github.com/crossbeam-rs/crossbeam)
-* [crossbeam-utils 0.8.4](https://github.com/crossbeam-rs/crossbeam)
+* [crossbeam-epoch 0.9.5](https://github.com/crossbeam-rs/crossbeam)
+* [crossbeam-utils 0.8.5](https://github.com/crossbeam-rs/crossbeam)
 * [either 1.6.1](https://github.com/bluss/either)
 * [itertools 0.10.0](https://github.com/bluss/rust-itertools)
 * [jpeg-decoder 0.1.22](https://github.com/image-rs/jpeg-decoder)
 * [lazy_static 1.4.0](https://github.com/rust-lang-nursery/lazy-static.rs)
-* [libc 0.2.94](https://github.com/rust-lang/libc)
+* [libc 0.2.95](https://github.com/rust-lang/libc)
 * [libz-sys 1.1.3](https://github.com/rust-lang/libz-sys)
 * [num-derive 0.3.3](https://github.com/rust-num/num-derive)
 * [num-integer 0.1.44](https://github.com/rust-num/num-integer)
@@ -41,15 +40,15 @@ License details for project dependencies are listed below.
 * [num_cpus 1.13.0](https://github.com/seanmonstar/num_cpus)
 * [once_cell 1.7.2](https://github.com/matklad/once_cell)
 * [paste 1.0.5](https://github.com/dtolnay/paste)
-* [proc-macro2 1.0.26](https://github.com/alexcrichton/proc-macro2)
+* [proc-macro2 1.0.27](https://github.com/alexcrichton/proc-macro2)
 * [quote 1.0.9](https://github.com/dtolnay/quote)
-* [rayon 1.5.0](https://github.com/rayon-rs/rayon)
-* [rayon-core 1.9.0](https://github.com/rayon-rs/rayon)
+* [rayon 1.5.1](https://github.com/rayon-rs/rayon)
+* [rayon-core 1.9.1](https://github.com/rayon-rs/rayon)
 * [scopeguard 1.1.0](https://github.com/bluss/scopeguard)
 * [syn 1.0.72](https://github.com/dtolnay/syn)
 * [tempfile 3.2.0](https://github.com/Stebalien/tempfile)
-* [thiserror 1.0.24](https://github.com/dtolnay/thiserror)
-* [thiserror-impl 1.0.24](https://github.com/dtolnay/thiserror)
+* [thiserror 1.0.25](https://github.com/dtolnay/thiserror)
+* [thiserror-impl 1.0.25](https://github.com/dtolnay/thiserror)
 * [unicode-xid 0.2.2](https://github.com/unicode-rs/unicode-xid)
 
 
@@ -334,7 +333,7 @@ limitations under the License.
 
 **Used By:**
 
-* [getrandom 0.2.2](https://github.com/rust-random/getrandom)
+* [getrandom 0.2.3](https://github.com/rust-random/getrandom)
 * [rand 0.8.3](https://github.com/rust-random/rand)
 * [rand_chacha 0.3.0](https://github.com/rust-random/rand)
 * [rand_core 0.6.2](https://github.com/rust-random/rand)
@@ -1283,6 +1282,40 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 **Used By:**
 
+* [libdav1d-sys 0.3.0](https://github.com/njaard/libavif-rs)
+
+
+```
+Copyright © 2018-2019, VideoLAN and dav1d authors
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+```
+
+### BSD 2-Clause &quot;Simplified&quot; License
+
+**Used By:**
+
 * [rav1e 0.4.1](https://github.com/xiph/rav1e/)
 * [v_frame 0.2.1](https://github.com/xiph/rav1e/)
 
@@ -1604,39 +1637,6 @@ The GNU General Public License does not permit incorporating your program into p
 
 **Used By:**
 
-* [aho-corasick 0.7.18](https://github.com/BurntSushi/aho-corasick)
-* [memchr 2.4.0](https://github.com/BurntSushi/rust-memchr)
-
-
-```
-The MIT License (MIT)
-
-Copyright (c) 2015 Andrew Gallant
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-```
-
-### MIT License
-
-**Used By:**
-
 * [arg_enum_proc_macro 0.3.1](https://github.com/lu-zero/arg_enum_proc_macro)
 
 
@@ -1669,7 +1669,7 @@ SOFTWARE.
 
 **Used By:**
 
-* [memoffset 0.6.3](https://github.com/Gilnaa/memoffset)
+* [memoffset 0.6.4](https://github.com/Gilnaa/memoffset)
 
 
 ```
@@ -1814,12 +1814,12 @@ SOFTWARE.
 
 **Used By:**
 
-* [argyle 0.4.1](https://github.com/Blobfolio/argyle)
+* [argyle 0.4.2](https://github.com/Blobfolio/argyle)
 * [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
-* [dowser 0.2.3](https://github.com/Blobfolio/dowser)
+* [dowser 0.2.4](https://github.com/Blobfolio/dowser)
 * [fyi_msg 0.7.1](https://github.com/Blobfolio/fyi)
-* [refract 0.5.0](https://github.com/Blobfolio/refract)
-* [refract_core 0.5.0](https://github.com/Blobfolio/refract)
+* [refract 0.6.0](https://github.com/Blobfolio/refract)
+* [refract_core 0.6.0](https://github.com/Blobfolio/refract)
 
 
 ```
