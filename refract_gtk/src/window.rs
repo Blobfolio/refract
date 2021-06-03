@@ -619,7 +619,16 @@ impl Window {
 	/// class associated with the `wnd_scroll` widget.
 	fn set_image(&self, img: Option<&Pixbuf>) {
 		if self.remove_flag(FLAG_NEW_IMAGE) {
-			self.img_main.set_from_pixbuf(img);
+			// Set the done image.
+			if img.is_none() && ! self.is_encoding() {
+				self.img_main.set_from_resource(Some("/gtk/refract/stop.png"));
+			}
+			// Set/unset the image as instructed.
+			else {
+				self.img_main.set_from_pixbuf(img);
+			}
+
+			// Toggle the background class.
 			if img.is_some() && self.btn_toggle.get_active() {
 				add_widget_class(&self.wnd_scroll, "preview_b");
 			}
