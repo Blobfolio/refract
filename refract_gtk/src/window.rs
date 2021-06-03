@@ -878,6 +878,10 @@ impl Window {
 				Ok(ShareFeedback::Ok)
 			},
 			Ok(Share::Source(x)) => self.set_source(x),
+			Ok(Share::Encoder(x)) => {
+				self.log_encoder(x);
+				Ok(ShareFeedback::Ok)
+			},
 			Ok(Share::Candidate(x)) => self.set_candidate(x),
 			Ok(Share::Best(path, x)) => self.set_best(path, x),
 			Ok(Share::DoneEncoding) => {
@@ -897,7 +901,9 @@ impl Window {
 
 /// ## Statuses.
 impl Window {
-	/// # Add Line.
+	/// # Log Line (Generic).
+	///
+	/// This handles the savings for all the log functions.
 	fn log_line<S>(&self, line: S)
 	where S: AsRef<str> {
 		let line = line.as_ref();
@@ -909,7 +915,7 @@ impl Window {
 		self.add_flag(FLAG_TICK_STATUS);
 	}
 
-	/// # Append Done.
+	/// # Log Done.
 	///
 	/// This happens when an encoding session finishes.
 	fn log_done(&self) {
@@ -920,7 +926,17 @@ impl Window {
 		));
 	}
 
-	/// # Append Error.
+	/// # Log Encoder.
+	///
+	/// This triggers when starting a new encoder for a given source.
+	fn log_encoder(&self, enc: ImageKind) {
+		self.log_line(format!(
+			r##"    <span foreground="#ff3596" weight="bold">Encoder:</span> Firing up the {} encoder!"##,
+			enc
+		));
+	}
+
+	/// # Log Error.
 	///
 	/// This will add a formatted error to the log, unless the error has no
 	/// value or is a duplicate of the previous entry.
@@ -934,7 +950,7 @@ impl Window {
 		}
 	}
 
-	/// # Add Saved.
+	/// # Log Saved.
 	///
 	/// This is used to indicate a new image has been saved.
 	fn log_saved<P>(&self, path: P, quality: Quality, old_size: usize, new_size: usize)
@@ -954,7 +970,7 @@ impl Window {
 		}
 	}
 
-	/// # Add Source.
+	/// # Log Source.
 	///
 	/// This is used when a new source image is being processed.
 	fn log_source<P>(&self, src: P)
@@ -966,7 +982,7 @@ impl Window {
 		));
 	}
 
-	/// # Add Start.
+	/// # Log Start.
 	///
 	/// This triggers when an encoding session starts.
 	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
@@ -1036,6 +1052,7 @@ fn _encode(
 	}
 
 	encoders.iter().for_each(|&e| {
+		Share::sync(tx, fb, Ok(Share::Encoder(e)), false);
 		if let Ok(mut guide) = EncodeIter::new(&src, e, flags) {
 			let mut count: u8 = 0;
 			while let Some(can) = guide.advance().and_then(|out| Candidate::try_from(out).ok()) {

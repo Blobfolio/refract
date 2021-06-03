@@ -8,6 +8,7 @@ use crate::{
 	GLOBAL,
 };
 use refract_core::{
+	ImageKind,
 	Output,
 	RefractError,
 };
@@ -52,6 +53,9 @@ pub(super) enum Share {
 
 	/// # New Source.
 	Source(Candidate),
+
+	/// # Encoder.
+	Encoder(ImageKind),
 
 	/// # New Candidate.
 	Candidate(Candidate),
