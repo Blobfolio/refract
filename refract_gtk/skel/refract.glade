@@ -205,8 +205,8 @@
           </packing>
         </child>
         <child>
-          <object class="GtkScrolledWindow" id="wnd_scroll">
-            <property name="name">wnd_scroll</property>
+          <object class="GtkScrolledWindow" id="wnd_image">
+            <property name="name">wnd_image</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="shadow-type">in</property>
@@ -247,7 +247,8 @@
             <property name="visible">True</property>
             <property name="can-focus">False</property>
             <child>
-              <object class="GtkScrolledWindow">
+              <object class="GtkScrolledWindow" id="wnd_status">
+                <property name="name">wnd_status</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="margin-start">10</property>

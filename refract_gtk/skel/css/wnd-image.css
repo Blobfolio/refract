@@ -1,10 +1,10 @@
-#wnd_scroll {
+#wnd_image {
 	background-image: url("resource:///gtk/refract/bg.png");
 	background-color:  transparent;
 	background-repeat:  repeat;
 	transition: background .3s ease 0s;
 }
 
-#wnd_scroll.preview_b {
+#wnd_image.preview_b {
 	background-image: url("resource:///gtk/refract/bg-b.png");
 }

@@ -9,6 +9,6 @@
     <file alias="btn-discard.css">css/btn-discard.css</file>
     <file alias="btn-keep.css">css/btn-keep.css</file>
     <file alias="spn-loading.css">css/spn-loading.css</file>
-    <file alias="wnd-scroll.css">css/wnd-scroll.css</file>
+    <file alias="wnd-image.css">css/wnd-image.css</file>
   </gresource>
 </gresources>

@@ -236,6 +236,16 @@ fn setup_ui(window: &Arc<Window>) {
 		});
 	}
 
+	// Keep the status log scrolled to the end.
+	{
+		let wnd2 = Arc::clone(window);
+		window.lbl_status.connect_size_allocate(move |_, _| {
+			if let Some(adj) = wnd2.wnd_status.get_vadjustment() {
+				adj.set_value(adj.get_upper());
+			}
+		});
+	}
+
 	// Give it one final paint!
 	window.paint();
 }
