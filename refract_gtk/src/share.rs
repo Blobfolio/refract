@@ -47,8 +47,11 @@ pub(super) type SharePayload = Result<Share, RefractError>;
 /// This is data passed from a sister thread back to the main thread via shared
 /// channels. This is entirely encoding-related.
 pub(super) enum Share {
+	/// # Path.
+	Path(PathBuf),
+
 	/// # New Source.
-	Source(PathBuf, Candidate),
+	Source(Candidate),
 
 	/// # New Candidate.
 	Candidate(Candidate),

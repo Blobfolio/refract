@@ -978,10 +978,11 @@ impl Window {
 	pub(super) fn process_share(&self, res: SharePayload)
 	-> Result<ShareFeedback, RefractError> {
 		let res = match res {
-			Ok(Share::Source(path, x)) => {
-				self.log_source(path);
-				self.set_source(x)
+			Ok(Share::Path(x)) => {
+				self.log_source(x);
+				Ok(ShareFeedback::Ok)
 			},
+			Ok(Share::Source(x)) => self.set_source(x),
 			Ok(Share::Candidate(x)) => self.set_candidate(x),
 			Ok(Share::Best(path, x)) => self.set_best(path, x),
 			Ok(Share::DoneEncoding) => {
