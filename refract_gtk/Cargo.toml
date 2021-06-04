@@ -1,6 +1,6 @@
 [package]
 name = "refract-gtk"
-version = "0.6.0"
+version = "0.6.1"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -23,11 +23,14 @@ Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG so
 assets = [
     ["../target/x86_64-unknown-linux-gnu/release/refract-gtk", "usr/bin/", "755"],
     ["./skel/deb/applications/refract-gtk.desktop", "/usr/share/applications/", "644"],
+    ["./skel/deb/icons/hicolor/32x32/apps/refract-gtk.png", "/usr/share/icons/hicolor/32x32/apps/", "644"],
     ["./skel/deb/icons/hicolor/48x48/apps/refract-gtk.png", "/usr/share/icons/hicolor/48x48/apps/", "644"],
     ["./skel/deb/icons/hicolor/64x64/apps/refract-gtk.png", "/usr/share/icons/hicolor/64x64/apps/", "644"],
+    ["./skel/deb/icons/hicolor/96x96/apps/refract-gtk.png", "/usr/share/icons/hicolor/96x96/apps/", "644"],
     ["./skel/deb/icons/hicolor/128x128/apps/refract-gtk.png", "/usr/share/icons/hicolor/128x128/apps/", "644"],
     ["./skel/deb/icons/hicolor/256x256/apps/refract-gtk.png", "/usr/share/icons/hicolor/256x256/apps/", "644"],
-    ["./skel/deb/pixmaps/refract-gtk.png", "/usr/share/pixmaps/", "644"],
+    ["./skel/deb/icons/hicolor/512x512/apps/refract-gtk.png", "/usr/share/icons/hicolor/512x512/apps/", "644"],
+    ["./skel/deb/pixmaps/refract-gtk.xpm", "/usr/share/pixmaps/", "644"],
 ]
 
 [dependencies]

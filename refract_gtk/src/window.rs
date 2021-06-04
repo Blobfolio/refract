@@ -5,7 +5,6 @@
 use atomic::Atomic;
 use crate::{
 	Candidate,
-	gtk_active,
 	gtk_obj,
 	gtk_sensitive,
 	Share,
@@ -68,10 +67,12 @@ const E_PNG: Extension = Extension::new3(*b"png");
 const E_WEBP: Extension = Extension::new4(*b"webp");
 
 // State flags.
-const FLAG_LOCK_ENCODING: u8 = 0b0000_0010; // We're in the middle of encoding.
-const FLAG_LOCK_FEEDBACK: u8 = 0b0000_0100; // Candidate feedback is required.
-const FLAG_LOCK_PAINT: u8 =    0b1000_0000; // Don't paint.
-const FLAG_NEW_IMAGE: u8 =     0b0000_1000; // We need to repaint the image.
+const FLAG_LOCK_ENCODING: u8 = 0b0000_0001; // We're in the middle of encoding.
+const FLAG_LOCK_FEEDBACK: u8 = 0b0000_0010; // Candidate feedback is required.
+const FLAG_LOCK_PAINT: u8 =    0b0000_0100; // Don't paint.
+const FLAG_TICK_IMAGE: u8 =    0b0000_1000; // We need to repaint the image.
+const FLAG_TICK_STATUS: u8 =   0b0001_0000; // We need to repaint the status.
+const FLAG_TICK_AB: u8 =       0b0010_0000; // We need to repaint format labels.
 
 
 
@@ -144,125 +145,6 @@ impl WindowSource {
 
 
 #[derive(Debug, Clone)]
-/// # Window Status Log.
-///
-/// This is a very simple text buffer that adds new entries to the start rather
-/// than the end. This ensures new happenings appear at the top of the
-/// scrollable `lbl_status` area (so i.e. they aren't missed by the user).
-pub(super) struct WindowStatus(String);
-
-#[allow(clippy::non_ascii_literal)] // We can't do this with r#literals.
-impl WindowStatus {
-	/// # Add Line.
-	fn add_line<S>(&mut self, line: S)
-	where S: AsRef<str> {
-		let line = line.as_ref();
-		if ! self.0.starts_with(line) {
-			if ! self.0.is_empty() { self.0.insert(0, '\n'); }
-			self.0.insert_str(0, line);
-		}
-	}
-
-	/// # Append Done.
-	///
-	/// This happens when an encoding session finishes.
-	fn add_done(&mut self) {
-		self.add_line(concat!(r##"<span foreground="#999">----</span>"##, "\n", r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Encoding has finished! <span foreground="#999">(That's all, folks!)</span>"##));
-	}
-
-	/// # Append Error.
-	///
-	/// This will add a formatted error to the log, unless the error has no
-	/// value or is a duplicate of the previous entry.
-	fn add_error(&mut self, err: RefractError) {
-		let err = err.as_str();
-		if ! err.is_empty() {
-			self.add_line(format!(
-				r##"{} <span foreground="#e74c3c" weight="bold">Error:</span> {}"##,
-				// Try to match the indentation style without making things
-				// too complicated.
-				if self.0.starts_with(' ') { r##"      <span foreground="#00abc0">↱</span>"## }
-				else { r##"  <span foreground="#9b59b6">↱</span>"## },
-				err
-			));
-		}
-	}
-
-	/// # Add Saved.
-	///
-	/// This is used to indicate a new image has been saved.
-	fn add_saved<P>(&mut self, path: P, quality: Quality, old_size: usize, new_size: usize)
-	where P: AsRef<Path> {
-		let path = path.as_ref();
-		if 0 < old_size && 0 < new_size && new_size < old_size {
-			let diff = old_size - new_size;
-			let per = dactyl::int_div_float(diff, old_size).unwrap_or(0.0);
-
-			self.add_line(format!(
-				r##"      <span foreground="#00abc0">↱</span> <span foreground="#2ecc71" weight="bold">Success:</span> Created <b>{}</b> with {}. <span foreground="#999">(Saved {} bytes, {}.)</span>"##,
-				path.to_string_lossy(),
-				quality,
-				NiceU64::from(diff).as_str(),
-				NicePercent::from(per).as_str(),
-			));
-		}
-	}
-
-	/// # Add Source.
-	///
-	/// This is used when a new source image is being processed.
-	fn add_source<P>(&mut self, src: P)
-	where P: AsRef<Path> {
-		let src = src.as_ref();
-		self.add_line(format!(
-			r##"  <span foreground="#9b59b6">↱</span> <span foreground="#00abc0" weight="bold">Source:</span> <b>{}</b>."##,
-			src.to_string_lossy(),
-		));
-	}
-
-	/// # Add Start.
-	///
-	/// This triggers when an encoding session starts.
-	fn add_start(&mut self, count: usize, encoders: &[ImageKind]) {
-		if encoders.is_empty() || count == 0 { return; }
-
-		// Format the encoder bit first.
-		let enc_list = crate::l10n::oxford_join(encoders, "and");
-		let images = crate::l10n::inflect(count, "image", "images");
-		let encoders = crate::l10n::inflect(encoders.len(), "encoder", "encoders");
-
-		self.add_line(format!(
-			r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Refracting {} using {}! <span foreground="#999">({}.)</span>"##,
-			images,
-			encoders,
-			enc_list,
-		));
-	}
-
-	#[inline]
-	/// # As String Slice.
-	fn as_str(&self) -> &str { &self.0 }
-}
-
-impl Default for WindowStatus {
-	/// # Default.
-	///
-	/// Start the log with the program name and version.
-	fn default() -> Self {
-		Self(String::from(concat!(
-			r##"<span foreground="#999">----</span>"##,
-			"\n",
-			r##"<span foreground="#9b59b6" weight="bold">Refract GTK</span> <span foreground="#ff3596" weight="bold">v"##,
-			env!("CARGO_PKG_VERSION"),
-			"</span>\n",
-			r##"<span foreground="#999">Tweak the settings (if you want to), then select an image or directory to encode!</span>"##,
-		)))
-	}
-}
-
-
-
-#[derive(Debug, Clone)]
 /// # Window.
 ///
 /// This holds the various GTK widgets we need to access after initialization,
@@ -272,7 +154,7 @@ impl Default for WindowStatus {
 pub(super) struct Window {
 	pub(super) flags: Cell<u8>,
 	pub(super) paths: RefCell<Vec<PathBuf>>,
-	pub(super) status: RefCell<WindowStatus>,
+	pub(super) status: RefCell<String>,
 	pub(super) source: RefCell<Option<WindowSource>>,
 	pub(super) candidate: RefCell<Option<WindowSource>>,
 
@@ -282,7 +164,8 @@ pub(super) struct Window {
 	pub(super) flt_webp: gtk::FileFilter,
 
 	pub(super) wnd_main: gtk::ApplicationWindow,
-	pub(super) wnd_scroll: gtk::ScrolledWindow,
+	pub(super) wnd_image: gtk::ScrolledWindow,
+	pub(super) wnd_status: gtk::ScrolledWindow,
 
 	pub(super) img_main: gtk::Image,
 	pub(super) box_preview: gtk::Box,
@@ -325,9 +208,16 @@ impl TryFrom<&gtk::Application> for Window {
 
 		// Create the main UI shell.
 		let out = Self {
-			flags: Cell::new(0),
+			flags: Cell::new(FLAG_TICK_STATUS),
 			paths: RefCell::new(Vec::new()),
-			status: RefCell::new(WindowStatus::default()),
+			status: RefCell::new(String::from(concat!(
+				r##"<span foreground="#9b59b6" weight="bold">Refract GTK</span> <span foreground="#ff3596" weight="bold">v"##,
+				env!("CARGO_PKG_VERSION"),
+				"</span>\n",
+				r##"<span foreground="#999">Tweak the settings (if you want to), then select an image or directory to encode!</span>"##,
+				"\n",
+				r##"<span foreground="#999">----</span>"##,
+			))),
 			source: RefCell::new(None),
 			candidate: RefCell::new(None),
 
@@ -337,7 +227,8 @@ impl TryFrom<&gtk::Application> for Window {
 			flt_webp: gtk_obj!(builder, "flt_webp"),
 
 			wnd_main: gtk_obj!(builder, "wnd_main"),
-			wnd_scroll: gtk_obj!(builder, "wnd_scroll"),
+			wnd_image: gtk_obj!(builder, "wnd_image"),
+			wnd_status: gtk_obj!(builder, "wnd_status"),
 
 			img_main: gtk_obj!(builder, "img_main"),
 			box_preview: gtk_obj!(builder, "box_preview"),
@@ -383,7 +274,7 @@ impl TryFrom<&gtk::Application> for Window {
 		set_widget_style(&out.btn_discard, "/gtk/refract/btn-discard.css");
 		set_widget_style(&out.btn_keep, "/gtk/refract/btn-keep.css");
 		set_widget_style(&out.spn_loading, "/gtk/refract/spn-loading.css");
-		set_widget_style(&out.wnd_scroll, "/gtk/refract/wnd-scroll.css");
+		set_widget_style(&out.wnd_image, "/gtk/refract/wnd-image.css");
 
 		// Start it up!
 		out.wnd_main.set_application(Some(app));
@@ -401,11 +292,11 @@ impl Window {
 	/// Returns `true` if changed.
 	fn add_flag(&self, flag: u8) -> bool {
 		let flags = self.flags.get();
-		if 0 == flags & flag {
+		if flag == flags & flag { false }
+		else {
 			self.flags.replace(flags | flag);
 			true
 		}
-		else { false }
 	}
 
 	#[inline]
@@ -419,11 +310,11 @@ impl Window {
 	/// Returns `true` if changed.
 	fn remove_flag(&self, flag: u8) -> bool {
 		let flags = self.flags.get();
-		if flag == flags & flag {
+		if 0 == flags & flag { false }
+		else {
 			self.flags.replace(flags & ! flag);
 			true
 		}
-		else { false }
 	}
 
 	/// # Finish Encoding.
@@ -492,7 +383,6 @@ impl Window {
 	///
 	/// Return an array of the enabled encoders.
 	fn encoders(&self) -> Box<[ImageKind]> {
-		self.validate_encoders();
 		let mut out: Vec<ImageKind> = Vec::with_capacity(3);
 		if self.chk_webp.get_active() { out.push(ImageKind::Webp); }
 		if self.chk_avif.get_active() { out.push(ImageKind::Avif); }
@@ -502,7 +392,7 @@ impl Window {
 
 	#[inline]
 	/// # Has Encoders?
-	fn has_encoders(&self) -> bool {
+	pub(super) fn has_encoders(&self) -> bool {
 		self.chk_webp.get_active() ||
 		self.chk_avif.get_active() ||
 		self.chk_jxl.get_active()
@@ -510,7 +400,7 @@ impl Window {
 
 	#[inline]
 	/// # Has Modes?
-	fn has_modes(&self) -> bool {
+	pub(super) fn has_modes(&self) -> bool {
 		self.chk_lossless.get_active() ||
 		self.chk_lossy.get_active()
 	}
@@ -518,27 +408,6 @@ impl Window {
 	#[inline]
 	/// # Is Encoding?
 	fn is_encoding(&self) -> bool { self.has_flag(FLAG_LOCK_ENCODING) }
-
-	/// # Validate Encoders.
-	///
-	/// This method ensures we always have at least one encoder, otherwise it
-	/// re-enables all of them.
-	pub(super) fn validate_encoders(&self) {
-		if ! self.has_encoders() {
-			gtk_active!(true, self.chk_avif, self.chk_jxl, self.chk_webp);
-		}
-	}
-
-	/// # Validate Modes.
-	///
-	/// This method ensures we always have at least one of "lossy" and
-	/// "lossless" encoding modes enabled. If for some reason they're both
-	/// dead, this will re-enable them.
-	pub(super) fn validate_modes(&self) {
-		if ! self.has_modes() {
-			gtk_active!(true, self.chk_lossy, self.chk_lossless);
-		}
-	}
 }
 
 /// ## Images.
@@ -554,7 +423,9 @@ impl Window {
 		if self.has_candidate() {
 			self.remove_flag(FLAG_LOCK_FEEDBACK);
 			self.candidate.borrow_mut().take();
+			gtk_sensitive!(false, self.btn_discard, self.btn_keep, self.btn_toggle);
 			self.toggle_preview(false, false);
+			self.add_flag(FLAG_TICK_AB);
 		}
 	}
 
@@ -599,7 +470,8 @@ impl Window {
 		if self.has_source() {
 			self.candidate.borrow_mut().replace(WindowSource::from(src));
 			self.toggle_preview(true, false);
-			self.add_flag(FLAG_LOCK_FEEDBACK);
+			gtk_sensitive!(true, self.btn_discard, self.btn_keep, self.btn_toggle);
+			self.add_flag(FLAG_LOCK_FEEDBACK | FLAG_TICK_AB);
 			Ok(ShareFeedback::WantsFeedback)
 		}
 		else { Err(RefractError::MissingSource) }
@@ -616,15 +488,24 @@ impl Window {
 	/// If `None` is passed, the image is cleared.
 	///
 	/// For source/candidate switching, this will also update the background
-	/// class associated with the `wnd_scroll` widget.
+	/// class associated with the `wnd_image` widget.
 	fn set_image(&self, img: Option<&Pixbuf>) {
-		if self.remove_flag(FLAG_NEW_IMAGE) {
-			self.img_main.set_from_pixbuf(img);
+		if self.remove_flag(FLAG_TICK_IMAGE) {
+			// Set the done image.
+			if img.is_none() && ! self.is_encoding() {
+				self.img_main.set_from_resource(Some("/gtk/refract/stop.png"));
+			}
+			// Set/unset the image as instructed.
+			else {
+				self.img_main.set_from_pixbuf(img);
+			}
+
+			// Toggle the background class.
 			if img.is_some() && self.btn_toggle.get_active() {
-				add_widget_class(&self.wnd_scroll, "preview_b");
+				add_widget_class(&self.wnd_image, "preview_b");
 			}
 			else {
-				remove_widget_class(&self.wnd_scroll, "preview_b");
+				remove_widget_class(&self.wnd_image, "preview_b");
 			}
 		}
 	}
@@ -635,7 +516,7 @@ impl Window {
 		self.remove_candidate();
 		self.source.borrow_mut().replace(WindowSource::from(src));
 		self.toggle_preview(false, true);
-		self.add_flag(FLAG_LOCK_ENCODING);
+		self.add_flag(FLAG_LOCK_ENCODING | FLAG_TICK_AB);
 		Ok(ShareFeedback::Ok)
 	}
 
@@ -649,13 +530,13 @@ impl Window {
 	/// redundant paints from the [`Window`] struct, but GTK may or may not
 	/// operate with similar consideration. At worst, though, this would just
 	/// be a +1 operation.
-	pub(super) fn toggle_preview(&self, val: bool, force_new_img: bool) {
+	pub(super) fn toggle_preview(&self, val: bool, force: bool) {
 		if self.btn_toggle.get_active() != val {
-			self.add_flag(FLAG_NEW_IMAGE | FLAG_LOCK_PAINT);
+			self.add_flag(FLAG_TICK_IMAGE | FLAG_LOCK_PAINT | FLAG_TICK_AB);
 			self.btn_toggle.set_active(val);
 			self.remove_flag(FLAG_LOCK_PAINT);
 		}
-		else if force_new_img { self.add_flag(FLAG_NEW_IMAGE); }
+		else if force { self.add_flag(FLAG_TICK_IMAGE | FLAG_TICK_AB); }
 	}
 
 	/// # Toggle Spinner.
@@ -893,31 +774,15 @@ impl Window {
 	fn paint_preview(&self) {
 		// Preview bits only apply if we have a source.
 		if self.has_source() {
-			self.lbl_format.set_opacity(1.0);
-			self.lbl_format_val.show();
-			self.lbl_quality.show();
-			self.lbl_quality_val.show();
-			self.box_ab.set_opacity(1.0);
-
-			// Make sure the AB fields have the sensitivity they deserve.
-			{
-				let sensitive: bool = self.has_candidate();
-				gtk_sensitive!(sensitive, self.btn_discard, self.btn_keep, self.btn_toggle);
-
-				if sensitive { self.toggle_spinner(false); }
-				else {
-					self.toggle_spinner(true);
-
-					// The toggle should already line up, but just in case
-					// let's make sure.
-					if self.btn_toggle.get_active() {
-						self.toggle_preview(false, false);
-					}
-				}
+			if ! self.lbl_quality.is_visible() {
+				self.lbl_quality.show();
 			}
 
+			// Show/hide spinner.
+			self.toggle_spinner(! self.has_candidate());
+
 			// Which image are we dealing with?
-			{
+			if self.remove_flag(FLAG_TICK_AB) {
 				let ptr =
 					if self.btn_toggle.get_active() {
 						self.candidate.borrow()
@@ -933,12 +798,8 @@ impl Window {
 				self.set_image(Some(&src.buf));
 			}
 		}
-		else {
-			self.lbl_format.set_opacity(0.0);
-			self.lbl_format_val.hide();
+		else if self.lbl_quality.is_visible() {
 			self.lbl_quality.hide();
-			self.lbl_quality_val.hide();
-			self.box_ab.set_opacity(0.0);
 			gtk_sensitive!(false, self.btn_discard, self.btn_keep, self.btn_toggle);
 			self.set_image(None);
 		}
@@ -949,7 +810,9 @@ impl Window {
 	///
 	/// This writes the status log. Easy enough.
 	fn paint_status(&self) {
-		self.lbl_status.set_markup(self.status.borrow().as_str())
+		if self.remove_flag(FLAG_TICK_STATUS) {
+			self.lbl_status.set_markup(self.status.borrow().as_str());
+		}
 	}
 }
 
@@ -969,9 +832,14 @@ impl Window {
 	pub(super) fn process_share(&self, res: SharePayload)
 	-> Result<ShareFeedback, RefractError> {
 		let res = match res {
-			Ok(Share::Source(path, x)) => {
-				self.log_source(path);
-				self.set_source(x)
+			Ok(Share::Path(x)) => {
+				self.log_source(x);
+				Ok(ShareFeedback::Ok)
+			},
+			Ok(Share::Source(x)) => self.set_source(x),
+			Ok(Share::Encoder(x)) => {
+				self.log_encoder(x);
+				Ok(ShareFeedback::Ok)
 			},
 			Ok(Share::Candidate(x)) => self.set_candidate(x),
 			Ok(Share::Best(path, x)) => self.set_best(path, x),
@@ -992,34 +860,104 @@ impl Window {
 
 /// ## Statuses.
 impl Window {
-	#[inline]
-	/// # Log Done.
-	fn log_done(&self) { self.status.borrow_mut().add_done(); }
-
-	#[inline]
-	/// # Log Error.
-	fn log_error(&self, err: RefractError) {
-		self.status.borrow_mut().add_error(err);
+	/// # Log Line (Generic).
+	///
+	/// This handles the savings for all the log functions.
+	fn log_line<S>(&self, line: S)
+	where S: AsRef<str> {
+		let line = line.as_ref();
+		let mut buf = self.status.borrow_mut();
+		if ! buf.is_empty() {
+			buf.push('\n');
+		}
+		buf.push_str(line);
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
-	#[inline]
-	/// # Log Saved Image.
+	/// # Log Done.
+	///
+	/// This happens when an encoding session finishes.
+	fn log_done(&self) {
+		self.log_line(concat!(
+			r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Encoding has finished! <span foreground="#999">(That's all, folks!)</span>"##,
+			"\n",
+			r##"<span foreground="#999">----</span>"##,
+		));
+	}
+
+	/// # Log Encoder.
+	///
+	/// This triggers when starting a new encoder for a given source.
+	fn log_encoder(&self, enc: ImageKind) {
+		self.log_line(format!(
+			r##"    <span foreground="#ff3596" weight="bold">Encoder:</span> Firing up the {} encoder!"##,
+			enc
+		));
+	}
+
+	/// # Log Error.
+	///
+	/// This will add a formatted error to the log, unless the error has no
+	/// value or is a duplicate of the previous entry.
+	fn log_error(&self, err: RefractError) {
+		let err = err.as_str();
+		if ! err.is_empty() {
+			self.log_line(format!(
+				r##"    <span foreground="#e74c3c" weight="bold">Error:</span> {}"##,
+				err
+			));
+		}
+	}
+
+	/// # Log Saved.
+	///
+	/// This is used to indicate a new image has been saved.
 	fn log_saved<P>(&self, path: P, quality: Quality, old_size: usize, new_size: usize)
 	where P: AsRef<Path> {
-		self.status.borrow_mut().add_saved(path, quality, old_size, new_size);
+		let path = path.as_ref();
+		if 0 < old_size && 0 < new_size && new_size < old_size {
+			let diff = old_size - new_size;
+			let per = dactyl::int_div_float(diff, old_size).unwrap_or(0.0);
+
+			self.log_line(format!(
+				r##"    <span foreground="#2ecc71" weight="bold">Success:</span> Created <b>{}</b> with {}. <span foreground="#999">(Saved {} bytes, {}.)</span>"##,
+				path.to_string_lossy(),
+				quality,
+				NiceU64::from(diff).as_str(),
+				NicePercent::from(per).as_str(),
+			));
+		}
 	}
 
-	#[inline]
-	/// # Log start.
-	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
-		self.status.borrow_mut().add_start(count, encoders);
-	}
-
-	#[inline]
 	/// # Log Source.
+	///
+	/// This is used when a new source image is being processed.
 	fn log_source<P>(&self, src: P)
 	where P: AsRef<Path> {
-		self.status.borrow_mut().add_source(src);
+		let src = src.as_ref();
+		self.log_line(format!(
+			r##"  <span foreground="#00abc0" weight="bold">Source:</span> <b>{}</b>."##,
+			src.to_string_lossy(),
+		));
+	}
+
+	/// # Log Start.
+	///
+	/// This triggers when an encoding session starts.
+	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
+		if encoders.is_empty() || count == 0 { return; }
+
+		// Format the encoder bit first.
+		let enc_list = crate::l10n::oxford_join(encoders, "and");
+		let images = crate::l10n::inflect(count, "image", "images");
+		let encoders = crate::l10n::inflect(encoders.len(), "encoder", "encoders");
+
+		self.log_line(format!(
+			r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Refracting {} using {}! <span foreground="#999">({}.)</span>"##,
+			images,
+			encoders,
+			enc_list,
+		));
 	}
 }
 
@@ -1064,14 +1002,16 @@ fn _encode(
 	}
 
 	// First, let's read the main input.
+	Share::sync(tx, fb, Ok(Share::Path(path.to_path_buf())), false);
 	let (src, can) = _encode_source(path)?;
-	if ShareFeedback::Err == Share::sync(tx, fb, Ok(Share::Source(path.to_path_buf(), can)), true) {
+	if ShareFeedback::Err == Share::sync(tx, fb, Ok(Share::Source(can)), true) {
 		// The status isn't actually OK, but errors are already known, so this
 		// prevents resubmitting the same error later.
 		return Ok(());
 	}
 
 	encoders.iter().for_each(|&e| {
+		Share::sync(tx, fb, Ok(Share::Encoder(e)), false);
 		if let Ok(mut guide) = EncodeIter::new(&src, e, flags) {
 			let mut count: u8 = 0;
 			while let Some(can) = guide.advance().and_then(|out| Candidate::try_from(out).ok()) {
