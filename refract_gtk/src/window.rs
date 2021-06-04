@@ -76,6 +76,18 @@ const FLAG_TICK_AB: u8 =       0b0010_0000; // We need to repaint format labels.
 
 
 
+/// # Helper: `FileChooser`.
+macro_rules! file_chooser {
+	($title:expr, $wnd:expr, $action:expr, $btn:literal) => (
+		gtk::FileChooserDialog::with_buttons(
+			Some($title),
+			Some(&$wnd),
+			$action,
+			&[("_Cancel", ResponseType::Cancel), ($btn, ResponseType::Accept)]
+		)
+	);
+}
+
 /// # Helper: Pango-Formatted Span.
 macro_rules! log_colored {
 	($color:literal, $inner:expr) => (
@@ -87,6 +99,9 @@ macro_rules! log_colored {
 }
 
 /// # Helper: Pango-Formatted Span (for log message prefix).
+///
+/// This works like [`log_colored`] bold but adds a trailing space, and
+/// optionally leading whitespace.
 macro_rules! log_prefix {
 	($color:literal, $prefix:literal) => (
 		concat!(log_colored!($color, $prefix, true), " ")
@@ -629,12 +644,7 @@ impl Window {
 	pub(super) fn maybe_add_file(&self) -> bool {
 		if self.is_encoding() { return false; }
 
-		let window = gtk::FileChooserDialog::with_buttons(
-			Some("Choose an Image to Encode"),
-			Some(&self.wnd_main),
-			FileChooserAction::Open,
-			&[("_Cancel", ResponseType::Cancel), ("_Open", ResponseType::Accept)]
-		);
+		let window = file_chooser!("Choose an Image to Encode", self.wnd_main, FileChooserAction::Open, "_Open");
 		window.set_filter(&self.flt_image);
 
 		let res = window.run();
@@ -659,12 +669,7 @@ impl Window {
 	pub(super) fn maybe_add_directory(&self) -> bool {
 		if self.is_encoding() { return false; }
 
-		let window = gtk::FileChooserDialog::with_buttons(
-			Some("Choose a Directory to Encode"),
-			Some(&self.wnd_main),
-			FileChooserAction::SelectFolder,
-			&[("_Cancel", ResponseType::Cancel), ("_Open", ResponseType::Accept)]
-		);
+		let window = file_chooser!("Choose a Directory to Encode", self.wnd_main, FileChooserAction::SelectFolder, "_Select");
 
 		let res = window.run();
 		if ResponseType::None == res { return false; }
@@ -694,13 +699,7 @@ impl Window {
 		use std::io::Write;
 
 		let kind = src.kind();
-		let title = format!("Save the {}!", kind);
-		let window = gtk::FileChooserDialog::with_buttons(
-			Some(title.as_str()),
-			Some(&self.wnd_main),
-			FileChooserAction::Save,
-			&[("_Cancel", ResponseType::Cancel), ("_Save", ResponseType::Accept)]
-		);
+		let window = file_chooser!(&format!("Save the {}!", kind), self.wnd_main, FileChooserAction::Save, "_Save");
 
 		window.set_do_overwrite_confirmation(true);
 		let ext: Extension = match kind {
@@ -717,9 +716,7 @@ impl Window {
 				E_WEBP
 			},
 			// It should not be possible to trigger this.
-			_ => {
-				return Err(RefractError::NoSave);
-			},
+			_ => { return Err(RefractError::NoSave); },
 		};
 
 		// Start in the source's directory.
@@ -728,19 +725,11 @@ impl Window {
 		}
 
 		// Suggest a file name.
-		if let Some(name) = path.file_name() {
-			window.set_current_name(OsStr::from_bytes(&[
-				name.as_bytes(),
-				b".",
-				src.kind().extension().as_bytes(),
-			].concat()));
-		}
-		else {
-			window.set_current_name(OsStr::from_bytes(&[
-				b"image.",
-				src.kind().extension().as_bytes(),
-			].concat()));
-		}
+		window.set_current_name(OsStr::from_bytes(&[
+			path.file_name().map_or_else(|| &b"image"[..], OsStr::as_bytes),
+			b".",
+			src.kind().extension().as_bytes(),
+		].concat()));
 
 		// Read the result!
 		let path: Option<PathBuf> = match window.run() {
@@ -751,11 +740,10 @@ impl Window {
 
 		// Close the window.
 		window.emit_close();
-		if path.is_none() { return Err(RefractError::NoSave); }
 
 		// Make sure the chosen path has an appropriate extension. If not, toss
 		// it onto the end.
-		let mut path = path.unwrap();
+		let mut path = path.ok_or(RefractError::NoSave)?;
 		if ext != path {
 			path = PathBuf::from(OsStr::from_bytes(&[
 				path.as_os_str().as_bytes(),
