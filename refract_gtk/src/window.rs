@@ -5,7 +5,6 @@
 use atomic::Atomic;
 use crate::{
 	Candidate,
-	gtk_active,
 	gtk_obj,
 	gtk_sensitive,
 	Share,
@@ -73,6 +72,7 @@ const FLAG_LOCK_FEEDBACK: u8 = 0b0000_0010; // Candidate feedback is required.
 const FLAG_LOCK_PAINT: u8 =    0b0000_0100; // Don't paint.
 const FLAG_TICK_IMAGE: u8 =    0b0000_1000; // We need to repaint the image.
 const FLAG_TICK_STATUS: u8 =   0b0001_0000; // We need to repaint the status.
+const FLAG_TICK_AB: u8 =       0b0010_0000; // We need to repaint format labels.
 
 
 
@@ -292,11 +292,11 @@ impl Window {
 	/// Returns `true` if changed.
 	fn add_flag(&self, flag: u8) -> bool {
 		let flags = self.flags.get();
-		if 0 == flags & flag {
+		if flag == flags & flag { false }
+		else {
 			self.flags.replace(flags | flag);
 			true
 		}
-		else { false }
 	}
 
 	#[inline]
@@ -310,11 +310,11 @@ impl Window {
 	/// Returns `true` if changed.
 	fn remove_flag(&self, flag: u8) -> bool {
 		let flags = self.flags.get();
-		if flag == flags & flag {
+		if 0 == flags & flag { false }
+		else {
 			self.flags.replace(flags & ! flag);
 			true
 		}
-		else { false }
 	}
 
 	/// # Finish Encoding.
@@ -383,7 +383,6 @@ impl Window {
 	///
 	/// Return an array of the enabled encoders.
 	fn encoders(&self) -> Box<[ImageKind]> {
-		self.validate_encoders();
 		let mut out: Vec<ImageKind> = Vec::with_capacity(3);
 		if self.chk_webp.get_active() { out.push(ImageKind::Webp); }
 		if self.chk_avif.get_active() { out.push(ImageKind::Avif); }
@@ -393,7 +392,7 @@ impl Window {
 
 	#[inline]
 	/// # Has Encoders?
-	fn has_encoders(&self) -> bool {
+	pub(super) fn has_encoders(&self) -> bool {
 		self.chk_webp.get_active() ||
 		self.chk_avif.get_active() ||
 		self.chk_jxl.get_active()
@@ -401,7 +400,7 @@ impl Window {
 
 	#[inline]
 	/// # Has Modes?
-	fn has_modes(&self) -> bool {
+	pub(super) fn has_modes(&self) -> bool {
 		self.chk_lossless.get_active() ||
 		self.chk_lossy.get_active()
 	}
@@ -409,27 +408,6 @@ impl Window {
 	#[inline]
 	/// # Is Encoding?
 	fn is_encoding(&self) -> bool { self.has_flag(FLAG_LOCK_ENCODING) }
-
-	/// # Validate Encoders.
-	///
-	/// This method ensures we always have at least one encoder, otherwise it
-	/// re-enables all of them.
-	pub(super) fn validate_encoders(&self) {
-		if ! self.has_encoders() {
-			gtk_active!(true, self.chk_avif, self.chk_jxl, self.chk_webp);
-		}
-	}
-
-	/// # Validate Modes.
-	///
-	/// This method ensures we always have at least one of "lossy" and
-	/// "lossless" encoding modes enabled. If for some reason they're both
-	/// dead, this will re-enable them.
-	pub(super) fn validate_modes(&self) {
-		if ! self.has_modes() {
-			gtk_active!(true, self.chk_lossy, self.chk_lossless);
-		}
-	}
 }
 
 /// ## Images.
@@ -445,7 +423,9 @@ impl Window {
 		if self.has_candidate() {
 			self.remove_flag(FLAG_LOCK_FEEDBACK);
 			self.candidate.borrow_mut().take();
+			gtk_sensitive!(false, self.btn_discard, self.btn_keep, self.btn_toggle);
 			self.toggle_preview(false, false);
+			self.add_flag(FLAG_TICK_AB);
 		}
 	}
 
@@ -490,7 +470,8 @@ impl Window {
 		if self.has_source() {
 			self.candidate.borrow_mut().replace(WindowSource::from(src));
 			self.toggle_preview(true, false);
-			self.add_flag(FLAG_LOCK_FEEDBACK);
+			gtk_sensitive!(true, self.btn_discard, self.btn_keep, self.btn_toggle);
+			self.add_flag(FLAG_LOCK_FEEDBACK | FLAG_TICK_AB);
 			Ok(ShareFeedback::WantsFeedback)
 		}
 		else { Err(RefractError::MissingSource) }
@@ -535,7 +516,7 @@ impl Window {
 		self.remove_candidate();
 		self.source.borrow_mut().replace(WindowSource::from(src));
 		self.toggle_preview(false, true);
-		self.add_flag(FLAG_LOCK_ENCODING);
+		self.add_flag(FLAG_LOCK_ENCODING | FLAG_TICK_AB);
 		Ok(ShareFeedback::Ok)
 	}
 
@@ -549,13 +530,13 @@ impl Window {
 	/// redundant paints from the [`Window`] struct, but GTK may or may not
 	/// operate with similar consideration. At worst, though, this would just
 	/// be a +1 operation.
-	pub(super) fn toggle_preview(&self, val: bool, force_new_img: bool) {
+	pub(super) fn toggle_preview(&self, val: bool, force: bool) {
 		if self.btn_toggle.get_active() != val {
-			self.add_flag(FLAG_TICK_IMAGE | FLAG_LOCK_PAINT);
+			self.add_flag(FLAG_TICK_IMAGE | FLAG_LOCK_PAINT | FLAG_TICK_AB);
 			self.btn_toggle.set_active(val);
 			self.remove_flag(FLAG_LOCK_PAINT);
 		}
-		else if force_new_img { self.add_flag(FLAG_TICK_IMAGE); }
+		else if force { self.add_flag(FLAG_TICK_IMAGE | FLAG_TICK_AB); }
 	}
 
 	/// # Toggle Spinner.
@@ -793,33 +774,15 @@ impl Window {
 	fn paint_preview(&self) {
 		// Preview bits only apply if we have a source.
 		if self.has_source() {
-			if ! self.lbl_format_val.is_visible() {
-				self.lbl_format.set_opacity(1.0);
-				self.lbl_format_val.show();
+			if ! self.lbl_quality.is_visible() {
 				self.lbl_quality.show();
-				self.lbl_quality_val.show();
-				self.box_ab.set_opacity(1.0);
 			}
 
-			// Make sure the AB fields have the sensitivity they deserve.
-			{
-				let sensitive: bool = self.has_candidate();
-				gtk_sensitive!(sensitive, self.btn_discard, self.btn_keep, self.btn_toggle);
-
-				if sensitive { self.toggle_spinner(false); }
-				else {
-					self.toggle_spinner(true);
-
-					// The toggle should already line up, but just in case
-					// let's make sure.
-					if self.btn_toggle.get_active() {
-						self.toggle_preview(false, false);
-					}
-				}
-			}
+			// Show/hide spinner.
+			self.toggle_spinner(! self.has_candidate());
 
 			// Which image are we dealing with?
-			{
+			if self.remove_flag(FLAG_TICK_AB) {
 				let ptr =
 					if self.btn_toggle.get_active() {
 						self.candidate.borrow()
@@ -835,12 +798,8 @@ impl Window {
 				self.set_image(Some(&src.buf));
 			}
 		}
-		else if self.lbl_format_val.is_visible() {
-			self.lbl_format.set_opacity(0.0);
-			self.lbl_format_val.hide();
+		else if self.lbl_quality.is_visible() {
 			self.lbl_quality.hide();
-			self.lbl_quality_val.hide();
-			self.box_ab.set_opacity(0.0);
 			gtk_sensitive!(false, self.btn_discard, self.btn_keep, self.btn_toggle);
 			self.set_image(None);
 		}

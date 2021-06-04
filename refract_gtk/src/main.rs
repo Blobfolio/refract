@@ -168,14 +168,13 @@ fn setup_ui(window: &Arc<Window>) {
 		macro_rules! chk_cb {
 			($validate_cb:ident, $($btn:expr),+) => {$(
 				let wnd2 = Arc::clone(window);
-				$btn.connect_toggled(move |_| {
-					wnd2.$validate_cb();
-					wnd2.paint();
+				$btn.connect_toggled(move |btn| {
+					if ! wnd2.$validate_cb() { btn.set_active(true); }
 				});
 			)+};
 		}
-		chk_cb!(validate_encoders, window.chk_avif, window.chk_jxl, window.chk_webp);
-		chk_cb!(validate_modes, window.chk_lossy, window.chk_lossless);
+		chk_cb!(has_encoders, window.chk_avif, window.chk_jxl, window.chk_webp);
+		chk_cb!(has_modes, window.chk_lossy, window.chk_lossless);
 	}
 
 	// The toggle.
@@ -208,9 +207,7 @@ fn setup_ui(window: &Arc<Window>) {
 	// The quit button.
 	{
 		let wnd2 = Arc::clone(window);
-		window.mnu_quit.connect_activate(move |_| {
-			wnd2.wnd_main.close();
-		});
+		window.mnu_quit.connect_activate(move |_| { wnd2.wnd_main.close(); });
 	}
 
 	// Add a file!
@@ -219,9 +216,7 @@ fn setup_ui(window: &Arc<Window>) {
 		let tx2 = tx.clone();
 		let wnd2 = Arc::clone(window);
 		window.mnu_fopen.connect_activate(move |_| {
-			if wnd2.maybe_add_file() {
-				wnd2.encode(&tx2, &fb2);
-			}
+			if wnd2.maybe_add_file() { wnd2.encode(&tx2, &fb2); }
 		});
 	}
 
@@ -230,9 +225,29 @@ fn setup_ui(window: &Arc<Window>) {
 	{
 		let wnd2 = Arc::clone(window);
 		window.mnu_dopen.connect_activate(move |_| {
-			if wnd2.maybe_add_directory() {
-				wnd2.encode(&tx, &fb);
-			}
+			if wnd2.maybe_add_directory() { wnd2.encode(&tx, &fb); }
+		});
+	}
+
+	// Show ab/format/quality fields when `lbl_quality` is shown.
+	{
+		let wnd2 = Arc::clone(window);
+		window.lbl_quality.connect_show(move |_| {
+			wnd2.box_ab.set_opacity(1.0);
+			wnd2.lbl_format.set_opacity(1.0);
+			wnd2.lbl_format_val.show();
+			wnd2.lbl_quality_val.show();
+		});
+	}
+
+	// Hide ab/format/quality fields when `lbl_quality` is hidden.
+	{
+		let wnd2 = Arc::clone(window);
+		window.lbl_quality.connect_hide(move |_| {
+			wnd2.box_ab.set_opacity(0.0);
+			wnd2.lbl_format.set_opacity(0.0);
+			wnd2.lbl_format_val.hide();
+			wnd2.lbl_quality_val.hide();
 		});
 	}
 
