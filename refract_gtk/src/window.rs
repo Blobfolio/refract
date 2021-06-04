@@ -581,15 +581,19 @@ impl Window {
 	/// # Add File.
 	fn add_file<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
-		let path = path.as_ref();
+		let path = match std::fs::canonicalize(path) {
+			Ok(p) => p,
+			Err(_) => { return false; },
+		};
+
 		if
 			path.is_file() &&
-			Extension::try_from3(path).map_or_else(
-				|| Extension::try_from4(path).map_or(false, |e| e == E_JPEG),
+			Extension::try_from3(&path).map_or_else(
+				|| Extension::try_from4(&path).map_or(false, |e| e == E_JPEG),
 				|e| e == E_JPG || e == E_PNG
 			)
 		{
-			self.paths.borrow_mut().push(path.to_path_buf());
+			self.paths.borrow_mut().push(path);
 			true
 		}
 		else { false }
