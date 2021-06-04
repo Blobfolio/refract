@@ -76,6 +76,33 @@ const FLAG_TICK_AB: u8 =       0b0010_0000; // We need to repaint format labels.
 
 
 
+/// # Helper: Pango-Formatted Span.
+macro_rules! log_colored {
+	($color:literal, $inner:expr) => (
+		concat!("<span foreground=\"", $color, "\">", $inner, "</span>")
+	);
+	($color:literal, $inner:expr, true) => (
+		concat!("<span foreground=\"", $color, "\" weight=\"bold\">", $inner, "</span>")
+	);
+}
+
+/// # Helper: Pango-Formatted Span (for log message prefix).
+macro_rules! log_prefix {
+	($color:literal, $prefix:literal) => (
+		concat!(log_colored!($color, $prefix, true), " ")
+	);
+	($before:literal, $color:literal, $prefix:literal) => (
+		concat!($before, log_colored!($color, $prefix, true), " ")
+	);
+}
+
+/// # Helper: GTK Resource Path.
+macro_rules! gtk_src {
+	($file:literal) => (concat!("/gtk/refract/", $file));
+}
+
+
+
 
 #[derive(Debug, Clone)]
 /// # Image Source.
@@ -203,7 +230,7 @@ impl TryFrom<&gtk::Application> for Window {
 	fn try_from(app: &gtk::Application) -> Result<Self, Self::Error> {
 		// Start the builder.
 		let builder = gtk::Builder::new();
-		builder.add_from_resource("/gtk/refract/refract.glade")
+		builder.add_from_resource(gtk_src!("refract.glade"))
 			.map_err(|_| RefractError::GtkInit)?;
 
 		// Create the main UI shell.
@@ -211,12 +238,12 @@ impl TryFrom<&gtk::Application> for Window {
 			flags: Cell::new(FLAG_TICK_STATUS),
 			paths: RefCell::new(Vec::new()),
 			status: RefCell::new(String::from(concat!(
-				r##"<span foreground="#9b59b6" weight="bold">Refract GTK</span> <span foreground="#ff3596" weight="bold">v"##,
-				env!("CARGO_PKG_VERSION"),
-				"</span>\n",
-				r##"<span foreground="#999">Tweak the settings (if you want to), then select an image or directory to encode!</span>"##,
+				log_prefix!("#9b59b6", "Refract GTK"),
+				log_colored!("#ff3596", concat!("v", env!("CARGO_PKG_VERSION")), true),
 				"\n",
-				r##"<span foreground="#999">----</span>"##,
+				log_colored!("#999", "Tweak the settings (if you want to), then select an image or directory to encode!"),
+				"\n",
+				log_colored!("#999", "----"),
 			))),
 			source: RefCell::new(None),
 			candidate: RefCell::new(None),
@@ -268,13 +295,13 @@ impl TryFrom<&gtk::Application> for Window {
 		});
 
 		// Start with a fun image.
-		out.img_main.set_from_resource(Some("/gtk/refract/start.png"));
+		out.img_main.set_from_resource(Some(gtk_src!("start.png")));
 
 		// Hook up some styles.
-		set_widget_style(&out.btn_discard, "/gtk/refract/btn-discard.css");
-		set_widget_style(&out.btn_keep, "/gtk/refract/btn-keep.css");
-		set_widget_style(&out.spn_loading, "/gtk/refract/spn-loading.css");
-		set_widget_style(&out.wnd_image, "/gtk/refract/wnd-image.css");
+		set_widget_style(&out.btn_discard, gtk_src!("btn-discard.css"));
+		set_widget_style(&out.btn_keep, gtk_src!("btn-keep.css"));
+		set_widget_style(&out.spn_loading, gtk_src!("spn-loading.css"));
+		set_widget_style(&out.wnd_image, gtk_src!("wnd-image.css"));
 
 		// Start it up!
 		out.wnd_main.set_application(Some(app));
@@ -493,7 +520,7 @@ impl Window {
 		if self.remove_flag(FLAG_TICK_IMAGE) {
 			// Set the done image.
 			if img.is_none() && ! self.is_encoding() {
-				self.img_main.set_from_resource(Some("/gtk/refract/stop.png"));
+				self.img_main.set_from_resource(Some(gtk_src!("stop.png")));
 			}
 			// Set/unset the image as instructed.
 			else {
@@ -860,39 +887,30 @@ impl Window {
 
 /// ## Statuses.
 impl Window {
-	/// # Log Line (Generic).
-	///
-	/// This handles the savings for all the log functions.
-	fn log_line<S>(&self, line: S)
-	where S: AsRef<str> {
-		let line = line.as_ref();
-		let mut buf = self.status.borrow_mut();
-		if ! buf.is_empty() {
-			buf.push('\n');
-		}
-		buf.push_str(line);
-		self.add_flag(FLAG_TICK_STATUS);
-	}
-
 	/// # Log Done.
 	///
 	/// This happens when an encoding session finishes.
 	fn log_done(&self) {
-		self.log_line(concat!(
-			r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Encoding has finished! <span foreground="#999">(That's all, folks!)</span>"##,
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(concat!(
+			log_prefix!("\n", "#9b59b6", "Notice:"),
+			"Encoding has finished! ",
+			log_colored!("#999", "(That's all, folks!)"),
 			"\n",
-			r##"<span foreground="#999">----</span>"##,
+			log_colored!("#999", "----"),
 		));
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Encoder.
 	///
 	/// This triggers when starting a new encoder for a given source.
 	fn log_encoder(&self, enc: ImageKind) {
-		self.log_line(format!(
-			r##"    <span foreground="#ff3596" weight="bold">Encoder:</span> Firing up the {} encoder!"##,
-			enc
-		));
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(concat!(log_prefix!("\n    ", "#ff3596", "Encoder:"), "Firing up the <b>"));
+		buf.push_str(enc.as_str());
+		buf.push_str("</b> encoder!");
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Error.
@@ -901,12 +919,12 @@ impl Window {
 	/// value or is a duplicate of the previous entry.
 	fn log_error(&self, err: RefractError) {
 		let err = err.as_str();
-		if ! err.is_empty() {
-			self.log_line(format!(
-				r##"    <span foreground="#e74c3c" weight="bold">Error:</span> {}"##,
-				err
-			));
-		}
+		if err.is_empty() { return; }
+
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(log_prefix!("\n    ", "#e74c3c", "Error:"));
+		buf.push_str(err);
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Saved.
@@ -914,19 +932,22 @@ impl Window {
 	/// This is used to indicate a new image has been saved.
 	fn log_saved<P>(&self, path: P, quality: Quality, old_size: usize, new_size: usize)
 	where P: AsRef<Path> {
-		let path = path.as_ref();
-		if 0 < old_size && 0 < new_size && new_size < old_size {
-			let diff = old_size - new_size;
-			let per = dactyl::int_div_float(diff, old_size).unwrap_or(0.0);
+		if 0 == old_size || 0 == new_size || new_size >= old_size { return; }
 
-			self.log_line(format!(
-				r##"    <span foreground="#2ecc71" weight="bold">Success:</span> Created <b>{}</b> with {}. <span foreground="#999">(Saved {} bytes, {}.)</span>"##,
-				path.to_string_lossy(),
-				quality,
-				NiceU64::from(diff).as_str(),
-				NicePercent::from(per).as_str(),
-			));
-		}
+		// Crunch some numbers.
+		let diff = old_size - new_size;
+		let per = dactyl::int_div_float(diff, old_size).unwrap_or(0.0);
+
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(log_prefix!("\n    ", "#2ecc71", "Success:"));
+		buf.push_str(&format!(
+			concat!("Created <b>{}</b> with {}.", log_colored!("#999", "(Saved {} bytes, {}.)")),
+			path.as_ref().to_string_lossy(),
+			quality,
+			NiceU64::from(diff).as_str(),
+			NicePercent::from(per).as_str(),
+		));
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Source.
@@ -935,29 +956,33 @@ impl Window {
 	fn log_source<P>(&self, src: P)
 	where P: AsRef<Path> {
 		let src = src.as_ref();
-		self.log_line(format!(
-			r##"  <span foreground="#00abc0" weight="bold">Source:</span> <b>{}</b>."##,
-			src.to_string_lossy(),
-		));
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(concat!(log_prefix!("\n  ", "#00abc0", "Source:"), "<b>"));
+		buf.push_str(src.to_string_lossy().as_ref());
+		buf.push_str("</b>.");
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Start.
 	///
 	/// This triggers when an encoding session starts.
 	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
+		use crate::l10n::{inflect, oxford_join};
+
 		if encoders.is_empty() || count == 0 { return; }
 
-		// Format the encoder bit first.
-		let enc_list = crate::l10n::oxford_join(encoders, "and");
-		let images = crate::l10n::inflect(count, "image", "images");
-		let encoders = crate::l10n::inflect(encoders.len(), "encoder", "encoders");
-
-		self.log_line(format!(
-			r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Refracting {} using {}! <span foreground="#999">({}.)</span>"##,
-			images,
-			encoders,
-			enc_list,
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(&format!(
+			concat!(
+				log_prefix!("\n", "#9b59b6", "Notice:"),
+				"Refracting {} using {}! ",
+				log_colored!("#999", "({}.)"),
+			),
+			inflect(count, "image", "images"),
+			inflect(encoders.len(), "encoder", "encoders"),
+			oxford_join(encoders, "and"),
 		));
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 }
 

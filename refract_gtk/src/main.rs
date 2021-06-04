@@ -67,16 +67,6 @@ mod macros {
 	}
 
 	#[macro_export(local_inner_macros)]
-	/// # Helper: Toggle GTK Widget Active En Masse.
-	macro_rules! gtk_active {
-		($active:expr, $($obj:expr),+) => ($(
-			if $obj.get_active() != $active {
-				$obj.set_active($active);
-			}
-		)+);
-	}
-
-	#[macro_export(local_inner_macros)]
 	/// # Helper: Toggle GTK Widget Sensitivity En Masse.
 	macro_rules! gtk_sensitive {
 		($sensitive:expr, $($obj:expr),+) => ($(
