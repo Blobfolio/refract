@@ -104,5 +104,5 @@ fn _man_path(file: &str) -> Option<PathBuf> {
 fn _out_path(file: &str) -> Option<PathBuf> {
 	let mut dir = std::fs::canonicalize(std::env::var("OUT_DIR").ok()?).ok()?;
 	dir.push(file);
-	Some(dir).filter(|x| x.exists())
+	Some(dir)
 }
