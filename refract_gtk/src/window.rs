@@ -357,6 +357,7 @@ impl Window {
 		self.remove_source();
 		if unlock {
 			self.remove_flag(FLAG_LOCK_ENCODING);
+			self.spn_loading.stop();
 		}
 	}
 }
@@ -386,6 +387,7 @@ impl Window {
 
 		// Mention that we're starting.
 		self.log_start(paths.len(), &encoders);
+		self.spn_loading.start();
 
 		// Shove the actual work into a separate thread.
 		let tx2 = tx.clone();
@@ -571,12 +573,11 @@ impl Window {
 		else if force { self.add_flag(FLAG_TICK_IMAGE | FLAG_TICK_AB); }
 	}
 
+	#[inline]
 	/// # Toggle Spinner.
 	fn toggle_spinner(&self, val: bool) {
 		if val != self.spn_loading.get_property_active() {
 			self.spn_loading.set_property_active(val);
-			if val { self.spn_loading.start(); }
-			else { self.spn_loading.stop(); }
 		}
 	}
 }
