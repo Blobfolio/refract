@@ -76,18 +76,6 @@ const FLAG_TICK_AB: u8 =       0b0010_0000; // We need to repaint format labels.
 
 
 
-/// # Helper: `FileChooser`.
-macro_rules! file_chooser {
-	($title:expr, $wnd:expr, $action:expr, $btn:literal) => (
-		gtk::FileChooserDialog::with_buttons(
-			Some($title),
-			Some(&$wnd),
-			$action,
-			&[("_Cancel", ResponseType::Cancel), ($btn, ResponseType::Accept)]
-		)
-	);
-}
-
 /// # Helper: Pango-Formatted Span.
 macro_rules! log_colored {
 	($color:literal, $inner:expr) => (
@@ -196,6 +184,7 @@ impl WindowSource {
 pub(super) struct Window {
 	pub(super) flags: Cell<u8>,
 	pub(super) paths: RefCell<Vec<PathBuf>>,
+	pub(super) dir: RefCell<Option<PathBuf>>,
 	pub(super) status: RefCell<String>,
 	pub(super) source: RefCell<Option<WindowSource>>,
 	pub(super) candidate: RefCell<Option<WindowSource>>,
@@ -252,6 +241,7 @@ impl TryFrom<&gtk::Application> for Window {
 		let out = Self {
 			flags: Cell::new(FLAG_TICK_STATUS),
 			paths: RefCell::new(Vec::new()),
+			dir: RefCell::new(None),
 			status: RefCell::new(String::from(concat!(
 				log_prefix!("#9b59b6", "Refract GTK"),
 				log_colored!("#ff3596", concat!("v", env!("CARGO_PKG_VERSION")), true),
@@ -634,6 +624,37 @@ impl Window {
 		else { false }
 	}
 
+	/// # Make File Chooser Dialogue.
+	///
+	/// This makes a new file chooser dialogue of the specified kind, and
+	/// optionally sets the working directory and/or filter.
+	fn file_chooser<P>(
+		&self,
+		title: &str,
+		action: FileChooserAction,
+		btn: &str,
+		dir: Option<P>,
+		filter: Option<&gtk::FileFilter>,
+	) -> gtk::FileChooserDialog
+	where P: AsRef<Path> {
+		let out = gtk::FileChooserDialog::with_buttons(
+			Some(title),
+			Some(&self.wnd_main),
+			action,
+			&[("_Cancel", ResponseType::Cancel), (btn, ResponseType::Accept)]
+		);
+
+		if let Some(filter) = filter {
+			out.set_filter(filter);
+		}
+
+		if let Some(parent) = dir {
+			out.set_current_folder(parent);
+		}
+
+		out
+	}
+
 	/// # Has Paths?
 	fn has_paths(&self) -> bool { ! self.paths.borrow().is_empty() }
 
@@ -644,13 +665,21 @@ impl Window {
 	pub(super) fn maybe_add_file(&self) -> bool {
 		if self.is_encoding() { return false; }
 
-		let window = file_chooser!("Choose an Image to Encode", self.wnd_main, FileChooserAction::Open, "_Open");
-		window.set_filter(&self.flt_image);
+		let window = self.file_chooser(
+			"Choose an Image to Encode",
+			FileChooserAction::Open,
+			"_Open",
+			self.dir.borrow().as_ref(),
+			Some(&self.flt_image),
+		);
 
 		let res = window.run();
 		if ResponseType::None == res { return false; }
 		else if ResponseType::Accept == res {
 			if let Some(file) = window.get_filename() {
+				if let Some(parent) = file.parent() {
+					self.dir.borrow_mut().replace(parent.to_path_buf());
+				}
 				self.add_file(file);
 			}
 		}
@@ -669,12 +698,22 @@ impl Window {
 	pub(super) fn maybe_add_directory(&self) -> bool {
 		if self.is_encoding() { return false; }
 
-		let window = file_chooser!("Choose a Directory to Encode", self.wnd_main, FileChooserAction::SelectFolder, "_Select");
+		let window = self.file_chooser(
+			"Choose a Directory to Encode",
+			FileChooserAction::SelectFolder,
+			"_Select",
+			self.dir.borrow().as_ref(),
+			None,
+		);
+
+		// Disable folder creation.
+		window.set_create_folders(false);
 
 		let res = window.run();
 		if ResponseType::None == res { return false; }
 		else if ResponseType::Accept == res {
 			if let Some(dir) = window.get_filename() {
+				self.dir.borrow_mut().replace(dir.clone());
 				self.add_directory(dir);
 			}
 		}
@@ -699,30 +738,24 @@ impl Window {
 		use std::io::Write;
 
 		let kind = src.kind();
-		let window = file_chooser!(&format!("Save the {}!", kind), self.wnd_main, FileChooserAction::Save, "_Save");
-
-		window.set_do_overwrite_confirmation(true);
-		let ext: Extension = match kind {
-			ImageKind::Avif => {
-				window.set_filter(&self.flt_avif);
-				E_AVIF
-			},
-			ImageKind::Jxl => {
-				window.set_filter(&self.flt_jxl);
-				E_JXL
-			},
-			ImageKind::Webp => {
-				window.set_filter(&self.flt_webp);
-				E_WEBP
-			},
+		let (filter, ext) = match kind {
+			ImageKind::Avif => (&self.flt_avif, E_AVIF),
+			ImageKind::Jxl => (&self.flt_jxl, E_JXL),
+			ImageKind::Webp => (&self.flt_webp, E_WEBP),
 			// It should not be possible to trigger this.
 			_ => { return Err(RefractError::NoSave); },
 		};
 
-		// Start in the source's directory.
-		if let Some(parent) = path.parent() {
-			window.set_current_folder(parent);
-		}
+		let window = self.file_chooser(
+			&format!("Save the {}!", kind),
+			FileChooserAction::Save,
+			"_Save",
+			path.parent(),
+			Some(filter),
+		);
+
+		// Warn about overwrites.
+		window.set_do_overwrite_confirmation(true);
 
 		// Suggest a file name.
 		window.set_current_name(OsStr::from_bytes(&[
