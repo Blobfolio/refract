@@ -677,9 +677,12 @@ impl Window {
 		if ResponseType::None == res { return false; }
 		else if ResponseType::Accept == res {
 			if let Some(file) = window.get_filename() {
+				// Store the "last used" directory for next time.
 				if let Some(parent) = file.parent() {
 					self.dir.borrow_mut().replace(parent.to_path_buf());
 				}
+
+				// Push image to the queue, if valid.
 				self.add_file(file);
 			}
 		}
@@ -687,7 +690,7 @@ impl Window {
 		// Close the window.
 		window.emit_close();
 
-		// True if we have stuff.
+		// True if we have stuff now.
 		self.has_paths()
 	}
 
@@ -713,7 +716,10 @@ impl Window {
 		if ResponseType::None == res { return false; }
 		else if ResponseType::Accept == res {
 			if let Some(dir) = window.get_filename() {
+				// Store the "last used" directory for next time.
 				self.dir.borrow_mut().replace(dir.clone());
+
+				// Push images to the queue, if any.
 				self.add_directory(dir);
 			}
 		}
@@ -721,7 +727,7 @@ impl Window {
 		// Close the window.
 		window.emit_close();
 
-		// True if we have stuff.
+		// True if we have stuff now.
 		self.has_paths()
 	}
 
