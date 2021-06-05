@@ -76,6 +76,36 @@ const FLAG_TICK_AB: u8 =       0b0010_0000; // We need to repaint format labels.
 
 
 
+/// # Helper: Pango-Formatted Span.
+macro_rules! log_colored {
+	($color:literal, $inner:expr) => (
+		concat!("<span foreground=\"", $color, "\">", $inner, "</span>")
+	);
+	($color:literal, $inner:expr, true) => (
+		concat!("<span foreground=\"", $color, "\" weight=\"bold\">", $inner, "</span>")
+	);
+}
+
+/// # Helper: Pango-Formatted Span (for log message prefix).
+///
+/// This works like [`log_colored`] bold but adds a trailing space, and
+/// optionally leading whitespace.
+macro_rules! log_prefix {
+	($color:literal, $prefix:literal) => (
+		concat!(log_colored!($color, $prefix, true), " ")
+	);
+	($before:literal, $color:literal, $prefix:literal) => (
+		concat!($before, log_colored!($color, $prefix, true), " ")
+	);
+}
+
+/// # Helper: GTK Resource Path.
+macro_rules! gtk_src {
+	($file:literal) => (concat!("/gtk/refract/", $file));
+}
+
+
+
 
 #[derive(Debug, Clone)]
 /// # Image Source.
@@ -154,6 +184,7 @@ impl WindowSource {
 pub(super) struct Window {
 	pub(super) flags: Cell<u8>,
 	pub(super) paths: RefCell<Vec<PathBuf>>,
+	pub(super) dir: RefCell<Option<PathBuf>>,
 	pub(super) status: RefCell<String>,
 	pub(super) source: RefCell<Option<WindowSource>>,
 	pub(super) candidate: RefCell<Option<WindowSource>>,
@@ -170,6 +201,7 @@ pub(super) struct Window {
 	pub(super) img_main: gtk::Image,
 	pub(super) box_preview: gtk::Box,
 	pub(super) box_ab: gtk::Box,
+	pub(super) box_menu: gtk::MenuBar,
 
 	pub(super) btn_discard: gtk::Button,
 	pub(super) btn_keep: gtk::Button,
@@ -189,8 +221,7 @@ pub(super) struct Window {
 
 	pub(super) lbl_status: gtk::Label,
 
-	pub(super) mnu_file: gtk::MenuItem,
-	pub(super) mnu_settings: gtk::MenuItem,
+	pub(super) mnu_about: gtk::MenuItem,
 	pub(super) mnu_fopen: gtk::MenuItem,
 	pub(super) mnu_dopen: gtk::MenuItem,
 	pub(super) mnu_quit: gtk::MenuItem,
@@ -203,20 +234,21 @@ impl TryFrom<&gtk::Application> for Window {
 	fn try_from(app: &gtk::Application) -> Result<Self, Self::Error> {
 		// Start the builder.
 		let builder = gtk::Builder::new();
-		builder.add_from_resource("/gtk/refract/refract.glade")
+		builder.add_from_resource(gtk_src!("refract.glade"))
 			.map_err(|_| RefractError::GtkInit)?;
 
 		// Create the main UI shell.
 		let out = Self {
 			flags: Cell::new(FLAG_TICK_STATUS),
 			paths: RefCell::new(Vec::new()),
+			dir: RefCell::new(None),
 			status: RefCell::new(String::from(concat!(
-				r##"<span foreground="#9b59b6" weight="bold">Refract GTK</span> <span foreground="#ff3596" weight="bold">v"##,
-				env!("CARGO_PKG_VERSION"),
-				"</span>\n",
-				r##"<span foreground="#999">Tweak the settings (if you want to), then select an image or directory to encode!</span>"##,
+				log_prefix!("#9b59b6", "Refract GTK"),
+				log_colored!("#ff3596", concat!("v", env!("CARGO_PKG_VERSION")), true),
 				"\n",
-				r##"<span foreground="#999">----</span>"##,
+				log_colored!("#999", "Tweak the settings (if you want to), then select an image or directory to encode!"),
+				"\n",
+				log_colored!("#999", "----"),
 			))),
 			source: RefCell::new(None),
 			candidate: RefCell::new(None),
@@ -233,6 +265,7 @@ impl TryFrom<&gtk::Application> for Window {
 			img_main: gtk_obj!(builder, "img_main"),
 			box_preview: gtk_obj!(builder, "box_preview"),
 			box_ab: gtk_obj!(builder, "box_ab"),
+			box_menu: gtk_obj!(builder, "box_menu"),
 
 			btn_discard: gtk_obj!(builder, "btn_discard"),
 			btn_keep: gtk_obj!(builder, "btn_keep"),
@@ -252,8 +285,7 @@ impl TryFrom<&gtk::Application> for Window {
 
 			lbl_status: gtk_obj!(builder, "lbl_status"),
 
-			mnu_file: gtk_obj!(builder, "mnu_file"),
-			mnu_settings: gtk_obj!(builder, "mnu_settings"),
+			mnu_about: gtk_obj!(builder, "mnu_about"),
 			mnu_fopen: gtk_obj!(builder, "mnu_fopen"),
 			mnu_dopen: gtk_obj!(builder, "mnu_dopen"),
 			mnu_quit: gtk_obj!(builder, "mnu_quit"),
@@ -268,13 +300,13 @@ impl TryFrom<&gtk::Application> for Window {
 		});
 
 		// Start with a fun image.
-		out.img_main.set_from_resource(Some("/gtk/refract/start.png"));
+		out.img_main.set_from_resource(Some(gtk_src!("start.png")));
 
 		// Hook up some styles.
-		set_widget_style(&out.btn_discard, "/gtk/refract/btn-discard.css");
-		set_widget_style(&out.btn_keep, "/gtk/refract/btn-keep.css");
-		set_widget_style(&out.spn_loading, "/gtk/refract/spn-loading.css");
-		set_widget_style(&out.wnd_image, "/gtk/refract/wnd-image.css");
+		set_widget_style(&out.btn_discard, gtk_src!("btn-discard.css"));
+		set_widget_style(&out.btn_keep, gtk_src!("btn-keep.css"));
+		set_widget_style(&out.spn_loading, gtk_src!("spn-loading.css"));
+		set_widget_style(&out.wnd_image, gtk_src!("wnd-image.css"));
 
 		// Start it up!
 		out.wnd_main.set_application(Some(app));
@@ -325,6 +357,7 @@ impl Window {
 		self.remove_source();
 		if unlock {
 			self.remove_flag(FLAG_LOCK_ENCODING);
+			self.spn_loading.stop();
 		}
 	}
 }
@@ -354,6 +387,7 @@ impl Window {
 
 		// Mention that we're starting.
 		self.log_start(paths.len(), &encoders);
+		self.spn_loading.start();
 
 		// Shove the actual work into a separate thread.
 		let tx2 = tx.clone();
@@ -493,7 +527,7 @@ impl Window {
 		if self.remove_flag(FLAG_TICK_IMAGE) {
 			// Set the done image.
 			if img.is_none() && ! self.is_encoding() {
-				self.img_main.set_from_resource(Some("/gtk/refract/stop.png"));
+				self.img_main.set_from_resource(Some(gtk_src!("stop.png")));
 			}
 			// Set/unset the image as instructed.
 			else {
@@ -539,12 +573,11 @@ impl Window {
 		else if force { self.add_flag(FLAG_TICK_IMAGE | FLAG_TICK_AB); }
 	}
 
+	#[inline]
 	/// # Toggle Spinner.
 	fn toggle_spinner(&self, val: bool) {
 		if val != self.spn_loading.get_property_active() {
 			self.spn_loading.set_property_active(val);
-			if val { self.spn_loading.start(); }
-			else { self.spn_loading.stop(); }
 		}
 	}
 }
@@ -554,15 +587,19 @@ impl Window {
 	/// # Add File.
 	fn add_file<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
-		let path = path.as_ref();
+		let path = match std::fs::canonicalize(path) {
+			Ok(p) => p,
+			Err(_) => { return false; },
+		};
+
 		if
 			path.is_file() &&
-			Extension::try_from3(path).map_or_else(
-				|| Extension::try_from4(path).map_or(false, |e| e == E_JPEG),
+			Extension::try_from3(&path).map_or_else(
+				|| Extension::try_from4(&path).map_or(false, |e| e == E_JPEG),
 				|e| e == E_JPG || e == E_PNG
 			)
 		{
-			self.paths.borrow_mut().push(path.to_path_buf());
+			self.paths.borrow_mut().push(path);
 			true
 		}
 		else { false }
@@ -588,6 +625,37 @@ impl Window {
 		else { false }
 	}
 
+	/// # Make File Chooser Dialogue.
+	///
+	/// This makes a new file chooser dialogue of the specified kind, and
+	/// optionally sets the working directory and/or filter.
+	fn file_chooser<P>(
+		&self,
+		title: &str,
+		action: FileChooserAction,
+		btn: &str,
+		dir: Option<P>,
+		filter: Option<&gtk::FileFilter>,
+	) -> gtk::FileChooserDialog
+	where P: AsRef<Path> {
+		let out = gtk::FileChooserDialog::with_buttons(
+			Some(title),
+			Some(&self.wnd_main),
+			action,
+			&[("_Cancel", ResponseType::Cancel), (btn, ResponseType::Accept)]
+		);
+
+		if let Some(filter) = filter {
+			out.set_filter(filter);
+		}
+
+		if let Some(parent) = dir {
+			out.set_current_folder(parent);
+		}
+
+		out
+	}
+
 	/// # Has Paths?
 	fn has_paths(&self) -> bool { ! self.paths.borrow().is_empty() }
 
@@ -598,18 +666,24 @@ impl Window {
 	pub(super) fn maybe_add_file(&self) -> bool {
 		if self.is_encoding() { return false; }
 
-		let window = gtk::FileChooserDialog::with_buttons(
-			Some("Choose an Image to Encode"),
-			Some(&self.wnd_main),
+		let window = self.file_chooser(
+			"Choose an Image to Encode",
 			FileChooserAction::Open,
-			&[("_Cancel", ResponseType::Cancel), ("_Open", ResponseType::Accept)]
+			"_Open",
+			self.dir.borrow().as_ref(),
+			Some(&self.flt_image),
 		);
-		window.set_filter(&self.flt_image);
 
 		let res = window.run();
 		if ResponseType::None == res { return false; }
 		else if ResponseType::Accept == res {
 			if let Some(file) = window.get_filename() {
+				// Store the "last used" directory for next time.
+				if let Some(parent) = file.parent() {
+					self.dir.borrow_mut().replace(parent.to_path_buf());
+				}
+
+				// Push image to the queue, if valid.
 				self.add_file(file);
 			}
 		}
@@ -617,7 +691,7 @@ impl Window {
 		// Close the window.
 		window.emit_close();
 
-		// True if we have stuff.
+		// True if we have stuff now.
 		self.has_paths()
 	}
 
@@ -628,17 +702,25 @@ impl Window {
 	pub(super) fn maybe_add_directory(&self) -> bool {
 		if self.is_encoding() { return false; }
 
-		let window = gtk::FileChooserDialog::with_buttons(
-			Some("Choose a Directory to Encode"),
-			Some(&self.wnd_main),
+		let window = self.file_chooser(
+			"Choose a Directory to Encode",
 			FileChooserAction::SelectFolder,
-			&[("_Cancel", ResponseType::Cancel), ("_Open", ResponseType::Accept)]
+			"_Select",
+			self.dir.borrow().as_ref(),
+			None,
 		);
+
+		// Disable folder creation.
+		window.set_create_folders(false);
 
 		let res = window.run();
 		if ResponseType::None == res { return false; }
 		else if ResponseType::Accept == res {
 			if let Some(dir) = window.get_filename() {
+				// Store the "last used" directory for next time.
+				self.dir.borrow_mut().replace(dir.clone());
+
+				// Push images to the queue, if any.
 				self.add_directory(dir);
 			}
 		}
@@ -646,7 +728,7 @@ impl Window {
 		// Close the window.
 		window.emit_close();
 
-		// True if we have stuff.
+		// True if we have stuff now.
 		self.has_paths()
 	}
 
@@ -663,53 +745,31 @@ impl Window {
 		use std::io::Write;
 
 		let kind = src.kind();
-		let title = format!("Save the {}!", kind);
-		let window = gtk::FileChooserDialog::with_buttons(
-			Some(title.as_str()),
-			Some(&self.wnd_main),
-			FileChooserAction::Save,
-			&[("_Cancel", ResponseType::Cancel), ("_Save", ResponseType::Accept)]
-		);
-
-		window.set_do_overwrite_confirmation(true);
-		let ext: Extension = match kind {
-			ImageKind::Avif => {
-				window.set_filter(&self.flt_avif);
-				E_AVIF
-			},
-			ImageKind::Jxl => {
-				window.set_filter(&self.flt_jxl);
-				E_JXL
-			},
-			ImageKind::Webp => {
-				window.set_filter(&self.flt_webp);
-				E_WEBP
-			},
+		let (filter, ext) = match kind {
+			ImageKind::Avif => (&self.flt_avif, E_AVIF),
+			ImageKind::Jxl => (&self.flt_jxl, E_JXL),
+			ImageKind::Webp => (&self.flt_webp, E_WEBP),
 			// It should not be possible to trigger this.
-			_ => {
-				return Err(RefractError::NoSave);
-			},
+			_ => { return Err(RefractError::NoSave); },
 		};
 
-		// Start in the source's directory.
-		if let Some(parent) = path.parent() {
-			window.set_current_folder(parent);
-		}
+		let window = self.file_chooser(
+			&format!("Save the {}!", kind),
+			FileChooserAction::Save,
+			"_Save",
+			path.parent(),
+			Some(filter),
+		);
+
+		// Warn about overwrites.
+		window.set_do_overwrite_confirmation(true);
 
 		// Suggest a file name.
-		if let Some(name) = path.file_name() {
-			window.set_current_name(OsStr::from_bytes(&[
-				name.as_bytes(),
-				b".",
-				src.kind().extension().as_bytes(),
-			].concat()));
-		}
-		else {
-			window.set_current_name(OsStr::from_bytes(&[
-				b"image.",
-				src.kind().extension().as_bytes(),
-			].concat()));
-		}
+		window.set_current_name(OsStr::from_bytes(&[
+			path.file_name().map_or_else(|| &b"image"[..], OsStr::as_bytes),
+			b".",
+			src.kind().extension().as_bytes(),
+		].concat()));
 
 		// Read the result!
 		let path: Option<PathBuf> = match window.run() {
@@ -720,11 +780,10 @@ impl Window {
 
 		// Close the window.
 		window.emit_close();
-		if path.is_none() { return Err(RefractError::NoSave); }
 
 		// Make sure the chosen path has an appropriate extension. If not, toss
 		// it onto the end.
-		let mut path = path.unwrap();
+		let mut path = path.ok_or(RefractError::NoSave)?;
 		if ext != path {
 			path = PathBuf::from(OsStr::from_bytes(&[
 				path.as_os_str().as_bytes(),
@@ -764,7 +823,7 @@ impl Window {
 	/// Really we just need to disable these fields when encoding is underway.
 	fn paint_settings(&self) {
 		let sensitive: bool = ! self.is_encoding();
-		gtk_sensitive!(sensitive, self.mnu_file, self.mnu_settings);
+		gtk_sensitive!(sensitive, self.box_menu);
 	}
 
 	/// # Paint Preview.
@@ -860,39 +919,30 @@ impl Window {
 
 /// ## Statuses.
 impl Window {
-	/// # Log Line (Generic).
-	///
-	/// This handles the savings for all the log functions.
-	fn log_line<S>(&self, line: S)
-	where S: AsRef<str> {
-		let line = line.as_ref();
-		let mut buf = self.status.borrow_mut();
-		if ! buf.is_empty() {
-			buf.push('\n');
-		}
-		buf.push_str(line);
-		self.add_flag(FLAG_TICK_STATUS);
-	}
-
 	/// # Log Done.
 	///
 	/// This happens when an encoding session finishes.
 	fn log_done(&self) {
-		self.log_line(concat!(
-			r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Encoding has finished! <span foreground="#999">(That's all, folks!)</span>"##,
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(concat!(
+			log_prefix!("\n", "#9b59b6", "Notice:"),
+			"Encoding has finished! ",
+			log_colored!("#999", "(That's all, folks!)"),
 			"\n",
-			r##"<span foreground="#999">----</span>"##,
+			log_colored!("#999", "----"),
 		));
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Encoder.
 	///
 	/// This triggers when starting a new encoder for a given source.
 	fn log_encoder(&self, enc: ImageKind) {
-		self.log_line(format!(
-			r##"    <span foreground="#ff3596" weight="bold">Encoder:</span> Firing up the {} encoder!"##,
-			enc
-		));
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(concat!(log_prefix!("\n    ", "#ff3596", "Encoder:"), "Firing up the <b>"));
+		buf.push_str(enc.as_str());
+		buf.push_str("</b> encoder!");
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Error.
@@ -901,12 +951,12 @@ impl Window {
 	/// value or is a duplicate of the previous entry.
 	fn log_error(&self, err: RefractError) {
 		let err = err.as_str();
-		if ! err.is_empty() {
-			self.log_line(format!(
-				r##"    <span foreground="#e74c3c" weight="bold">Error:</span> {}"##,
-				err
-			));
-		}
+		if err.is_empty() { return; }
+
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(log_prefix!("\n    ", "#e74c3c", "Error:"));
+		buf.push_str(err);
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Saved.
@@ -914,19 +964,22 @@ impl Window {
 	/// This is used to indicate a new image has been saved.
 	fn log_saved<P>(&self, path: P, quality: Quality, old_size: usize, new_size: usize)
 	where P: AsRef<Path> {
-		let path = path.as_ref();
-		if 0 < old_size && 0 < new_size && new_size < old_size {
-			let diff = old_size - new_size;
-			let per = dactyl::int_div_float(diff, old_size).unwrap_or(0.0);
+		if 0 == old_size || 0 == new_size || new_size >= old_size { return; }
 
-			self.log_line(format!(
-				r##"    <span foreground="#2ecc71" weight="bold">Success:</span> Created <b>{}</b> with {}. <span foreground="#999">(Saved {} bytes, {}.)</span>"##,
-				path.to_string_lossy(),
-				quality,
-				NiceU64::from(diff).as_str(),
-				NicePercent::from(per).as_str(),
-			));
-		}
+		// Crunch some numbers.
+		let diff = old_size - new_size;
+		let per = dactyl::int_div_float(diff, old_size).unwrap_or(0.0);
+
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(log_prefix!("\n    ", "#2ecc71", "Success:"));
+		buf.push_str(&format!(
+			concat!("Created <b>{}</b> with {}.", log_colored!("#999", "(Saved {} bytes, {}.)")),
+			path.as_ref().to_string_lossy(),
+			quality,
+			NiceU64::from(diff).as_str(),
+			NicePercent::from(per).as_str(),
+		));
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Source.
@@ -935,29 +988,65 @@ impl Window {
 	fn log_source<P>(&self, src: P)
 	where P: AsRef<Path> {
 		let src = src.as_ref();
-		self.log_line(format!(
-			r##"  <span foreground="#00abc0" weight="bold">Source:</span> <b>{}</b>."##,
-			src.to_string_lossy(),
-		));
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(concat!(log_prefix!("\n  ", "#00abc0", "Source:"), "<b>"));
+		buf.push_str(src.to_string_lossy().as_ref());
+		buf.push_str("</b>.");
+		self.add_flag(FLAG_TICK_STATUS);
 	}
 
 	/// # Log Start.
 	///
 	/// This triggers when an encoding session starts.
 	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
+		use crate::l10n::{inflect, oxford_join};
+
 		if encoders.is_empty() || count == 0 { return; }
 
-		// Format the encoder bit first.
-		let enc_list = crate::l10n::oxford_join(encoders, "and");
-		let images = crate::l10n::inflect(count, "image", "images");
-		let encoders = crate::l10n::inflect(encoders.len(), "encoder", "encoders");
-
-		self.log_line(format!(
-			r##"<span foreground="#9b59b6" weight="bold">Notice:</span> Refracting {} using {}! <span foreground="#999">({}.)</span>"##,
-			images,
-			encoders,
-			enc_list,
+		let mut buf = self.status.borrow_mut();
+		buf.push_str(&format!(
+			concat!(
+				log_prefix!("\n", "#9b59b6", "Notice:"),
+				"Refracting {} using {}! ",
+				log_colored!("#999", "({}.)"),
+			),
+			inflect(count, "image", "images"),
+			inflect(encoders.len(), "encoder", "encoders"),
+			oxford_join(encoders, "and"),
 		));
+		self.add_flag(FLAG_TICK_STATUS);
+	}
+}
+
+/// ## Miscellaneous.
+impl Window {
+	/// # About Dialog.
+	pub(super) fn about(&self) -> Result<gtk::AboutDialog, RefractError> {
+		let comic: Pixbuf = Pixbuf::from_resource(gtk_src!("comic.png"))
+			.map_err(|_| RefractError::NothingDoing)?;
+
+		let about = gtk::AboutDialogBuilder::new()
+			.attached_to(&self.wnd_main)
+			.authors(vec![env!("CARGO_PKG_AUTHORS").to_string(), String::from("Blobfolio https://blobfolio.com")])
+			.comments(env!("CARGO_PKG_DESCRIPTION"))
+			.copyright("\u{a9}2021 Blobfolio, LLC.")
+			.license(include_str!("../skel/license.txt"))
+			.license_type(gtk::License::Custom)
+			.logo(&comic)
+			.program_name("Refract GTK")
+			.version(env!("CARGO_PKG_VERSION"))
+			.website(env!("CARGO_PKG_REPOSITORY"))
+			.website_label("Source Code")
+			.build();
+
+		// Give a shout-out to all the direct dependencies. This list is
+		// generated by `build.rs`.
+		about.add_credit_section(
+			"Using",
+			include!(concat!(env!("OUT_DIR"), "/about-credits.txt")),
+		);
+
+		Ok(about)
 	}
 }
 

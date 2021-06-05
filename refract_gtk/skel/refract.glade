@@ -42,7 +42,8 @@
         <property name="can-focus">False</property>
         <property name="orientation">vertical</property>
         <child>
-          <object class="GtkMenuBar">
+          <object class="GtkMenuBar" id="box_menu">
+            <property name="name">box_menu</property>
             <property name="visible">True</property>
             <property name="can-focus">False</property>
             <child>
@@ -191,6 +192,30 @@
                             </child>
                           </object>
                         </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuItem" id="mnu_help">
+                <property name="name">mnu_help</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">_Help</property>
+                <property name="use-underline">True</property>
+                <child type="submenu">
+                  <object class="GtkMenu">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkMenuItem" id="mnu_about">
+                        <property name="name">mnu_about</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">_About</property>
+                        <property name="use-underline">True</property>
                       </object>
                     </child>
                   </object>

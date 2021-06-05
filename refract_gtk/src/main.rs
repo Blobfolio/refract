@@ -67,16 +67,6 @@ mod macros {
 	}
 
 	#[macro_export(local_inner_macros)]
-	/// # Helper: Toggle GTK Widget Active En Masse.
-	macro_rules! gtk_active {
-		($active:expr, $($obj:expr),+) => ($(
-			if $obj.get_active() != $active {
-				$obj.set_active($active);
-			}
-		)+);
-	}
-
-	#[macro_export(local_inner_macros)]
 	/// # Helper: Toggle GTK Widget Sensitivity En Masse.
 	macro_rules! gtk_sensitive {
 		($sensitive:expr, $($obj:expr),+) => ($(
@@ -155,7 +145,7 @@ fn init_resources() -> Result<(), RefractError> {
 /// # Setup UI.
 ///
 /// This finishes the UI setup, hooking up communication channels, event
-/// event bindings, etc.
+/// bindings, etc.
 fn setup_ui(window: &Arc<Window>) {
 	let (tx, rx) = mpsc::channel();
 	let fb = Arc::new(Atomic::new(ShareFeedback::Ok));
@@ -210,6 +200,21 @@ fn setup_ui(window: &Arc<Window>) {
 		window.mnu_quit.connect_activate(move |_| { wnd2.wnd_main.close(); });
 	}
 
+	// About.
+	{
+		let wnd2 = Arc::clone(window);
+		window.mnu_about.connect_activate(move |_| {
+			if let Ok(about) = wnd2.about() {
+				if gtk::ResponseType::None != about.run() {
+					about.emit_close();
+				}
+			}
+			else {
+				eprintln!("Error: Unable to draw about dialogue.");
+			}
+		});
+	}
+
 	// Add a file!
 	{
 		let fb2 = Arc::clone(&fb);
@@ -229,26 +234,22 @@ fn setup_ui(window: &Arc<Window>) {
 		});
 	}
 
-	// Show ab/format/quality fields when `lbl_quality` is shown.
+	// Sync display of ab/format/quality fields with `lbl_quality`.
 	{
-		let wnd2 = Arc::clone(window);
-		window.lbl_quality.connect_show(move |_| {
-			wnd2.box_ab.set_opacity(1.0);
-			wnd2.lbl_format.set_opacity(1.0);
-			wnd2.lbl_format_val.show();
-			wnd2.lbl_quality_val.show();
-		});
-	}
+		macro_rules! preview_cb {
+			($hook:ident, $action:ident, $opacity:literal) => {
+				let wnd2 = Arc::clone(window);
+				window.lbl_quality.$hook(move |_| {
+					wnd2.box_ab.set_opacity($opacity);
+					wnd2.lbl_format.set_opacity($opacity);
+					wnd2.lbl_format_val.$action();
+					wnd2.lbl_quality_val.$action();
+				});
+			};
+		}
 
-	// Hide ab/format/quality fields when `lbl_quality` is hidden.
-	{
-		let wnd2 = Arc::clone(window);
-		window.lbl_quality.connect_hide(move |_| {
-			wnd2.box_ab.set_opacity(0.0);
-			wnd2.lbl_format.set_opacity(0.0);
-			wnd2.lbl_format_val.hide();
-			wnd2.lbl_quality_val.hide();
-		});
+		preview_cb!(connect_show, show, 1.0);
+		preview_cb!(connect_hide, hide, 0.0);
 	}
 
 	// Keep the status log scrolled to the end.
