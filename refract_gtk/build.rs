@@ -19,8 +19,8 @@ use std::{
 pub fn main() {
 	println!("cargo:rerun-if-changed=skel");
 
-	_resources();
 	_credits();
+	_resources();
 }
 
 /// # Build Resource Bundle.
@@ -57,7 +57,7 @@ fn _resources() {
 fn _credits() {
 	use std::io::Write;
 
-	// Parse direct dependencies from the GTK and Core manifests.
+	// Parse the GTK and Core manifests.
 	let man1 = _man_path("Cargo.toml")
 		.and_then(|p| std::fs::read(p).ok())
 		.and_then(|d| cargo_toml::Manifest::from_slice(&d).ok())
@@ -67,7 +67,7 @@ fn _credits() {
 		.and_then(|d| cargo_toml::Manifest::from_slice(&d).ok())
 		.expect("Unable to parse refract_core manifest.");
 
-	// Tease out the names.
+	// Tease out the direct dependencies.
 	let mut deps: Vec<String> = man1.dependencies.keys()
 		.chain(man2.dependencies.keys())
 		.filter_map(|k|
@@ -79,7 +79,7 @@ fn _credits() {
 	deps.sort();
 	deps.dedup();
 
-	// Save them!
+	// Save them as a slice value!
 	let mut file = _out_path("about-credits.txt")
 		.and_then(|p| File::create(p).ok())
 		.expect("Missing OUT_DIR.");
