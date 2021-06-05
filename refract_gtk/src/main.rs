@@ -200,6 +200,21 @@ fn setup_ui(window: &Arc<Window>) {
 		window.mnu_quit.connect_activate(move |_| { wnd2.wnd_main.close(); });
 	}
 
+	// About.
+	{
+		let wnd2 = Arc::clone(window);
+		window.mnu_about.connect_activate(move |_| {
+			if let Ok(about) = wnd2.about() {
+				if gtk::ResponseType::None != about.run() {
+					about.emit_close();
+				}
+			}
+			else {
+				eprintln!("Error: Unable to draw about dialogue.");
+			}
+		});
+	}
+
 	// Add a file!
 	{
 		let fb2 = Arc::clone(&fb);

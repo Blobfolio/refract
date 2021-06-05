@@ -212,6 +212,7 @@ pub(super) struct Window {
 	pub(super) img_main: gtk::Image,
 	pub(super) box_preview: gtk::Box,
 	pub(super) box_ab: gtk::Box,
+	pub(super) box_menu: gtk::MenuBar,
 
 	pub(super) btn_discard: gtk::Button,
 	pub(super) btn_keep: gtk::Button,
@@ -231,8 +232,7 @@ pub(super) struct Window {
 
 	pub(super) lbl_status: gtk::Label,
 
-	pub(super) mnu_file: gtk::MenuItem,
-	pub(super) mnu_settings: gtk::MenuItem,
+	pub(super) mnu_about: gtk::MenuItem,
 	pub(super) mnu_fopen: gtk::MenuItem,
 	pub(super) mnu_dopen: gtk::MenuItem,
 	pub(super) mnu_quit: gtk::MenuItem,
@@ -275,6 +275,7 @@ impl TryFrom<&gtk::Application> for Window {
 			img_main: gtk_obj!(builder, "img_main"),
 			box_preview: gtk_obj!(builder, "box_preview"),
 			box_ab: gtk_obj!(builder, "box_ab"),
+			box_menu: gtk_obj!(builder, "box_menu"),
 
 			btn_discard: gtk_obj!(builder, "btn_discard"),
 			btn_keep: gtk_obj!(builder, "btn_keep"),
@@ -294,8 +295,7 @@ impl TryFrom<&gtk::Application> for Window {
 
 			lbl_status: gtk_obj!(builder, "lbl_status"),
 
-			mnu_file: gtk_obj!(builder, "mnu_file"),
-			mnu_settings: gtk_obj!(builder, "mnu_settings"),
+			mnu_about: gtk_obj!(builder, "mnu_about"),
 			mnu_fopen: gtk_obj!(builder, "mnu_fopen"),
 			mnu_dopen: gtk_obj!(builder, "mnu_dopen"),
 			mnu_quit: gtk_obj!(builder, "mnu_quit"),
@@ -783,7 +783,7 @@ impl Window {
 	/// Really we just need to disable these fields when encoding is underway.
 	fn paint_settings(&self) {
 		let sensitive: bool = ! self.is_encoding();
-		gtk_sensitive!(sensitive, self.mnu_file, self.mnu_settings);
+		gtk_sensitive!(sensitive, self.box_menu);
 	}
 
 	/// # Paint Preview.
@@ -975,6 +975,37 @@ impl Window {
 			oxford_join(encoders, "and"),
 		));
 		self.add_flag(FLAG_TICK_STATUS);
+	}
+}
+
+/// ## Miscellaneous.
+impl Window {
+	/// # About Dialog.
+	pub(super) fn about(&self) -> Result<gtk::AboutDialog, RefractError> {
+		let comic: Pixbuf = Pixbuf::from_resource(gtk_src!("comic.png"))
+			.map_err(|_| RefractError::NothingDoing)?;
+
+		let about = gtk::AboutDialogBuilder::new()
+			.attached_to(&self.wnd_main)
+			.authors(vec![env!("CARGO_PKG_AUTHORS").to_string(), String::from("Blobfolio https://blobfolio.com")])
+			.comments(env!("CARGO_PKG_DESCRIPTION"))
+			.copyright("\u{a9}2021 Blobfolio, LLC.")
+			.license(include_str!("../skel/license.txt"))
+			.license_type(gtk::License::Custom)
+			.logo(&comic)
+			.program_name("Refract GTK")
+			.version(env!("CARGO_PKG_VERSION"))
+			.website(env!("CARGO_PKG_REPOSITORY"))
+			.website_label("Source Code")
+			.build();
+
+		// Give a shout-out to all the direct dependencies.
+		about.add_credit_section(
+			"Using",
+			include!(concat!(env!("OUT_DIR"), "/about-credits.txt")),
+		);
+
+		Ok(about)
 	}
 }
 

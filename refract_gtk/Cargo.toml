@@ -33,6 +33,9 @@ assets = [
     ["./skel/deb/pixmaps/refract-gtk.xpm", "/usr/share/pixmaps/", "644"],
 ]
 
+[build-dependencies]
+cargo_toml = "0.9.*"
+
 [dependencies]
 atomic = "0.5.*"
 dactyl = "0.1.*"

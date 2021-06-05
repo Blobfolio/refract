@@ -7,35 +7,32 @@ be pulled into GTK.
 
 use std::{
 	ffi::OsStr,
+	fs::File,
+	path::PathBuf,
 	process::{
 		Command,
 		Stdio,
 	},
 };
 
-/// # Bundle Resources.
+/// # Build!
 pub fn main() {
 	println!("cargo:rerun-if-changed=skel");
 
+	_resources();
+	_credits();
+}
+
+/// # Build Resource Bundle.
+fn _resources() {
 	// The directory with all the files.
-	let skel_dir = std::fs::canonicalize(concat!(env!("CARGO_MANIFEST_DIR"), "/skel"))
-		.expect("Missing /skel directory.");
+	let skel_dir = _man_path("skel").expect("Missing /skel directory.");
 
 	// The input resource manifest.
-	let in_file = {
-		let mut dir = skel_dir.clone();
-		dir.push("resources.xml");
-		dir
-	};
-	assert!(in_file.is_file(), "Missing resources.xml");
+	let in_file = _man_path("skel/resources.xml").expect("Missing resources.xml");
 
 	// The output location for the resource manifest.
-	let out_file = {
-		let mut dir = std::fs::canonicalize(std::env::var("OUT_DIR").expect("Missing OUT_DIR."))
-			.expect("Missing OUT_DIR.");
-		dir.push("resources.gresource");
-		dir
-	};
+	let out_file = _out_path("resources.gresource").expect("Missing OUT_DIR.");
 
 	// Build it!
 	if ! Command::new("glib-compile-resources")
@@ -52,5 +49,60 @@ pub fn main() {
 			panic!("Unable to bundle resources with glib-compile-resources; is GLIB installed?");
 		}
 
+	// Make sure that created the file.
 	assert!(out_file.is_file(), "Missing the resource bundle.");
+}
+
+/// # Build Credits.
+fn _credits() {
+	use std::io::Write;
+
+	// Parse direct dependencies from the GTK and Core manifests.
+	let man1 = _man_path("Cargo.toml")
+		.and_then(|p| std::fs::read(p).ok())
+		.and_then(|d| cargo_toml::Manifest::from_slice(&d).ok())
+		.expect("Unable to parse refract_gtk manifest.");
+	let man2 = _man_path("../refract_core/Cargo.toml")
+		.and_then(|p| std::fs::read(p).ok())
+		.and_then(|d| cargo_toml::Manifest::from_slice(&d).ok())
+		.expect("Unable to parse refract_core manifest.");
+
+	// Tease out the names.
+	let mut deps: Vec<String> = man1.dependencies.keys()
+		.chain(man2.dependencies.keys())
+		.filter_map(|k|
+			if k == "argyle" || k == "refract_core" { None }
+			else { Some(format!("\"{} https://crates.io/crates/{}\"", k, k)) }
+		)
+		.collect();
+
+	deps.sort();
+	deps.dedup();
+
+	// Save them!
+	let mut file = _out_path("about-credits.txt")
+		.and_then(|p| File::create(p).ok())
+		.expect("Missing OUT_DIR.");
+
+	file.write_fmt(format_args!("&[{}]", deps.join(", ")))
+		.and_then(|_| file.flush())
+		.expect("Unable to save credits.");
+}
+
+/// # Manifest Path.
+///
+/// Return a path relative to the manifest directory.
+fn _man_path(file: &str) -> Option<PathBuf> {
+	let mut dir = std::fs::canonicalize(env!("CARGO_MANIFEST_DIR")).ok()?;
+	dir.push(file);
+	Some(dir).filter(|x| x.exists())
+}
+
+/// # Output Path.
+///
+/// Return a path relative to the output directory.
+fn _out_path(file: &str) -> Option<PathBuf> {
+	let mut dir = std::fs::canonicalize(std::env::var("OUT_DIR").ok()?).ok()?;
+	dir.push(file);
+	Some(dir).filter(|x| x.exists())
 }
