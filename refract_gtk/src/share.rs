@@ -31,7 +31,7 @@ pub(super) type SharePayload = Result<Share, RefractError>;
 type MainRx = Receiver<SharePayload>;
 
 /// # Main Thread Sender.
-type MainTx = Sender<ShareFeedback>;
+pub(super) type MainTx = Sender<ShareFeedback>;
 
 /// # Sister Thread Receiver.
 pub(super) type SisterRx = Receiver<ShareFeedback>;
