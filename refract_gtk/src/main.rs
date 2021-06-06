@@ -36,6 +36,8 @@ pub(self) use share::{
 	Share,
 	ShareFeedback,
 	SharePayload,
+	SisterRx,
+	SisterTx,
 };
 pub(self) use window::Window;
 
@@ -45,10 +47,7 @@ use gtk::prelude::*;
 use refract_core::RefractError;
 use std::{
 	convert::TryFrom,
-	sync::{
-		Arc,
-		atomic::Ordering::SeqCst,
-	},
+	sync::Arc,
 };
 
 
@@ -133,12 +132,13 @@ fn init_resources() -> Result<(), RefractError> {
 	Ok(())
 }
 
+#[allow(clippy::similar_names)] // We're being consistent.
 /// # Setup UI.
 ///
 /// This finishes the UI setup, hooking up communication channels, event
 /// bindings, etc.
 fn setup_ui(window: &Arc<Window>) {
-	let (tx, fb) = Share::init(Arc::clone(window));
+	let (stx, mtx, srx) = Share::init(Arc::clone(window));
 
 	// The encoder checkbox settings.
 	{
@@ -167,12 +167,12 @@ fn setup_ui(window: &Arc<Window>) {
 	{
 		macro_rules! feedback_cb {
 			($btn:expr, $status:expr) => {
-				let fb2 = Arc::clone(&fb);
+				let mtx2 = mtx.clone();
 				let wnd2 = Arc::clone(window);
 				$btn.connect_clicked(move |_| {
 					wnd2.remove_candidate();
 					wnd2.paint();
-					fb2.store($status, SeqCst);
+					mtx2.send($status).expect("Main thread unable to respond.");
 				});
 			};
 		}
@@ -191,33 +191,29 @@ fn setup_ui(window: &Arc<Window>) {
 	{
 		let wnd2 = Arc::clone(window);
 		window.mnu_about.connect_activate(move |_| {
-			if let Ok(about) = wnd2.about() {
-				if gtk::ResponseType::None != about.run() {
-					about.emit_close();
-				}
-			}
-			else {
-				eprintln!("Error: Unable to draw about dialogue.");
+			let about = wnd2.about().expect("Unable to draw about dialogue.");
+			if gtk::ResponseType::None != about.run() {
+				about.emit_close();
 			}
 		});
 	}
 
 	// Add a file!
 	{
-		let fb2 = Arc::clone(&fb);
-		let tx2 = tx.clone();
+		let srx2 = srx.clone();
+		let stx2 = stx.clone();
 		let wnd2 = Arc::clone(window);
 		window.mnu_fopen.connect_activate(move |_| {
-			if wnd2.maybe_add_file() { wnd2.encode(&tx2, &fb2); }
+			if wnd2.maybe_add_file() { wnd2.encode(&stx2, &srx2); }
 		});
 	}
 
 	// Add a directory!
-	// Note: both tx and feedback go out of scope here.
+	// Note: both stx and srx go out of scope here.
 	{
 		let wnd2 = Arc::clone(window);
 		window.mnu_dopen.connect_activate(move |_| {
-			if wnd2.maybe_add_directory() { wnd2.encode(&tx, &fb); }
+			if wnd2.maybe_add_directory() { wnd2.encode(&stx, &srx); }
 		});
 	}
 

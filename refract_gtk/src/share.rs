@@ -2,7 +2,6 @@
 # `Refract GTK` - Sharing
 */
 
-use atomic::Atomic;
 use crate::{
 	Candidate,
 	Window,
@@ -20,38 +19,33 @@ use std::{
 	cell::RefCell,
 	convert::TryFrom,
 	path::PathBuf,
-	sync::{
-		Arc,
-		atomic::Ordering::SeqCst,
-	},
-	time::Duration,
+	sync::Arc,
 };
-
-
-
-/// # Feedback Check Delay.
-///
-/// When a sister thread sends data back to the main thread, it sometimes needs
-/// to wait for a response. In such cases, the sister thread will check for
-/// updates at this frequency.
-///
-/// A `Condvar` would make more sense were it not for their "spurious wakeups".
-/// Haha.
-const FEEDBACK_PAUSE: Duration = Duration::from_millis(60);
 
 
 
 /// # Payload Type.
 pub(super) type SharePayload = Result<Share, RefractError>;
 
+/// # Main Thread Receiver.
+pub(super) type MainRx = Receiver<SharePayload>;
+
+/// # Main Thread Sender.
+pub(super) type MainTx = Sender<ShareFeedback>;
+
+/// # Sister Thread Receiver.
+pub(super) type SisterRx = Receiver<ShareFeedback>;
+
+/// # Sister Thread Sender.
+pub(super) type SisterTx = Sender<SharePayload>;
+
 
 
 thread_local!(
-	#[allow(clippy::type_complexity)] // This is the only definition.
 	/// # Global.
 	///
 	/// This gives us a way to reach the main thread from a sister thread.
-	static GLOBAL: RefCell<Option<(Arc<Window>, Receiver<SharePayload>, Arc<Atomic<ShareFeedback>>)>> = RefCell::new(None);
+	static GLOBAL: RefCell<Option<(Arc<Window>, MainRx, MainTx)>> = RefCell::new(None);
 );
 
 
@@ -94,14 +88,14 @@ impl TryFrom<&Output> for Share {
 impl Share {
 	/// # Initialize.
 	pub(super) fn init(window: Arc<Window>)
-	-> (Sender<SharePayload>, Arc<Atomic<ShareFeedback>>) {
+	-> (SisterTx, MainTx, SisterRx) {
 		let (tx, rx) = crossbeam_channel::bounded(8);
-		let fb = Arc::new(Atomic::new(ShareFeedback::Ok));
+		let (tx2, rx2) = crossbeam_channel::bounded(8);
 		GLOBAL.with(|global| {
-			*global.borrow_mut() = Some((window, rx, Arc::clone(&fb)));
+			*global.borrow_mut() = Some((window, rx, tx2.clone()));
 		});
 
-		(tx, fb)
+		(tx, tx2, rx2)
 	}
 
 	/// # Sync Share.
@@ -109,33 +103,24 @@ impl Share {
 	/// This pushes a payload to the main thread, then optionally waits for and
 	/// returns the response.
 	///
-	/// When not waiting for a response, [`ShareFeedback::Ok`] is returned
+	/// When not waiting for a response, [`ShareFeedback::Continue`] is returned
 	/// immediately.
 	pub(super) fn sync(
-		tx: &Sender<SharePayload>,
-		fb: &Arc<Atomic<ShareFeedback>>,
+		tx: &SisterTx,
+		rx: &SisterRx,
 		share: SharePayload,
-		verify: bool,
+		_verify: bool,
 	) -> ShareFeedback {
-		fb.store(ShareFeedback::WantsFeedback, SeqCst);
 		tx.send(share).unwrap();
 		glib::source::idle_add(|| {
 			get_share();
 			glib::source::Continue(false)
 		});
 
-		if verify {
-			loop {
-				let res = fb.load(SeqCst);
-				if res == ShareFeedback::WantsFeedback {
-					std::thread::sleep(FEEDBACK_PAUSE);
-				}
-				else {
-					return res;
-				}
-			}
+		loop {
+			let res = rx.recv().expect("Missing main thread response.");
+			if res != ShareFeedback::Wait { return res; }
 		}
-		else { ShareFeedback::Ok }
 	}
 }
 
@@ -151,27 +136,11 @@ impl Share {
 /// decide to keep or kill the image — but it may also indicate an error, in
 /// which case the sister thread will try to close itself down.
 pub(super) enum ShareFeedback {
-	/// # Payload Accepted. Continue...
-	Ok,
-
-	/// # Payload Rejected. Abort...
-	Err,
-
-	/// # Discard Candidate.
+	Continue,
+	Abort,
 	Discard,
-
-	/// # Keep Candidate.
 	Keep,
-
-	/// # Waiting on Feedback.
-	///
-	/// This status is always set when sending a new [`SharePayload`], but it
-	/// will also be returned by the main thread when, well, it is waiting for
-	/// feedback.
-	///
-	/// The sister thread treats this as a blocking value and will not continue
-	/// its work until it changes to something else.
-	WantsFeedback,
+	Wait,
 }
 
 
@@ -188,12 +157,15 @@ pub(super) enum ShareFeedback {
 fn get_share() {
 	GLOBAL.with(|global| {
 		let ptr = global.borrow();
-		let (ui, rx, feedback) = ptr.as_ref()
-			.expect("An unregistered thread was encountered.");
+		let (ui, rx, tx) = ptr.as_ref()
+			.expect("Missing main thread state.");
 
-		if let Ok(res) = rx.recv() {
-			feedback.store(ui.process_share(res).unwrap_or(ShareFeedback::Err), SeqCst);
-		}
+		tx.send(
+			if let Ok(res) = rx.recv() {
+				ui.process_share(res).unwrap_or(ShareFeedback::Abort)
+			}
+			else { ShareFeedback::Abort }
+		).expect("Main thread unable to respond.");
 
 		ui.paint();
 	});

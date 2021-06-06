@@ -2,7 +2,6 @@
 # `Refract GTK` - Window
 */
 
-use atomic::Atomic;
 use crate::{
 	Candidate,
 	gtk_obj,
@@ -10,8 +9,9 @@ use crate::{
 	Share,
 	ShareFeedback,
 	SharePayload,
+	SisterRx,
+	SisterTx,
 };
-use crossbeam_channel::Sender;
 use dactyl::{
 	NicePercent,
 	NiceU64,
@@ -51,7 +51,6 @@ use std::{
 		Path,
 		PathBuf,
 	},
-	sync::Arc,
 };
 
 
@@ -372,8 +371,8 @@ impl Window {
 	/// though, can be dealt with before that point.
 	pub(super) fn encode(
 		&self,
-		tx: &Sender<SharePayload>,
-		fb: &Arc<Atomic<ShareFeedback>>,
+		tx: &SisterTx,
+		rx: &SisterRx,
 	) -> bool {
 		// We can abort early if we have no paths or are already encoding.
 		if ! self.has_paths() || ! self.add_flag(FLAG_LOCK_ENCODING) { return false; }
@@ -389,9 +388,9 @@ impl Window {
 
 		// Shove the actual work into a separate thread.
 		let tx2 = tx.clone();
-		let fb2 = fb.clone();
+		let rx2 = rx.clone();
 		std::thread::spawn(move || {
-			_encode_outer(paths, &encoders, flags, &tx2, &fb2);
+			_encode_outer(paths, &encoders, flags, &tx2, &rx2);
 		});
 
 		true
@@ -471,7 +470,8 @@ impl Window {
 	}
 
 	/// # Set Best.
-	fn set_best(&self, mut path: PathBuf, src: Output) -> Result<ShareFeedback, RefractError> {
+	fn set_best(&self, mut path: PathBuf, src: Output)
+	-> Result<ShareFeedback, RefractError> {
 		// We still need a source.
 		if ! self.has_source() {
 			return Err(RefractError::MissingSource);
@@ -485,7 +485,10 @@ impl Window {
 		path = self.maybe_save(&path, &src)?;
 
 		// Record the happiness.
-		let old_size: usize = self.source.borrow().as_ref().map(|x| x.size).ok_or(RefractError::MissingSource)?;
+		let old_size: usize = self.source.borrow()
+			.as_ref()
+			.map(|x| x.size)
+			.ok_or(RefractError::MissingSource)?;
 		self.log_saved(
 			path,
 			src.quality(),
@@ -494,7 +497,7 @@ impl Window {
 		);
 
 		drop(src);
-		Ok(ShareFeedback::Ok)
+		Ok(ShareFeedback::Continue)
 	}
 
 	/// # Set Candidate.
@@ -504,7 +507,7 @@ impl Window {
 			self.toggle_preview(true, false);
 			gtk_sensitive!(true, self.btn_discard, self.btn_keep, self.btn_toggle);
 			self.add_flag(FLAG_LOCK_FEEDBACK | FLAG_TICK_AB);
-			Ok(ShareFeedback::WantsFeedback)
+			Ok(ShareFeedback::Wait)
 		}
 		else { Err(RefractError::MissingSource) }
 	}
@@ -549,7 +552,7 @@ impl Window {
 		self.source.borrow_mut().replace(WindowSource::from(src));
 		self.toggle_preview(false, true);
 		self.add_flag(FLAG_LOCK_ENCODING | FLAG_TICK_AB);
-		Ok(ShareFeedback::Ok)
+		Ok(ShareFeedback::Continue)
 	}
 
 	/// # Toggle Preview.
@@ -884,26 +887,26 @@ impl Window {
 	/// saving a new image, ending an encoding run, or logging an error.
 	///
 	/// A response is sent back to the sister thread when finished. Most of the
-	/// time the response is simply [`ShareFeedback::Ok`], but sometimes the
+	/// time the response is simply [`ShareFeedback::Continue`], but sometimes the
 	/// sister thread needs a specific answer (and will get one).
 	pub(super) fn process_share(&self, res: SharePayload)
 	-> Result<ShareFeedback, RefractError> {
 		let res = match res {
 			Ok(Share::Path(x)) => {
 				self.log_source(x);
-				Ok(ShareFeedback::Ok)
+				Ok(ShareFeedback::Continue)
 			},
 			Ok(Share::Source(x)) => self.set_source(x),
 			Ok(Share::Encoder(x)) => {
 				self.log_encoder(x);
-				Ok(ShareFeedback::Ok)
+				Ok(ShareFeedback::Continue)
 			},
 			Ok(Share::Candidate(x)) => self.set_candidate(x),
 			Ok(Share::Best(path, x)) => self.set_best(path, x),
 			Ok(Share::DoneEncoding) => {
 				self.finish(true);
 				self.log_done();
-				Ok(ShareFeedback::Ok)
+				Ok(ShareFeedback::Continue)
 			},
 			Err(e) => { Err(e) },
 		};
@@ -1058,16 +1061,16 @@ fn _encode_outer(
 	paths: Vec<PathBuf>,
 	encoders: &[ImageKind],
 	flags: u8,
-	tx: &Sender<SharePayload>,
-	fb: &Arc<Atomic<ShareFeedback>>,
+	tx: &SisterTx,
+	rx: &SisterRx,
 ) {
 	paths.into_iter().for_each(|path| {
-		if let Err(e) = _encode(&path, encoders, flags, tx, fb) {
-			Share::sync(tx, fb, Err(e), false);
+		if let Err(e) = _encode(&path, encoders, flags, tx, rx) {
+			Share::sync(tx, rx, Err(e), false);
 		}
 	});
 
-	Share::sync(tx, fb, Ok(Share::DoneEncoding), false);
+	Share::sync(tx, rx, Ok(Share::DoneEncoding), false);
 }
 
 /// # Encode!
@@ -1080,8 +1083,8 @@ fn _encode(
 	path: &Path,
 	encoders: &[ImageKind],
 	flags: u8,
-	tx: &Sender<SharePayload>,
-	fb: &Arc<Atomic<ShareFeedback>>,
+	tx: &SisterTx,
+	rx: &SisterRx,
 ) -> Result<(), RefractError> {
 	// Abort if there are no encoders.
 	if encoders.is_empty() {
@@ -1089,21 +1092,21 @@ fn _encode(
 	}
 
 	// First, let's read the main input.
-	Share::sync(tx, fb, Ok(Share::Path(path.to_path_buf())), false);
+	Share::sync(tx, rx, Ok(Share::Path(path.to_path_buf())), false);
 	let (src, can) = _encode_source(path)?;
-	if ShareFeedback::Err == Share::sync(tx, fb, Ok(Share::Source(can)), true) {
+	if ShareFeedback::Abort == Share::sync(tx, rx, Ok(Share::Source(can)), true) {
 		// The status isn't actually OK, but errors are already known, so this
 		// prevents resubmitting the same error later.
 		return Ok(());
 	}
 
 	encoders.iter().for_each(|&e| {
-		Share::sync(tx, fb, Ok(Share::Encoder(e)), false);
+		Share::sync(tx, rx, Ok(Share::Encoder(e)), false);
 		if let Ok(mut guide) = EncodeIter::new(&src, e, flags) {
 			let mut count: u8 = 0;
 			while let Some(can) = guide.advance().and_then(|out| Candidate::try_from(out).ok()) {
 				count += 1;
-				let res = Share::sync(tx, fb, Ok(Share::Candidate(can.with_count(count))), true);
+				let res = Share::sync(tx, rx, Ok(Share::Candidate(can.with_count(count))), true);
 				match res {
 					ShareFeedback::Keep => { guide.keep(); },
 					ShareFeedback::Discard => { guide.discard(); },
@@ -1112,7 +1115,7 @@ fn _encode(
 			}
 
 			// Save the best, if any!
-			Share::sync(tx, fb, guide.take().map(|x| Share::Best(path.to_path_buf(), x)), true);
+			Share::sync(tx, rx, guide.take().map(|x| Share::Best(path.to_path_buf(), x)), true);
 		}
 	});
 
