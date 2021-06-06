@@ -56,12 +56,9 @@ use std::{
 ///
 /// This lets us bubble up startup errors so they can be pretty-printed.
 fn main() {
-	match _main() {
-		Ok(_) => {},
-		Err(e) => {
-			eprintln!("Error: {}", e);
-			std::process::exit(1);
-		},
+	if let Err(e) = _main() {
+		eprintln!("Error: {}", e);
+		std::process::exit(1);
 	}
 }
 
@@ -145,7 +142,7 @@ fn setup_ui(window: &Arc<Window>) {
 				$btn.connect_clicked(move |_| {
 					wnd2.remove_candidate();
 					wnd2.paint();
-					mtx2.send($status).expect("Main thread unable to respond.");
+					mtx2.send($status).unwrap();
 				});
 			};
 		}
@@ -164,9 +161,10 @@ fn setup_ui(window: &Arc<Window>) {
 	{
 		let wnd2 = Arc::clone(window);
 		window.mnu_about.connect_activate(move |_| {
-			let about = wnd2.about().expect("Unable to draw about dialogue.");
-			if gtk::ResponseType::None != about.run() {
-				about.emit_close();
+			if let Ok(about) = wnd2.about() {
+				if gtk::ResponseType::None != about.run() {
+					about.emit_close();
+				}
 			}
 		});
 	}

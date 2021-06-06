@@ -118,7 +118,7 @@ impl Share {
 		});
 
 		loop {
-			let res = rx.recv().expect("Missing main thread response.");
+			let res = rx.recv().unwrap();
 			if res != ShareFeedback::Wait { return res; }
 		}
 	}
@@ -165,7 +165,7 @@ fn get_share() {
 				ui.process_share(res).unwrap_or(ShareFeedback::Abort)
 			}
 			else { ShareFeedback::Abort }
-		).expect("Main thread unable to respond.");
+		).unwrap();
 
 		ui.paint();
 	});
