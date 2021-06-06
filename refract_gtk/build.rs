@@ -68,7 +68,7 @@ fn _resources() {
 fn _credits() {
 	// Parse the lock file.
 	let lock_toml = _man_path("Cargo.lock")
-		.or(_man_path("../Cargo.lock"))
+		.or_else(|| _man_path("../Cargo.lock"))
 		.and_then(|p| std::fs::read_to_string(p).ok())
 		.and_then(|p| p.parse::<Value>().ok())
 		.expect("Unable to parse Cargo.lock.");
