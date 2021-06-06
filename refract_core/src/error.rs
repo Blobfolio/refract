@@ -46,9 +46,6 @@ pub enum RefractError {
 	Write,
 
 	#[cfg(feature = "gtk")]
-	AlreadyRunning,
-
-	#[cfg(feature = "gtk")]
 	GtkInit,
 
 	#[cfg(feature = "gtk")]
@@ -121,9 +118,6 @@ impl RefractError {
 
 			#[cfg(feature = "bin")]
 			Self::Write => "Unable to save the file.",
-
-			#[cfg(feature = "gtk")]
-			Self::AlreadyRunning => "The encoder is already running.",
 
 			#[cfg(feature = "gtk")]
 			Self::GtkInit => "Failed to initialize GTK.",
