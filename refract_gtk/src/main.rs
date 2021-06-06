@@ -52,33 +52,6 @@ use std::{
 
 
 
-#[macro_use]
-mod macros {
-	#[macro_export(local_inner_macros)]
-	/// # Helper: GTK Objects From Builder.
-	macro_rules! gtk_obj {
-		($builder:ident, $key:literal) => (
-			$builder.get_object($key).ok_or(RefractError::GtkInit)?
-		);
-	}
-
-	#[macro_export(local_inner_macros)]
-	/// # Helper: Toggle GTK Widget Sensitivity En Masse.
-	macro_rules! gtk_sensitive {
-		($sensitive:expr, $($obj:expr),+) => ($(
-			if $obj.get_sensitive() != $sensitive {
-				$obj.set_sensitive($sensitive);
-			}
-		)+);
-	}
-}
-
-
-
-
-
-
-
 /// # Main.
 ///
 /// This lets us bubble up startup errors so they can be pretty-printed.

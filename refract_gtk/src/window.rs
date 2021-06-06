@@ -4,8 +4,6 @@
 
 use crate::{
 	Candidate,
-	gtk_obj,
-	gtk_sensitive,
 	Share,
 	ShareFeedback,
 	SharePayload,
@@ -94,6 +92,22 @@ macro_rules! log_prefix {
 	($before:literal, $color:literal, $prefix:literal) => (
 		concat!($before, log_colored!($color, $prefix, true), " ")
 	);
+}
+
+/// # Helper: GTK Objects From Builder.
+macro_rules! gtk_obj {
+	($builder:ident, $key:literal) => (
+		$builder.get_object($key).ok_or(RefractError::GtkInit)?
+	);
+}
+
+/// # Helper: Toggle GTK Widget Sensitivity En Masse.
+macro_rules! gtk_sensitive {
+	($sensitive:expr, $($obj:expr),+) => ($(
+		if $obj.get_sensitive() != $sensitive {
+			$obj.set_sensitive($sensitive);
+		}
+	)+);
 }
 
 /// # Helper: GTK Resource Path.
