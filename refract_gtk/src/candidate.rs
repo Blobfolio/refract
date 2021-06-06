@@ -25,10 +25,10 @@ use std::convert::TryFrom;
 /// a buffer of RGBA pixels, the image dimensions, the encoding quality and
 /// iteration number — if applicable — and the byte size of the raw image.
 pub(super) struct Candidate {
-	pub(super) buf: Box<[u8]>,
-	pub(super) width: i32,
-	pub(super) height: i32,
-	pub(super) row_size: i32,
+	buf: Box<[u8]>,
+	width: i32,
+	height: i32,
+	row_size: i32,
 	pub(super) quality: Quality,
 	pub(super) count: u8,
 	pub(super) size: usize,

@@ -125,7 +125,7 @@ macro_rules! gtk_src {
 /// with the encoding quality, encoding iteration count, and the raw file size.
 ///
 /// If only we could share `Pixbuf` across threads...
-pub(super) struct WindowSource {
+struct WindowSource {
 	buf: Pixbuf,
 	quality: Quality,
 	count: u8,
@@ -193,26 +193,26 @@ impl WindowSource {
 ///
 /// It's pretty monstrous, but what can you do?
 pub(super) struct Window {
-	pub(super) flags: Cell<u8>,
-	pub(super) paths: RefCell<Vec<PathBuf>>,
-	pub(super) dir: RefCell<Option<PathBuf>>,
-	pub(super) status: RefCell<String>,
-	pub(super) source: RefCell<Option<WindowSource>>,
-	pub(super) candidate: RefCell<Option<WindowSource>>,
+	flags: Cell<u8>,
+	paths: RefCell<Vec<PathBuf>>,
+	dir: RefCell<Option<PathBuf>>,
+	status: RefCell<String>,
+	source: RefCell<Option<WindowSource>>,
+	candidate: RefCell<Option<WindowSource>>,
 
-	pub(super) flt_image: gtk::FileFilter,
-	pub(super) flt_avif: gtk::FileFilter,
-	pub(super) flt_jxl: gtk::FileFilter,
-	pub(super) flt_webp: gtk::FileFilter,
+	flt_image: gtk::FileFilter,
+	flt_avif: gtk::FileFilter,
+	flt_jxl: gtk::FileFilter,
+	flt_webp: gtk::FileFilter,
 
 	pub(super) wnd_main: gtk::ApplicationWindow,
-	pub(super) wnd_image: gtk::ScrolledWindow,
+	wnd_image: gtk::ScrolledWindow,
 	pub(super) wnd_status: gtk::ScrolledWindow,
 
-	pub(super) img_main: gtk::Image,
-	pub(super) box_preview: gtk::Box,
+	img_main: gtk::Image,
+	box_preview: gtk::Box,
 	pub(super) box_ab: gtk::Box,
-	pub(super) box_menu: gtk::MenuBar,
+	box_menu: gtk::MenuBar,
 
 	pub(super) btn_discard: gtk::Button,
 	pub(super) btn_keep: gtk::Button,
@@ -237,7 +237,7 @@ pub(super) struct Window {
 	pub(super) mnu_dopen: gtk::MenuItem,
 	pub(super) mnu_quit: gtk::MenuItem,
 
-	pub(super) spn_loading: gtk::Spinner,
+	spn_loading: gtk::Spinner,
 }
 
 impl TryFrom<&gtk::Application> for Window {

@@ -28,10 +28,10 @@ use std::{
 pub(super) type SharePayload = Result<Share, RefractError>;
 
 /// # Main Thread Receiver.
-pub(super) type MainRx = Receiver<SharePayload>;
+type MainRx = Receiver<SharePayload>;
 
 /// # Main Thread Sender.
-pub(super) type MainTx = Sender<ShareFeedback>;
+type MainTx = Sender<ShareFeedback>;
 
 /// # Sister Thread Receiver.
 pub(super) type SisterRx = Receiver<ShareFeedback>;
