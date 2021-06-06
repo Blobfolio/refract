@@ -1046,7 +1046,10 @@ impl Window {
 				env!("CARGO_PKG_AUTHORS").to_string(),
 				String::from("Blobfolio https://blobfolio.com")
 			])
-			.comments(env!("CARGO_PKG_DESCRIPTION"))
+			.comments(concat!(
+				env!("CARGO_PKG_DESCRIPTION"),
+				"\nFor best results, optimize your source images prior to running any conversions."
+			))
 			.copyright("\u{a9}2021 Blobfolio, LLC.")
 			.license(include_str!("../skel/license.txt"))
 			.license_type(gtk::License::Custom)
