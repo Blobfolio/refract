@@ -26,38 +26,8 @@ pub fn main() {
 	println!("cargo:rerun-if-changed=Cargo.toml");
 	println!("cargo:rerun-if-changed=skel");
 
-	_credits();
-	_resources();
-}
-
-/// # Build Resource Bundle.
-fn _resources() {
-	// The directory with all the files.
-	let skel_dir = _man_path("skel").expect("Missing /skel directory.");
-
-	// The input resource manifest.
-	let in_file = _man_path("skel/resources.xml").expect("Missing resources.xml");
-
-	// The output location for the resource manifest.
-	let out_file = _out_path("resources.gresource").expect("Missing OUT_DIR.");
-
-	// Build it!
-	if ! Command::new("glib-compile-resources")
-		.current_dir(&skel_dir)
-		.args(&[
-			OsStr::new("--target"),
-			out_file.as_os_str(),
-			in_file.as_os_str(),
-		])
-		.stdout(Stdio::null())
-		.stderr(Stdio::null())
-		.status()
-		.map_or(false, |s| s.success()) {
-			panic!("Unable to bundle resources with glib-compile-resources; is GLIB installed?");
-		}
-
-	// Make sure that created the file.
-	assert!(out_file.is_file(), "Missing the resource bundle.");
+	build_credits();
+	build_resources();
 }
 
 /// # Build Credits.
@@ -66,7 +36,7 @@ fn _resources() {
 /// core, since both are ours).
 ///
 /// This data gets used inside the Help > About dialogue.
-fn _credits() {
+fn build_credits() {
 	// Parse the lock file.
 	let lock_toml = _man_path("Cargo.lock")
 		.or_else(|| _man_path("../Cargo.lock"))
@@ -116,9 +86,39 @@ fn _credits() {
 		.and_then(|p| File::create(p).ok())
 		.expect("Missing OUT_DIR.");
 
-	file.write_fmt(format_args!("&[{}]", list.join(", ")))
+	file.write_fmt(format_args!("&[{}]", list.join(",")))
 		.and_then(|_| file.flush())
 		.expect("Unable to save credits.");
+}
+
+/// # Build Resource Bundle.
+fn build_resources() {
+	// The directory with all the files.
+	let skel_dir = _man_path("skel").expect("Missing /skel directory.");
+
+	// The input resource manifest.
+	let in_file = _man_path("skel/resources.xml").expect("Missing resources.xml");
+
+	// The output location for the resource manifest.
+	let out_file = _out_path("resources.gresource").expect("Missing OUT_DIR.");
+
+	// Build it!
+	if ! Command::new("glib-compile-resources")
+		.current_dir(&skel_dir)
+		.args(&[
+			OsStr::new("--target"),
+			out_file.as_os_str(),
+			in_file.as_os_str(),
+		])
+		.stdout(Stdio::null())
+		.stderr(Stdio::null())
+		.status()
+		.map_or(false, |s| s.success()) {
+			panic!("Unable to bundle resources with glib-compile-resources; is GLIB installed?");
+		}
+
+	// Make sure that created the file.
+	assert!(out_file.is_file(), "Missing the resource bundle.");
 }
 
 /// # Credit Dependency Array.
@@ -148,12 +148,10 @@ fn _credits_deps_formatted(key: &str, map: &HashMap<String, (String, Vec<String>
 	if let Some(deps) = map.get(key) {
 		deps.1.iter()
 			// Ignore our build dependencies, etc.
-			.filter(|x|
-				"argyle" != x.as_str() &&
-				"refract_core" != x.as_str() &&
-				"toml" != x.as_str() &&
-				"version-compare" != x.as_str()
-			)
+			.filter(|x| ! matches!(
+				x.as_str(),
+				"argyle" | "refract_core" | "toml" | "version-compare"
+			))
 			.filter_map(|name| map.get(name).map(|entry| format!(
 				"\"{} v{} https://crates.io/crates/{}\"",
 				name,
