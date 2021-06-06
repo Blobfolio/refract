@@ -39,18 +39,15 @@ pub(self) use share::{
 };
 pub(self) use window::Window;
 
-use atomic::Atomic;
 use gio::prelude::*;
 use glib::Bytes;
 use gtk::prelude::*;
 use refract_core::RefractError;
 use std::{
-	cell::RefCell,
 	convert::TryFrom,
 	sync::{
 		Arc,
 		atomic::Ordering::SeqCst,
-		mpsc,
 	},
 };
 
@@ -79,13 +76,7 @@ mod macros {
 
 
 
-thread_local!(
-	#[allow(clippy::type_complexity)] // This is the only definition.
-	/// # Global.
-	///
-	/// This gives us a way to reach the main thread from a sister thread.
-	static GLOBAL: RefCell<Option<(Arc<Window>, mpsc::Receiver<SharePayload>, Arc<Atomic<ShareFeedback>>)>> = RefCell::new(None);
-);
+
 
 
 
@@ -147,11 +138,7 @@ fn init_resources() -> Result<(), RefractError> {
 /// This finishes the UI setup, hooking up communication channels, event
 /// bindings, etc.
 fn setup_ui(window: &Arc<Window>) {
-	let (tx, rx) = mpsc::channel();
-	let fb = Arc::new(Atomic::new(ShareFeedback::Ok));
-	GLOBAL.with(|global| {
-		*global.borrow_mut() = Some((Arc::clone(window), rx, Arc::clone(&fb)));
-	});
+	let (tx, fb) = Share::init(Arc::clone(window));
 
 	// The encoder checkbox settings.
 	{

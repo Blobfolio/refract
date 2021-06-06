@@ -39,6 +39,7 @@ version-compare = "0.0.*"
 
 [dependencies]
 atomic = "0.5.*"
+crossbeam-channel = "0.5.*"
 dactyl = "0.1.*"
 dowser = "0.2.*"
 gio = "0.9.*"

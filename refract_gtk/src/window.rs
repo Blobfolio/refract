@@ -11,6 +11,7 @@ use crate::{
 	ShareFeedback,
 	SharePayload,
 };
+use crossbeam_channel::Sender;
 use dactyl::{
 	NicePercent,
 	NiceU64,
@@ -50,10 +51,7 @@ use std::{
 		Path,
 		PathBuf,
 	},
-	sync::{
-		Arc,
-		mpsc,
-	},
+	sync::Arc,
 };
 
 
@@ -374,7 +372,7 @@ impl Window {
 	/// though, can be dealt with before that point.
 	pub(super) fn encode(
 		&self,
-		tx: &mpsc::Sender<SharePayload>,
+		tx: &Sender<SharePayload>,
 		fb: &Arc<Atomic<ShareFeedback>>,
 	) -> bool {
 		// We can abort early if we have no paths or are already encoding.
@@ -1060,7 +1058,7 @@ fn _encode_outer(
 	paths: Vec<PathBuf>,
 	encoders: &[ImageKind],
 	flags: u8,
-	tx: &mpsc::Sender<SharePayload>,
+	tx: &Sender<SharePayload>,
 	fb: &Arc<Atomic<ShareFeedback>>,
 ) {
 	paths.into_iter().for_each(|path| {
@@ -1082,7 +1080,7 @@ fn _encode(
 	path: &Path,
 	encoders: &[ImageKind],
 	flags: u8,
-	tx: &mpsc::Sender<SharePayload>,
+	tx: &Sender<SharePayload>,
 	fb: &Arc<Atomic<ShareFeedback>>,
 ) -> Result<(), RefractError> {
 	// Abort if there are no encoders.

@@ -5,7 +5,11 @@
 use atomic::Atomic;
 use crate::{
 	Candidate,
-	GLOBAL,
+	Window,
+};
+use crossbeam_channel::{
+	Receiver,
+	Sender,
 };
 use refract_core::{
 	ImageKind,
@@ -13,12 +17,12 @@ use refract_core::{
 	RefractError,
 };
 use std::{
+	cell::RefCell,
 	convert::TryFrom,
 	path::PathBuf,
 	sync::{
 		Arc,
 		atomic::Ordering::SeqCst,
-		mpsc,
 	},
 	time::Duration,
 };
@@ -39,6 +43,16 @@ const FEEDBACK_PAUSE: Duration = Duration::from_millis(60);
 
 /// # Payload Type.
 pub(super) type SharePayload = Result<Share, RefractError>;
+
+
+
+thread_local!(
+	#[allow(clippy::type_complexity)] // This is the only definition.
+	/// # Global.
+	///
+	/// This gives us a way to reach the main thread from a sister thread.
+	static GLOBAL: RefCell<Option<(Arc<Window>, Receiver<SharePayload>, Arc<Atomic<ShareFeedback>>)>> = RefCell::new(None);
+);
 
 
 
@@ -78,6 +92,18 @@ impl TryFrom<&Output> for Share {
 }
 
 impl Share {
+	/// # Initialize.
+	pub(super) fn init(window: Arc<Window>)
+	-> (Sender<SharePayload>, Arc<Atomic<ShareFeedback>>) {
+		let (tx, rx) = crossbeam_channel::bounded(8);
+		let fb = Arc::new(Atomic::new(ShareFeedback::Ok));
+		GLOBAL.with(|global| {
+			*global.borrow_mut() = Some((window, rx, Arc::clone(&fb)));
+		});
+
+		(tx, fb)
+	}
+
 	/// # Sync Share.
 	///
 	/// This pushes a payload to the main thread, then optionally waits for and
@@ -86,7 +112,7 @@ impl Share {
 	/// When not waiting for a response, [`ShareFeedback::Ok`] is returned
 	/// immediately.
 	pub(super) fn sync(
-		tx: &mpsc::Sender<SharePayload>,
+		tx: &Sender<SharePayload>,
 		fb: &Arc<Atomic<ShareFeedback>>,
 		share: SharePayload,
 		verify: bool,
@@ -161,20 +187,14 @@ pub(super) enum ShareFeedback {
 /// shouldn't actually happen, though.
 fn get_share() {
 	GLOBAL.with(|global| {
-		if let Some((ui, rx, feedback)) = &*global.borrow() {
-			if let Ok(res) = rx.recv() {
-				if let Ok(fb) = ui.process_share(res) {
-					feedback.store(fb, SeqCst);
-				}
-				else {
-					feedback.store(ShareFeedback::Err, SeqCst);
-				}
-			}
+		let ptr = global.borrow();
+		let (ui, rx, feedback) = ptr.as_ref()
+			.expect("An unregistered thread was encountered.");
 
-			ui.paint();
+		if let Ok(res) = rx.recv() {
+			feedback.store(ui.process_share(res).unwrap_or(ShareFeedback::Err), SeqCst);
 		}
-		else {
-			panic!("An unregistered thread was encountered.");
-		}
+
+		ui.paint();
 	});
 }
