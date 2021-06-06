@@ -105,12 +105,8 @@ impl Share {
 	///
 	/// When not waiting for a response, [`ShareFeedback::Continue`] is returned
 	/// immediately.
-	pub(super) fn sync(
-		tx: &SisterTx,
-		rx: &SisterRx,
-		share: SharePayload,
-		_verify: bool,
-	) -> ShareFeedback {
+	pub(super) fn sync(tx: &SisterTx, rx: &SisterRx, share: SharePayload)
+	-> ShareFeedback {
 		tx.send(share).unwrap();
 		glib::source::idle_add(|| {
 			get_share();

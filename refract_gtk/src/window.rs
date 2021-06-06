@@ -1145,11 +1145,11 @@ fn _encode_outer(
 ) {
 	paths.into_iter().for_each(|path| {
 		if let Err(e) = _encode(&path, encoders, flags, tx, rx) {
-			Share::sync(tx, rx, Err(e), false);
+			Share::sync(tx, rx, Err(e));
 		}
 	});
 
-	Share::sync(tx, rx, Ok(Share::DoneEncoding), false);
+	Share::sync(tx, rx, Ok(Share::DoneEncoding));
 }
 
 /// # Encode!
@@ -1171,21 +1171,21 @@ fn _encode(
 	}
 
 	// First, let's read the main input.
-	Share::sync(tx, rx, Ok(Share::Path(path.to_path_buf())), false);
+	Share::sync(tx, rx, Ok(Share::Path(path.to_path_buf())));
 	let (src, can) = _encode_source(path)?;
-	if ShareFeedback::Abort == Share::sync(tx, rx, Ok(Share::Source(can)), true) {
+	if ShareFeedback::Abort == Share::sync(tx, rx, Ok(Share::Source(can))) {
 		// The status isn't actually OK, but errors are already known, so this
 		// prevents resubmitting the same error later.
 		return Ok(());
 	}
 
 	encoders.iter().for_each(|&e| {
-		Share::sync(tx, rx, Ok(Share::Encoder(e)), false);
+		Share::sync(tx, rx, Ok(Share::Encoder(e)));
 		if let Ok(mut guide) = EncodeIter::new(&src, e, flags) {
 			let mut count: u8 = 0;
 			while let Some(can) = guide.advance().and_then(|out| Candidate::try_from(out).ok()) {
 				count += 1;
-				let res = Share::sync(tx, rx, Ok(Share::Candidate(can.with_count(count))), true);
+				let res = Share::sync(tx, rx, Ok(Share::Candidate(can.with_count(count))));
 				match res {
 					ShareFeedback::Keep => { guide.keep(); },
 					ShareFeedback::Discard => { guide.discard(); },
@@ -1194,7 +1194,7 @@ fn _encode(
 			}
 
 			// Save the best, if any!
-			Share::sync(tx, rx, guide.take().map(|x| Share::Best(path.to_path_buf(), x)), true);
+			Share::sync(tx, rx, guide.take().map(|x| Share::Best(path.to_path_buf(), x)));
 		}
 	});
 
