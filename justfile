@@ -172,9 +172,7 @@ version:
 
 # Init dependencies.
 @_init:
-	# GTK requirements.
-	apt-get update
-	apt-fast install -y librust-gtk-dev librust-gdk-dev
+	# Nothing just now.
 
 
 # Fix file/directory permissions.
