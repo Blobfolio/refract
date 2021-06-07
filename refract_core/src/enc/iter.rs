@@ -193,11 +193,14 @@ impl EncodeIter<'_> {
 	/// This will return an error if the encoder does not support lossless
 	/// encoding, if there are errors during encoding, or if the resulting
 	/// file offers no savings over the original.
-	fn lossless(&mut self) -> Result<(), RefractError> {
+	fn lossless(&mut self, flags: u8) -> Result<(), RefractError> {
 		self.set_candidate_quality(None);
 
 		let kind = self.output_kind();
-		kind.encode_lossless(&self.src, &mut self.candidate, self.flags)?;
+		if (0 == flags & FLAG_AVIF_ROUND_3) || kind == ImageKind::Avif {
+			kind.encode_lossless(&self.src, &mut self.candidate, flags)?;
+		}
+		else { return Err(RefractError::NothingDoing); }
 
 		self.finish_candidate()
 	}
@@ -329,9 +332,14 @@ impl EncodeIter<'_> {
 			self.flags |= FLAG_AVIF_ROUND_3;
 
 			if self.best.is_valid() {
-				let quality = self.best.quality().raw();
 				let flags = self.best.flags() | FLAG_AVIF_ROUND_3;
-				self.lossy(quality, flags).ok()?;
+				if self.best.quality().is_lossless() {
+					self.lossless(flags).ok()?;
+				}
+				else {
+					let quality = self.best.quality().raw();
+					self.lossy(quality, flags).ok()?;
+				}
 				self.keep_candidate();
 			}
 		}
@@ -351,7 +359,7 @@ impl EncodeIter<'_> {
 			self.flags |= FLAG_DID_LOSSLESS;
 			if 0 == self.flags & FLAG_NO_LOSSLESS {
 				self.steps.ignore(self.steps.top());
-				if self.lossless().is_ok() {
+				if self.lossless(self.flags).is_ok() {
 					self.keep_candidate();
 				}
 			}

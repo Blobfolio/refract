@@ -1,8 +1,12 @@
-# Refract
+# Refract GTK
 
-Refract is a guided image conversion tool. It takes [JPEG](https://en.wikipedia.org/wiki/JPEG) and [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) image sources and produces [AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF)), [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL), and [WebP](https://en.wikipedia.org/wiki/WebP) clones.
+Refract is a guided image conversion tool written in [Rust](https://www.rust-lang.org/) for x86-64 Linux systems with [GTK](https://www.gtk.org/).
 
-The program is named after — and works like — eye doctor Refraction Tests. It generates candidate images at various qualities, asking at each step how it looks, and uses that feedback to arrive at the smallest possible "acceptable" output.
+It takes [JPEG](https://en.wikipedia.org/wiki/JPEG) and [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) image sources and produces [AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF)), [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL), and [WebP](https://en.wikipedia.org/wiki/WebP) clones.
+
+<img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen0.png" width="30%" alt="The start screen. Nice and clean."></img> <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen1.png" width="30%" alt="Viewing a PNG source image."></img> <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen2.png" width="30%" alt="Previewing a WebP candidate to Discard or Keep."></img> 
+
+The program is named after — and works like — eye doctor Refraction Tests. It generates candidate images at various qualities, asking at each step how it looks, and uses that feedback (you provide) to arrive at the smallest possible "acceptable" output.
 
 Hence "guided".
 
@@ -24,7 +28,11 @@ Refract helps makes that manual process _less_ tedious and _more_ foolproof.
 
 It automatically uses the strongest (slowest) possible compression settings for each format, keeps track of file sizes and qualities along the way, can process inputs en masse, and reduces the number of conversion tests by around 90%.
 
-Should you use it for every image ever? No, probably not. The next generation formats, particularly AVIF and JPEG XL, require a lot of computation to discover byte savings. All those minutes will add up quickly.
+Should you use it for every image ever?
+
+No, probably not.
+
+The next generation formats, particularly AVIF and JPEG XL, require a lot of computation to eek out their extra byte savings. All those minutes will add up quickly.
 
 But if you're looking to obsessively optimize a small project or single web page, Refract is the way to go!
 
@@ -32,111 +40,35 @@ But if you're looking to obsessively optimize a small project or single web page
 
 ## Features
 
-Only JPEG and PNG input sources are supported. They can have RGB, RGBA, greyscale, or greyscale w/ alpha color spaces, but CMYK is not supported.
+| Format | Decoding (Input/Display) | Encoding (Output) |
+| ------ | -------- | -------- |
+| JPEG | Yes, except CMYK. ||
+| PNG  | Yes* ||
+| AVIF | Yes | Lossless, lossy, `RGB`, and `YCbCr` |
+| JPEG XL | Yes* | Lossless, lossy. |
+| WebP | Yes* | Lossless, lossy. |
 
-Conversion is done at pixel level; gamma and other metadata profile information is not factored or present in the converted copies, so is not supported.
+** Refract does not support animated images. Without going too far down _that_ rabbit hole, let's just say that if GIF can't handle the job, it should be a video, not an image.
 
-Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjxl`](https://gitlab.com/wg1/jpeg-xl), and [`libwebp`](https://chromium.googlesource.com/webm/libwebp/) directly. This means the images it produces will match those produced by the official `avifenc`, `cjxl`, and `cwebp` binaries, but it also means you don't _need_ those official programs installed to use it.
+In other words, Refract takes JPEG and PNG sources — either individual files or entire directory trees — and turns them into AVIF, JPEG XL, and/or WebP outputs.
 
-Refract supports both lossless and lossy encoding for each of the three formats, and by default will try both. (Sometimes lossless actually wins!)
+Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjxl`](https://gitlab.com/wg1/jpeg-xl), and [`libwebp`](https://chromium.googlesource.com/webm/libwebp/) directly. This not only ensures full standards compliance and feature/performance parity with each format's official conversion tools — `avifenc`, `cjxl`, and `cwebp` respectively — it also means you don't need any of that crap separately installed to use it!
 
-Refract also supports both full-range `RGB` and limited-range `YCbCr` encoding modes for AVIF.
-
-
-
-## Flavors
-
-Refract comes in two flavors — [CLI](#cli-version) and [GTK](#gtk-version) (GUI) — differing only in how they manage image previews.
-
-The GTK version, being graphical, simply displays source and candidate images within its interface, allowing you to easily toggle between the two to quickly identify good encodings from bad ones.
-
-The CLI version instead saves each candidate image to a temporary file so you can open and inspect them in any program of your choosing, such as a web browser.
-
-Other than that, the two versions share the same features and process images the same way.
+All conversion takes place at Pixel Level and is intended for displays with an sRGB color space (e.g. web browsers). Gamma correction, color profiles, and other metadata are ignored and stripped out when saving next-gen copies.
 
 
 
-## CLI Version
+## Usage
 
-The original Refract is a simple CLI tool that saves each candidate image to a temporary location (which you can open and inspect in any program of your choosing).
+Refract is pretty straightforward:
 
-![Example CLI screen.](https://github.com/Blobfolio/refract/raw/master/skel/prompt.png)
+1. Tweak the settings — via the `Settings` menu — as desired.
+2. Load a single image or an entire directory.
+3. Sit back and wait for any feedback or save prompts.
 
-Final, "best" candidate images are saved next to the source(s) with the appropriate extension tacked onto the end, e.g. `image.jpeg.webp`.
+For best results, be sure to optimize your input sources before re-encoding them with Refract.
 
-### Usage
-
-Just run `refract [FLAGS] [OPTIONS] <PATH(S)>…`.
-
-The following flags are available:
-
-```bash
--h, --help          Prints help information.
-    --no-avif       Skip AVIF conversion.
-    --no-jxl        Skip JPEG XL conversion.
-    --no-webp       Skip WebP conversion.
-    --skip-lossless Only perform lossy encoding.
-    --skip-lossy    Only perform lossless encoding.
-    --skip-ycbcr    Only test full-range RGB AVIF encoding (when encoding
-                    AVIFs).
--V, --version       Prints version information.
-```
-
-By default, Refract CLI will generate copies in every next-gen format. If you want to skip one, use the corresponding `--no-*` flag.
-
-You can specify any number of input paths. The paths can be individual JPEG or PNG images, or directories containing such images. You can also/alternatively specify paths using the `-l`/`--list` option, which should point to a text file containing any number of paths, one per line.
-
-```bash
-# Handle one image.
-refract /path/to/image.jpg
-
-# Example pulling paths from a text file.
-refract --list /path/to/list.txt /path/to/another/image.jpg
-
-# Skip WebP.
-refract --no-webp /path/to/image.jpg
-```
-
-### Installation
-
-Debian and Ubuntu users can just grab the pre-built `refract_#.#.#_amd64.deb` package from the [release page](https://github.com/Blobfolio/refract/releases/latest).
-
-Refract can also be built from source on other x86-64 Unix systems with `Rust`/`Cargo`:
-
-```
-# Clone the repository.
-git clone https://github.com/Blobfolio/refract.git
-
-# Move into the directory.
-cd refract
-
-# Build with Cargo.
-# Note: you should specify both --bin and -p to avoid binary bloat.
-cargo build \
-    --bin refract \
-    -p refract \
-    --release
-```
-
-Image formats are… complicated, and many of the decoders have `build.rs` system dependencies that need to be present on the system when compiling from source, including up-to-date versions of Clang, GCC, NASM, and Ninja. (If you end up needing to install anything else, please open a ticket so I can update this README.)
-
-
-
-## GTK Version
-
-The guided generation offered by Refract CLI is a big time saver, but previewing the images it generates can still be quite the time suck.
-
-The GUI version of Refract helps streamline the process by providing a built-in A/B image viewer, letting you quickly toggle between source and candidate images to inspect the differences.
-
-![Example GTK screen.](https://github.com/Blobfolio/refract/raw/master/skel/gtk.webp)
-
-### Usage
-
-As with the CLI version, you can load and encode a single source image, or queue up an entire directory to process multiple images en masse.
-
-Unlike the CLI version, a `Save` prompt is popped whenever a "best" candidate has been found, allowing you to specify any arbitrary output destination.
-
-For keyboard afficionados, the following hot-keys are provided:
+For keyboard afficionados, the following hot-keys may be used:
 
 | Action | Key(s) |
 | ------ | ------ |
@@ -146,11 +78,15 @@ For keyboard afficionados, the following hot-keys are provided:
 | Discard Candidate | `d` |
 | Keep Candidate | `k` |
 
-### Installation
 
-Debian and Ubuntu users can just grab the pre-built `refract-gtk_#.#.#_amd64.deb` package from the [release page](https://github.com/Blobfolio/refract/releases/latest).
 
-Refract GTK can also be built from source on other x86-64 Unix systems with `Rust`/`Cargo`:
+## Installation
+
+Debian and Ubuntu users can just grab the pre-built `.deb` package from the [release page](https://github.com/Blobfolio/refract/releases/latest).
+
+(Arch Linux users can probably use the `.deb` too, but may need to adjust the icon and `.desktop` paths to match where your system likes to keep those things.)
+
+While specifically written for use on x86-64 Linux systems, both Rust and GTK are cross-platform, so you may well be able to build it from source on other 64-bit Unix systems using `Cargo`:
 
 ```
 # Clone the repository.
@@ -159,17 +95,30 @@ git clone https://github.com/Blobfolio/refract.git
 # Move into the directory.
 cd refract
 
-# Build with Cargo.
-# Note: you should specify both --bin and -p to avoid binary bloat.
+# Build with Cargo. Feel free to add other build flags as desired.
 cargo build \
-    --bin refract-gtk \
-    -p refract-gtk \
+    --bin refract \
+    -p refract \
     --release
 ```
 
-This comes with the same build caveats as the [CLI version](#cli-version), but with the additional monster that is GTK. To build this version from source, you're going to need the `-dev` packages for ATK, Cairo, GDK, GLIB, GTK, Pango, Pixbuf, and probably a few other things.
+Cargo _will_ handle the entire build process for you, however many of Refract's dependencies have heavy `build.rs` scripts requiring additional system libraries.
 
-Thankfully many distributions offer meta packages to bundle away the tedium. On Debian Buster, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover it.
+At a minimum, you'll need up-to-date versions of:
+
+* Clang
+* Cmake
+* GCC
+* Git
+* Make
+* NASM
+* Ninja
+
+You'll also need the `-dev` packages for all of the GTK dependencies, including ATK, Cairo, GDK, GLIB, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make the GTK dependency installation process easier. On Debian Buster, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
+
+This list is (probably) non-exhaustive. If you find you need something else, open a ticket so I can update the list!
+
+Likewise, if you try building on Mac, please let me know how it goes!
 
 
 
