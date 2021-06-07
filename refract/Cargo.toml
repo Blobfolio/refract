@@ -15,6 +15,7 @@ copyright = "2021, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
 revision = "1"
 depends = "libgdk-pixbuf2.0-0(>= 2.36), libgtk-3-0 (>= 3.22), libpango-1.0-0, libcairo2, libatk1.0-0, libglib2.0-0, libpng16-16, libstdc++6 (>= 8.3.0), libc6 (>= 2.28)"
+replaces = "refract-gtk"
 section = "utility"
 extended-description = """\
 .\n\
