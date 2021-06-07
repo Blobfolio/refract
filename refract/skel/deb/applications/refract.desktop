@@ -8,4 +8,4 @@ Type=Application
 Icon=refract.png
 Categories=GNOME;Application;Utility;
 X-AppStream-Ignore=true
-Name[en_US]=refract.desktop
+Name[en_US]=Refract GTK
