@@ -1,5 +1,5 @@
 /*!
-# `Refract`
+# `Refract GTK`
 */
 
 #![warn(clippy::filetype_is_file)]
@@ -25,187 +25,187 @@
 #![allow(clippy::module_name_repetitions)]
 
 
-pub(self) mod utility;
-mod source;
 
+mod candidate;
+pub(self) mod l10n;
+mod share;
+mod window;
 
-use argyle::{
-	Argue,
-	ArgyleError,
-	FLAG_HELP,
-	FLAG_REQUIRED,
-	FLAG_VERSION,
+pub(self) use candidate::Candidate;
+pub(self) use share::{
+	MainTx,
+	Share,
+	ShareFeedback,
+	SharePayload,
+	SisterRx,
+	SisterTx,
 };
-use refract_core::{
-	FLAG_NO_AVIF_YCBCR,
-	FLAG_NO_LOSSLESS,
-	FLAG_NO_LOSSY,
-	ImageKind,
-	RefractError,
-};
-use dowser::{
-	Dowser,
-	Extension,
-};
-use fyi_msg::Msg;
+pub(self) use window::Window;
+
+use gio::prelude::*;
+use glib::Bytes;
+use gtk::prelude::*;
+use refract_core::RefractError;
 use std::{
 	convert::TryFrom,
-	ffi::OsStr,
-	os::unix::ffi::OsStrExt,
-	path::PathBuf,
+	sync::Arc,
 };
 
 
 
 /// # Main.
+///
+/// This lets us bubble up startup errors so they can be pretty-printed.
 fn main() {
-	match _main() {
-		Ok(_) => {},
-		Err(RefractError::Menu(ArgyleError::WantsVersion)) => {
-			println!(concat!("Refract v", env!("CARGO_PKG_VERSION")));
-		},
-		Err(RefractError::Menu(ArgyleError::WantsHelp)) => {
-			helper();
-		},
-		Err(e) => {
-			Msg::error(e).die(1);
-		},
+	if let Err(e) = _main() {
+		eprintln!("Error: {}", e);
+		std::process::exit(1);
 	}
 }
 
 #[inline]
 /// # Actual Main.
 ///
-/// This just gives us an easy way to bubble errors up to the real entrypoint.
+/// This initializes, sets up, and runs the GTK application.
+///
+/// ## Panics
+///
+/// This will panic if the building of the UI model itself fails. This
+/// shouldn't ever happen, but we can't propagate that particular failure as a
+/// proper `Result`.
+///
+/// Any other kind of issue encountered will cause the application to fail, but
+/// with a pretty CLI error reason.
 fn _main() -> Result<(), RefractError> {
-	// The extensions we're going to be looking for.
-	const E_JPG: Extension = Extension::new3(*b"jpg");
-	const E_PNG: Extension = Extension::new3(*b"png");
-	const E_JPEG: Extension = Extension::new4(*b"jpeg");
+	init_resources()?;
+	let application =
+		gtk::Application::new(Some("com.refract.gtk"), gio::ApplicationFlags::default())
+			.map_err(|_| RefractError::GtkInit)?;
 
-	// Parse CLI arguments.
-	let args = Argue::new(FLAG_HELP | FLAG_REQUIRED | FLAG_VERSION)
-		.map_err(RefractError::Menu)?
-		.with_list();
+	application.connect_activate(|app| {
+		let window = Arc::new(Window::try_from(app).expect("Unable to build GTK window."));
+		setup_ui(&window);
+		window.paint();
+	});
 
-	// We'll get to these in a bit.
-	let mut flags: u8 = 0;
-
-	// General encoding modes.
-	if args.switch(b"--skip-lossy") {
-		flags |= FLAG_NO_LOSSY;
-	}
-	if args.switch(b"--skip-lossless") {
-		flags |= FLAG_NO_LOSSLESS;
-	}
-
-	// Make sure the user didn't do something stupid.
-	if
-		(FLAG_NO_LOSSY == flags & FLAG_NO_LOSSY) &&
-		(FLAG_NO_LOSSLESS == flags & FLAG_NO_LOSSLESS)
-	{
-		return Err(RefractError::NoCompression);
-	}
-
-	// Figure out which types we're dealing with.
-	let encoders: Box<[ImageKind]> = {
-		let mut encoders: Vec<ImageKind> = Vec::with_capacity(3);
-		if ! args.switch(b"--no-webp") {
-			encoders.push(ImageKind::Webp);
-		}
-		if ! args.switch(b"--no-avif") {
-			encoders.push(ImageKind::Avif);
-
-			// Deal with the AVIF-specific flag while we're here.
-			if args.switch(b"--skip-ycbcr") {
-				flags |= FLAG_NO_AVIF_YCBCR;
-			}
-		}
-		if ! args.switch(b"--no-jxl") {
-			encoders.push(ImageKind::Jxl);
-		}
-		encoders.into_boxed_slice()
-	};
-
-	if encoders.is_empty() {
-		return Err(RefractError::NoEncoders);
-	}
-
-	// Find the paths.
-	let mut paths = Vec::<PathBuf>::try_from(
-		Dowser::filtered(|p|
-			Extension::try_from3(p).map_or_else(
-				|| Extension::try_from4(p).map_or(false, |e| e == E_JPEG),
-				|e| e == E_JPG || e == E_PNG
-			)
-		)
-			.with_paths(args.args().iter().map(|x| OsStr::from_bytes(x.as_ref())))
-	)
-		.map_err(|_| RefractError::NoImages)?;
-
-	// Sort the paths to make it easier for people to follow.
-	paths.sort();
-
-	// Process the images!
-	paths.into_iter()
-		.for_each(|p| {
-			if let Some(s) = source::Source::new(p, flags) {
-				encoders.iter().for_each(|e| s.encode(*e));
-			}
-			println!();
-		});
-
+	application.run(&[]);
 	Ok(())
 }
 
-#[cold]
-/// # Print Help.
-fn helper() {
-	println!(concat!(
-		r"
-             ,,,,,,,,
-           ,|||````||||
-     ,,,,|||||       ||,
-  ,||||```````       `||
-,|||`                 |||,
-||`     ....,          `|||
-||     ::::::::          |||,
-||     :::::::'     ||    ``|||,
-||,     :::::'               `|||
-`||,                           |||
- `|||,       ||          ||    ,||
-   `||                        |||`
-    ||                   ,,,||||
-    ||              ,||||||```
-   ,||         ,,|||||`
-  ,||`   ||   |||`
- |||`         ||
-,||           ||  ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r"
-||`           ||  Guided AVIF/JPEG XL/WebP image
-|||,         |||  conversion for JPEG and PNG sources.
- `|||,,    ,|||
-   ``||||||||`
+/// # Initialize Resources.
+///
+/// Load and register the resource bundle.
+fn init_resources() -> Result<(), RefractError> {
+	/// # Resource Bundle.
+	const RESOURCES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/resources.gresource"));
+	let resources = gio::Resource::from_data(&Bytes::from(RESOURCES))
+		.map_err(|_| RefractError::GtkInit)?;
+	gio::resources_register(&resources);
+	Ok(())
+}
 
+#[allow(clippy::similar_names)] // We're being consistent.
+/// # Setup UI.
+///
+/// This finishes the UI setup, hooking up communication channels, event
+/// bindings, etc.
+fn setup_ui(window: &Arc<Window>) {
+	let (stx, mtx, srx) = Share::init(Arc::clone(window));
 
-USAGE:
-    refract [FLAGS] [OPTIONS] <PATH(S)>...
+	// Bind things that just need the window.
+	setup_ui_window(window);
 
-FLAGS:
-    -h, --help          Prints help information.
-        --no-avif       Skip AVIF conversion.
-        --no-jxl        Skip JPEG XL conversion.
-        --no-webp       Skip WebP conversion.
-        --skip-lossless Only perform lossy encoding.
-        --skip-lossy    Only perform lossless encoding.
-        --skip-ycbcr    Only test full-range RGB AVIF encoding (when encoding
-                        AVIFs).
-    -V, --version       Prints version information.
+	// Discard button.
+	let mtx2 = mtx.clone();
+	let wnd2 = Arc::clone(window);
+	window.btn_discard.connect_clicked(move |_| { wnd2.feedback(&mtx2, ShareFeedback::Discard); });
 
-OPTIONS:
-    -l, --list <list>   Read image/dir paths from this text file.
+	// Keep button. (Note: mtx goes out of scope here.)
+	let wnd2 = Arc::clone(window);
+	window.btn_keep.connect_clicked(move |_| { wnd2.feedback(&mtx, ShareFeedback::Keep); });
 
-ARGS:
-    <PATH(S)>...        One or more images or directories to crawl and crunch.
-"
-	));
+	// Add a file!
+	let srx2 = srx.clone();
+	let stx2 = stx.clone();
+	let wnd2 = Arc::clone(window);
+	window.mnu_fopen.connect_activate(move |_| {
+		if wnd2.maybe_add_file() { wnd2.encode(&stx2, &srx2); }
+	});
+
+	// Add a directory! (Note: stx and srx go out of scope here.)
+	let wnd2 = Arc::clone(window);
+	window.mnu_dopen.connect_activate(move |_| {
+		if wnd2.maybe_add_directory() { wnd2.encode(&stx, &srx); }
+	});
+}
+
+/// # Setup UI (Callbacks Needing Window).
+///
+/// These event bindings require access to an `Arc<Window>`, but nothing else.
+///
+/// As we're using `Arc`s already, it is cheaper to clone and pass the whole
+/// thing to these callbacks rather than using `glib::clone!()` to clone
+/// individual references.
+fn setup_ui_window(window: &Arc<Window>) {
+	// The quit menu.
+	let wnd2 = Arc::clone(window);
+	window.mnu_quit.connect_activate(move |_| { wnd2.wnd_main.close(); });
+
+	// The about menu.
+	let wnd2 = Arc::clone(window);
+	window.mnu_about.connect_activate(move |_| {
+		let about = wnd2.about();
+		if gtk::ResponseType::None != about.run() { about.emit_close(); }
+	});
+
+	// The A/B toggle.
+	let wnd2 = Arc::clone(window);
+	window.btn_toggle.connect_property_state_notify(move |btn| {
+		wnd2.toggle_preview(btn.get_active(), true);
+		wnd2.paint();
+	});
+
+	// Keep the status log scrolled to the end.
+	let wnd2 = Arc::clone(window);
+	window.lbl_status.connect_size_allocate(move |_, _| {
+		if let Some(adj) = wnd2.wnd_status.get_vadjustment() {
+			adj.set_value(adj.get_upper());
+		}
+	});
+
+	// Make sure people don't disable every encoder or encoding mode. This will
+	// flip the last (just clicked) value back on if none of its sisters are
+	// active.
+	{
+		macro_rules! chk_cb {
+			($cb:ident, $($btn:ident),+) => ($(
+				let wnd2 = Arc::clone(window);
+				window.$btn.connect_toggled(move |btn| {
+					if ! btn.get_active() && ! wnd2.$cb() { btn.set_active(true); }
+				});
+			)+);
+		}
+
+		chk_cb!(has_encoders, chk_avif, chk_jxl, chk_webp);
+		chk_cb!(has_modes, chk_lossless, chk_lossy);
+	}
+
+	// Sync preview field display to `lbl_quality` (so we only have to directly
+	// toggle the latter).
+	{
+		macro_rules! preview_cb {
+			($event:ident, $view:ident, $opacity:literal) => (
+				let wnd2 = Arc::clone(window);
+				window.lbl_quality.$event(move |_| {
+					wnd2.box_ab.set_opacity($opacity);
+					wnd2.lbl_format.set_opacity($opacity);
+					wnd2.lbl_format_val.$view();
+					wnd2.lbl_quality_val.$view();
+				});
+			);
+		}
+
+		preview_cb!(connect_show, show, 1.0);
+		preview_cb!(connect_hide, hide, 0.0);
+	}
 }

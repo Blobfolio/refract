@@ -2,7 +2,6 @@
 # `Refract` - Error
 */
 
-#[cfg(feature = "cli")] use argyle::ArgyleError;
 use crate::ImageKind;
 use std::{
 	error::Error,
@@ -26,9 +25,11 @@ pub enum RefractError {
 	Overflow,
 	TooBig,
 
-	#[cfg(feature = "cli")]
-	/// # Passthrough menu error.
-	Menu(ArgyleError),
+	#[cfg(feature = "bin")]
+	GtkInit,
+
+	#[cfg(feature = "bin")]
+	MissingSource,
 
 	#[cfg(feature = "bin")]
 	NoCompression,
@@ -40,19 +41,13 @@ pub enum RefractError {
 	NoImages,
 
 	#[cfg(feature = "bin")]
+	NoSave,
+
+	#[cfg(feature = "bin")]
 	Read,
 
 	#[cfg(feature = "bin")]
 	Write,
-
-	#[cfg(feature = "gtk")]
-	GtkInit,
-
-	#[cfg(feature = "gtk")]
-	MissingSource,
-
-	#[cfg(feature = "gtk")]
-	NoSave,
 }
 
 impl Error for RefractError {}
@@ -101,8 +96,11 @@ impl RefractError {
 			Self::Overflow => "The image dimensions are out of range.",
 			Self::TooBig => "The encoded image was too big.",
 
-			#[cfg(feature = "cli")]
-			Self::Menu(e) => e.as_str(),
+			#[cfg(feature = "bin")]
+			Self::GtkInit => "Failed to initialize GTK.",
+
+			#[cfg(feature = "bin")]
+			Self::MissingSource => "A source image must be set before a candidate image.",
 
 			#[cfg(feature = "bin")]
 			Self::NoCompression => "Lossless and lossy encoding cannot both be disabled.",
@@ -114,19 +112,13 @@ impl RefractError {
 			Self::NoImages => "No images were found.",
 
 			#[cfg(feature = "bin")]
+			Self::NoSave => "The result was not saved.",
+
+			#[cfg(feature = "bin")]
 			Self::Read => "Unable to read the source file.",
 
 			#[cfg(feature = "bin")]
 			Self::Write => "Unable to save the file.",
-
-			#[cfg(feature = "gtk")]
-			Self::GtkInit => "Failed to initialize GTK.",
-
-			#[cfg(feature = "gtk")]
-			Self::MissingSource => "A source image must be set before a candidate image.",
-
-			#[cfg(feature = "gtk")]
-			Self::NoSave => "The result was not saved.",
 		}
 	}
 }

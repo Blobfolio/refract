@@ -2,7 +2,6 @@
 members = [
     "refract",
     "refract_core",
-    "refract_gtk",
 ]
 
 [profile.release]
