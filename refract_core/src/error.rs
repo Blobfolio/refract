@@ -32,13 +32,7 @@ pub enum RefractError {
 	MissingSource,
 
 	#[cfg(feature = "bin")]
-	NoCompression,
-
-	#[cfg(feature = "bin")]
 	NoEncoders,
-
-	#[cfg(feature = "bin")]
-	NoImages,
 
 	#[cfg(feature = "bin")]
 	NoSave,
@@ -103,13 +97,7 @@ impl RefractError {
 			Self::MissingSource => "A source image must be set before a candidate image.",
 
 			#[cfg(feature = "bin")]
-			Self::NoCompression => "Lossless and lossy encoding cannot both be disabled.",
-
-			#[cfg(feature = "bin")]
 			Self::NoEncoders => "At least one encoder must be enabled.",
-
-			#[cfg(feature = "bin")]
-			Self::NoImages => "No images were found.",
 
 			#[cfg(feature = "bin")]
 			Self::NoSave => "The result was not saved.",
