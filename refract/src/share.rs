@@ -114,7 +114,7 @@ impl Share {
 		});
 
 		loop {
-			let res = rx.recv().unwrap();
+			let res = rx.recv().unwrap_or(ShareFeedback::Abort);
 			if res != ShareFeedback::Wait { return res; }
 		}
 	}
