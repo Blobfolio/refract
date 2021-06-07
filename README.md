@@ -48,7 +48,7 @@ But if you're looking to obsessively optimize a small project or single web page
 | JPEG XL | Yes* | Lossless, lossy. |
 | WebP | Yes* | Lossless, lossy. |
 
-** Refract does not support animated images. Without going too far down _that_ rabbit hole, let's just say that if GIF can't handle the job, it should be a video, not an image.
+*<small>Refract does not support animated images. Without going too far down _that_ rabbit hole, let's just say that if GIF can't handle the job, it should be a video, not an image.</small>
 
 In other words, Refract takes JPEG and PNG sources — either individual files or entire directory trees — and turns them into AVIF, JPEG XL, and/or WebP outputs.
 
@@ -102,7 +102,7 @@ cargo build \
     --release
 ```
 
-Cargo _will_ handle the entire build process for you, however many of Refract's dependencies have heavy `build.rs` scripts requiring additional system libraries.
+Cargo _will_ handle the entire build process for you, however many of Refract's dependencies have heavy `build.rs` scripts requiring additional system libraries. (Who'd have thought image decoders and encoders were complicated?!)
 
 At a minimum, you'll need up-to-date versions of:
 
@@ -113,12 +113,13 @@ At a minimum, you'll need up-to-date versions of:
 * Make
 * NASM
 * Ninja
+* Rust/Cargo
 
-You'll also need the `-dev` packages for all of the GTK dependencies, including ATK, Cairo, GDK, GLIB, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make the GTK dependency installation process easier. On Debian Buster, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
+GTK is a whole other monster, requiring the `-dev` packages for (at least) ATK, Cairo, GDK, GLIB, GTK, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make GTK dependency resolution easier. On Debian Buster, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
 
-This list is (probably) non-exhaustive. If you find you need something else, open a ticket so I can update the list!
+This list is (probably) non-exhaustive. If you find you need something else to build on your system, please open a ticket so the list can be updated!
 
-Likewise, if you try building on Mac, please let me know how it goes!
+Likewise, if you try building on Mac, please let us know how it goes!
 
 
 
