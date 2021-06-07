@@ -48,7 +48,7 @@ But if you're looking to obsessively optimize a small project or single web page
 | JPEG XL | Yes* | Lossless, lossy. |
 | WebP | Yes* | Lossless, lossy. |
 
-*<sup><sub>Refract does not support animated images. Without going too far down _that_ rabbit hole, let's just say that if GIF can't handle the job, it should be a video, not an image.</sub></sup>
+*Refract does not support animated images. Without going too far down _that_ rabbit hole, let's just say that if GIF can't handle the job, it should be a video, not an image.
 
 In other words, Refract takes JPEG and PNG sources — either individual files or entire directory trees — and turns them into AVIF, JPEG XL, and/or WebP outputs.
 
