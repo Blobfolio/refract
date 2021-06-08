@@ -66,7 +66,7 @@ Refract is pretty straightforward:
 2. Load a single image or an entire directory.
 3. Sit back and wait for any feedback or save prompts.
 
-For best results, be sure to optimize your input sources before re-encoding them with Refract.
+For best results, be sure to optimize your input sources before re-encoding them with Refract. (Our [Flaca](https://github.com/Blobfolio/flaca) CLI tool can help with this!)
 
 For keyboard afficionados, the following hot-keys may be used:
 
