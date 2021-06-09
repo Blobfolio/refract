@@ -27,7 +27,6 @@
 
 
 mod candidate;
-pub(self) mod l10n;
 mod share;
 mod window;
 

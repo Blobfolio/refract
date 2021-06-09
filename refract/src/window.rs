@@ -1009,7 +1009,7 @@ impl Window {
 	///
 	/// This triggers when an encoding session starts.
 	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
-		use crate::l10n::{inflect, oxford_join};
+		use oxford_join::OxfordJoin;
 
 		if encoders.is_empty() || count == 0 { return; }
 
@@ -1022,7 +1022,7 @@ impl Window {
 			),
 			inflect(count, "image", "images"),
 			inflect(encoders.len(), "encoder", "encoders"),
-			oxford_join(encoders, "and"),
+			encoders.oxford_and(),
 		));
 		self.add_flag(FLAG_TICK_STATUS);
 	}
@@ -1153,6 +1153,18 @@ fn add_widget_class<W>(widget: &W, class: &str)
 where W: gtk::WidgetExt {
 	let style_context = widget.get_style_context();
 	style_context.add_class(class);
+}
+
+/// # Inflect.
+///
+/// Return the singular or plural version of a noun given the count.
+fn inflect<T>(len: usize, singular: T, plural: T) -> String
+where T: AsRef<str> {
+	let size = NiceU64::from(len);
+	let noun =
+		if len == 1 { singular.as_ref() }
+		else { plural.as_ref() };
+	[size.as_str(), " ", noun ].concat()
 }
 
 #[inline]
