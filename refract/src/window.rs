@@ -14,6 +14,7 @@ use crate::{
 use dactyl::{
 	NicePercent,
 	NiceU64,
+	NiceU8,
 };
 use dowser::{
 	Dowser,
@@ -157,7 +158,11 @@ impl WindowSource {
 	fn format_val(&self) -> Cow<str> {
 		if self.count == 0 { Cow::Borrowed(self.quality.kind().as_str()) }
 		else {
-			Cow::Owned(format!("{} #{}", self.quality.kind(), self.count))
+			Cow::Owned([
+				self.quality.kind().as_str(),
+				" #",
+				NiceU8::from(self.count).as_str(),
+			].concat())
 		}
 	}
 
@@ -166,9 +171,7 @@ impl WindowSource {
 	///
 	/// This returns a value suitable for the `lbl_quality` widget. Currently
 	/// it always reads "Quality" or "Quantizer" (for AVIF).
-	fn quality(&self) -> String {
-		format!("{}:", self.quality.label_title())
-	}
+	fn quality(&self) -> String { [self.quality.label_title(), ":"].concat() }
 
 	/// # Quality.
 	///
@@ -766,7 +769,7 @@ impl Window {
 		};
 
 		let window = self.file_chooser(
-			&format!("Save the {}!", kind),
+			&["Save the ", kind.as_str(), "!"].concat(),
 			FileChooserAction::Save,
 			"_Save",
 			path.parent(),
