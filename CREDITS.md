@@ -19,10 +19,10 @@ License details for project dependencies are listed below.
 **Used By:**
 
 * [ahash 0.7.4](https://github.com/tkaitchuck/ahash)
-* [anyhow 1.0.40](https://github.com/dtolnay/anyhow)
+* [anyhow 1.0.41](https://github.com/dtolnay/anyhow)
 * [arrayvec 0.5.2](https://github.com/bluss/arrayvec)
 * [bitflags 1.2.1](https://github.com/bitflags/bitflags)
-* [bitstream-io 1.0.0](https://github.com/tuffy/bitstream-io)
+* [bitstream-io 1.1.0](https://github.com/tuffy/bitstream-io)
 * [cfg-if 0.1.10](https://github.com/alexcrichton/cfg-if)
 * [cfg-if 1.0.0](https://github.com/alexcrichton/cfg-if)
 * [crossbeam-channel 0.5.1](https://github.com/crossbeam-rs/crossbeam)
@@ -31,17 +31,16 @@ License details for project dependencies are listed below.
 * [crossbeam-utils 0.8.5](https://github.com/crossbeam-rs/crossbeam)
 * [either 1.6.1](https://github.com/bluss/either)
 * [heck 0.3.3](https://github.com/withoutboats/heck)
-* [itertools 0.10.0](https://github.com/bluss/rust-itertools)
+* [itertools 0.10.1](https://github.com/rust-itertools/itertools)
 * [itertools 0.9.0](https://github.com/bluss/rust-itertools)
 * [jpeg-decoder 0.1.22](https://github.com/image-rs/jpeg-decoder)
 * [lazy_static 1.4.0](https://github.com/rust-lang-nursery/lazy-static.rs)
-* [libc 0.2.95](https://github.com/rust-lang/libc)
+* [libc 0.2.97](https://github.com/rust-lang/libc)
 * [libz-sys 1.1.3](https://github.com/rust-lang/libz-sys)
 * [num-derive 0.3.3](https://github.com/rust-num/num-derive)
-* [num-integer 0.1.44](https://github.com/rust-num/num-integer)
 * [num-traits 0.2.14](https://github.com/rust-num/num-traits)
 * [num_cpus 1.13.0](https://github.com/seanmonstar/num_cpus)
-* [once_cell 1.7.2](https://github.com/matklad/once_cell)
+* [once_cell 1.8.0](https://github.com/matklad/once_cell)
 * [paste 1.0.5](https://github.com/dtolnay/paste)
 * [proc-macro-hack 0.5.19](https://github.com/dtolnay/proc-macro-hack)
 * [proc-macro-nested 0.1.7](https://github.com/dtolnay/proc-macro-hack)
@@ -51,7 +50,7 @@ License details for project dependencies are listed below.
 * [rayon-core 1.9.1](https://github.com/rayon-rs/rayon)
 * [scopeguard 1.1.0](https://github.com/bluss/scopeguard)
 * [serde 1.0.126](https://github.com/serde-rs/serde)
-* [syn 1.0.72](https://github.com/dtolnay/syn)
+* [syn 1.0.73](https://github.com/dtolnay/syn)
 * [tempfile 3.2.0](https://github.com/Stebalien/tempfile)
 * [thiserror 1.0.25](https://github.com/dtolnay/thiserror)
 * [thiserror-impl 1.0.25](https://github.com/dtolnay/thiserror)
@@ -269,7 +268,7 @@ limitations under the License.
 
 **Used By:**
 
-* [bytemuck 1.5.1](https://github.com/Lokathor/bytemuck)
+* [bytemuck 1.7.0](https://github.com/Lokathor/bytemuck)
 
 
 ```
@@ -563,9 +562,9 @@ limitations under the License.
 **Used By:**
 
 * [getrandom 0.2.3](https://github.com/rust-random/getrandom)
-* [rand 0.8.3](https://github.com/rust-random/rand)
-* [rand_chacha 0.3.0](https://github.com/rust-random/rand)
-* [rand_core 0.6.2](https://github.com/rust-random/rand)
+* [rand 0.8.4](https://github.com/rust-random/rand)
+* [rand_chacha 0.3.1](https://github.com/rust-random/rand)
+* [rand_core 0.6.3](https://github.com/rust-random/rand)
 
 
 ```
@@ -3291,10 +3290,11 @@ SOFTWARE.
 
 **Used By:**
 
-* [dactyl 0.1.7](https://github.com/Blobfolio/dactyl)
+* [dactyl 0.1.8](https://github.com/Blobfolio/dactyl)
 * [dowser 0.2.4](https://github.com/Blobfolio/dowser)
-* [refract 0.6.3](https://github.com/Blobfolio/refract)
-* [refract_core 0.6.3](https://github.com/Blobfolio/refract)
+* [oxford_join 0.1.0](https://github.com/Blobfolio/oxford_join)
+* [refract 0.6.4](https://github.com/Blobfolio/refract)
+* [refract_core 0.6.4](https://github.com/Blobfolio/refract)
 
 
 ```

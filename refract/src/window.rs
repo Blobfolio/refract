@@ -14,6 +14,7 @@ use crate::{
 use dactyl::{
 	NicePercent,
 	NiceU64,
+	NiceU8,
 };
 use dowser::{
 	Dowser,
@@ -157,7 +158,11 @@ impl WindowSource {
 	fn format_val(&self) -> Cow<str> {
 		if self.count == 0 { Cow::Borrowed(self.quality.kind().as_str()) }
 		else {
-			Cow::Owned(format!("{} #{}", self.quality.kind(), self.count))
+			Cow::Owned([
+				self.quality.kind().as_str(),
+				" #",
+				NiceU8::from(self.count).as_str(),
+			].concat())
 		}
 	}
 
@@ -166,9 +171,7 @@ impl WindowSource {
 	///
 	/// This returns a value suitable for the `lbl_quality` widget. Currently
 	/// it always reads "Quality" or "Quantizer" (for AVIF).
-	fn quality(&self) -> String {
-		format!("{}:", self.quality.label_title())
-	}
+	fn quality(&self) -> String { [self.quality.label_title(), ":"].concat() }
 
 	/// # Quality.
 	///
@@ -766,7 +769,7 @@ impl Window {
 		};
 
 		let window = self.file_chooser(
-			&format!("Save the {}!", kind),
+			&["Save the ", kind.as_str(), "!"].concat(),
 			FileChooserAction::Save,
 			"_Save",
 			path.parent(),
@@ -1009,7 +1012,7 @@ impl Window {
 	///
 	/// This triggers when an encoding session starts.
 	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
-		use crate::l10n::{inflect, oxford_join};
+		use oxford_join::OxfordJoin;
 
 		if encoders.is_empty() || count == 0 { return; }
 
@@ -1022,7 +1025,7 @@ impl Window {
 			),
 			inflect(count, "image", "images"),
 			inflect(encoders.len(), "encoder", "encoders"),
-			oxford_join(encoders, "and"),
+			encoders.oxford_and(),
 		));
 		self.add_flag(FLAG_TICK_STATUS);
 	}
@@ -1077,11 +1080,11 @@ fn _encode_outer(
 	tx: &SisterTx,
 	rx: &SisterRx,
 ) {
-	paths.into_iter().for_each(|path| {
+	for path in paths {
 		if let Err(e) = _encode(&path, encoders, flags, tx, rx) {
 			Share::sync(tx, rx, Err(e));
 		}
-	});
+	}
 
 	Share::sync(tx, rx, Ok(Share::DoneEncoding));
 }
@@ -1113,7 +1116,7 @@ fn _encode(
 		return Ok(());
 	}
 
-	encoders.iter().for_each(|&e| {
+	for &e in encoders {
 		Share::sync(tx, rx, Ok(Share::Encoder(e)));
 		if let Ok(mut guide) = EncodeIter::new(&src, e, flags) {
 			let mut count: u8 = 0;
@@ -1123,6 +1126,7 @@ fn _encode(
 				match res {
 					ShareFeedback::Keep => { guide.keep(); },
 					ShareFeedback::Discard => { guide.discard(); },
+					ShareFeedback::Abort => { break; },
 					_ => {},
 				}
 			}
@@ -1130,7 +1134,7 @@ fn _encode(
 			// Save the best, if any!
 			Share::sync(tx, rx, guide.take().map(|x| Share::Best(path.to_path_buf(), x)));
 		}
-	});
+	}
 
 	Ok(())
 }
@@ -1153,6 +1157,18 @@ fn add_widget_class<W>(widget: &W, class: &str)
 where W: gtk::WidgetExt {
 	let style_context = widget.get_style_context();
 	style_context.add_class(class);
+}
+
+/// # Inflect.
+///
+/// Return the singular or plural version of a noun given the count.
+fn inflect<T>(len: usize, singular: T, plural: T) -> String
+where T: AsRef<str> {
+	let size = NiceU64::from(len);
+	let noun =
+		if len == 1 { singular.as_ref() }
+		else { plural.as_ref() };
+	[size.as_str(), " ", noun ].concat()
 }
 
 #[inline]

@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.6.3"
+version = "0.6.4"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -45,6 +45,7 @@ dactyl = "0.1.*"
 dowser = "0.2.*"
 gio = "0.9.*"
 glib = "0.10.*"
+oxford_join = "0.1.*"
 
 [dependencies.gdk-pixbuf]
 version = "0.9.*"
