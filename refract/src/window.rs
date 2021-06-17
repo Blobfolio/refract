@@ -1126,7 +1126,7 @@ fn _encode(
 				match res {
 					ShareFeedback::Keep => { guide.keep(); },
 					ShareFeedback::Discard => { guide.discard(); },
-					ShareFeedback::Abort => { return Ok(()); },
+					ShareFeedback::Abort => { break; },
 					_ => {},
 				}
 			}
