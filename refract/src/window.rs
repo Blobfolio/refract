@@ -1080,11 +1080,11 @@ fn _encode_outer(
 	tx: &SisterTx,
 	rx: &SisterRx,
 ) {
-	paths.into_iter().for_each(|path| {
+	for path in paths {
 		if let Err(e) = _encode(&path, encoders, flags, tx, rx) {
 			Share::sync(tx, rx, Err(e));
 		}
-	});
+	}
 
 	Share::sync(tx, rx, Ok(Share::DoneEncoding));
 }
@@ -1116,7 +1116,7 @@ fn _encode(
 		return Ok(());
 	}
 
-	encoders.iter().for_each(|&e| {
+	for &e in encoders {
 		Share::sync(tx, rx, Ok(Share::Encoder(e)));
 		if let Ok(mut guide) = EncodeIter::new(&src, e, flags) {
 			let mut count: u8 = 0;
@@ -1126,6 +1126,7 @@ fn _encode(
 				match res {
 					ShareFeedback::Keep => { guide.keep(); },
 					ShareFeedback::Discard => { guide.discard(); },
+					ShareFeedback::Abort => { return Ok(()); },
 					_ => {},
 				}
 			}
@@ -1133,7 +1134,7 @@ fn _encode(
 			// Save the best, if any!
 			Share::sync(tx, rx, guide.take().map(|x| Share::Best(path.to_path_buf(), x)));
 		}
-	});
+	}
 
 	Ok(())
 }

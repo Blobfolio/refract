@@ -214,9 +214,9 @@ fn blur_alpha(img: &mut Vec<u8>, width: usize, height: usize) {
 	});
 
 	// And apply it!
-	diff.into_iter().for_each(|(idx, px)| {
+	for (idx, px) in diff {
 		img[idx..idx + 4].copy_from_slice(&px);
-	});
+	}
 }
 
 #[allow(clippy::cast_possible_truncation)] // Values will be in range.
