@@ -1,7 +1,5 @@
 # Refract GTK
 
-[![Build Status](https://github.com/Blobfolio/refract/workflows/Build/badge.svg)](https://github.com/Blobfolio/refract/actions)
-
 Refract is a guided image conversion tool written in [Rust](https://www.rust-lang.org/) for x86-64 Linux systems with [GTK](https://www.gtk.org/).
 
 It takes [JPEG](https://en.wikipedia.org/wiki/JPEG) and [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) image sources and produces [AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF)), [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL), and [WebP](https://en.wikipedia.org/wiki/WebP) clones.
