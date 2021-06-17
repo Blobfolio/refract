@@ -11,9 +11,9 @@ publish = false
 
 [dependencies]
 ahash = "0.7.*"
+dactyl = "0.1.*"
 jpeg-decoder = "0.1.*"
 num_cpus = "1.13.*"
-num-integer = "0.1.*"
 rgb = "0.8.*"
 spng = "0.1.0"
 

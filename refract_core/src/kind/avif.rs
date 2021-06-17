@@ -437,7 +437,7 @@ impl LibAvifTiles {
 
 		let tile_width_sb = tile_width_sb_pre;
 
-		let cols = num_integer::div_floor(
+		let cols = dactyl::div_usize(
 			frame_width_sb + tile_width_sb - 1,
 			tile_width_sb
 		);
@@ -459,7 +459,7 @@ impl LibAvifTiles {
 			.min(max_tile_rows_log2);
 		let tile_height_sb = align_shift_pow2(sb_rows, tile_rows_log2);
 
-		let rows = num_integer::div_floor(
+		let rows = dactyl::div_usize(
 			frame_height_sb + tile_height_sb - 1,
 			tile_height_sb
 		);
@@ -526,8 +526,8 @@ fn quality_to_quantizers(quality: NonZeroU8) -> (u8, u8) {
 	// easier on the brain to recalibrate the value to be out of 100, then
 	// re-recalibrate it to be out of 63.
 	let aq = ratio_of(quality.get(), 63, 100);
-	let aq = num_integer::div_floor(aq + 100, 2).min(
-		aq + num_integer::div_floor(aq, 4) + 2
+	let aq = dactyl::div_u8(aq + 100, 2).min(
+		aq + dactyl::div_u8(aq, 4) + 2
 	);
 	let aq = 63 - ratio_of(aq, 100, 63);
 
@@ -580,7 +580,7 @@ fn tiles(width: usize, height: usize) -> Option<(i32, i32)> {
 	// limit, it isn't worth generating a million tiny tiles if the CPU has
 	// to wait to deal with them.
 	let tiles_max: usize = num_cpus::get()
-		.min(num_integer::div_floor(width * height, 128 * 128));
+		.min(dactyl::div_usize(width * height, 128 * 128));
 	if tiles_max < 2 { return None; }
 
 	// A starting point.
