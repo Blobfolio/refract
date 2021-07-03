@@ -803,11 +803,6 @@ impl Window {
 			].concat()));
 		}
 
-		// Touch the file to set sane default permissions.
-		if ! path.exists() {
-			std::fs::File::create(&path).map_err(|_| RefractError::Write)?;
-		}
-
 		// Save it.
 		write_atomic::write_file(&path, src).map_err(|_| RefractError::Write)?;
 
