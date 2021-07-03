@@ -77,9 +77,10 @@ fn main() {
 /// with a pretty CLI error reason.
 fn _main() -> Result<(), RefractError> {
 	init_resources()?;
-	let application =
-		gtk::Application::new(Some("com.refract.gtk"), gio::ApplicationFlags::default())
-			.map_err(|_| RefractError::GtkInit)?;
+	let application = gtk::Application::new(
+		Some("com.refract.gtk"),
+		gio::ApplicationFlags::default()
+	);
 
 	application.connect_activate(|app| {
 		let window = Arc::new(Window::try_from(app).expect("Unable to build GTK window."));
@@ -87,7 +88,7 @@ fn _main() -> Result<(), RefractError> {
 		window.paint();
 	});
 
-	application.run(&[]);
+	application.run();
 	Ok(())
 }
 
@@ -159,17 +160,16 @@ fn setup_ui_window(window: &Arc<Window>) {
 
 	// The A/B toggle.
 	let wnd2 = Arc::clone(window);
-	window.btn_toggle.connect_property_state_notify(move |btn| {
-		wnd2.toggle_preview(btn.get_active(), true);
+	window.btn_toggle.connect_state_notify(move |btn| {
+		wnd2.toggle_preview(btn.is_active(), true);
 		wnd2.paint();
 	});
 
 	// Keep the status log scrolled to the end.
 	let wnd2 = Arc::clone(window);
 	window.lbl_status.connect_size_allocate(move |_, _| {
-		if let Some(adj) = wnd2.wnd_status.get_vadjustment() {
-			adj.set_value(adj.get_upper());
-		}
+		let adj = wnd2.wnd_status.vadjustment();
+		adj.set_value(adj.upper());
 	});
 
 	// Make sure people don't disable every encoder or encoding mode. This will
@@ -180,7 +180,7 @@ fn setup_ui_window(window: &Arc<Window>) {
 			($cb:ident, $($btn:ident),+) => ($(
 				let wnd2 = Arc::clone(window);
 				window.$btn.connect_toggled(move |btn| {
-					if ! btn.get_active() && ! wnd2.$cb() { btn.set_active(true); }
+					if ! btn.is_active() && ! wnd2.$cb() { btn.set_active(true); }
 				});
 			)+);
 		}
