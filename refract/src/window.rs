@@ -99,14 +99,14 @@ macro_rules! log_prefix {
 /// # Helper: GTK Objects From Builder.
 macro_rules! gtk_obj {
 	($builder:ident, $key:literal) => (
-		$builder.get_object($key).ok_or(RefractError::GtkInit)?
+		$builder.object($key).ok_or(RefractError::GtkInit)?
 	);
 }
 
 /// # Helper: Toggle GTK Widget Sensitivity En Masse.
 macro_rules! gtk_sensitive {
 	($sensitive:expr, $($obj:expr),+) => ($(
-		if $obj.get_sensitive() != $sensitive {
+		if $obj.is_sensitive() != $sensitive {
 			$obj.set_sensitive($sensitive);
 		}
 	)+);
@@ -420,10 +420,10 @@ impl Window {
 	fn encoder_flags(&self) -> u8 {
 		let mut flags: u8 = 0;
 
-		if ! self.chk_lossy.get_active() { flags |= FLAG_NO_LOSSY; }
-		else if ! self.chk_lossless.get_active() { flags |= FLAG_NO_LOSSLESS; }
+		if ! self.chk_lossy.is_active() { flags |= FLAG_NO_LOSSY; }
+		else if ! self.chk_lossless.is_active() { flags |= FLAG_NO_LOSSLESS; }
 
-		if ! self.chk_ycbcr.get_active() { flags |= FLAG_NO_AVIF_YCBCR; }
+		if ! self.chk_ycbcr.is_active() { flags |= FLAG_NO_AVIF_YCBCR; }
 
 		flags
 	}
@@ -433,9 +433,9 @@ impl Window {
 	/// Return an array of the enabled encoders.
 	fn encoders(&self) -> Box<[ImageKind]> {
 		let mut out: Vec<ImageKind> = Vec::with_capacity(3);
-		if self.chk_webp.get_active() { out.push(ImageKind::Webp); }
-		if self.chk_avif.get_active() { out.push(ImageKind::Avif); }
-		if self.chk_jxl.get_active() { out.push(ImageKind::Jxl); }
+		if self.chk_webp.is_active() { out.push(ImageKind::Webp); }
+		if self.chk_avif.is_active() { out.push(ImageKind::Avif); }
+		if self.chk_jxl.is_active() { out.push(ImageKind::Jxl); }
 		out.into_boxed_slice()
 	}
 
@@ -448,14 +448,14 @@ impl Window {
 
 	/// # Has Encoders.
 	pub(super) fn has_encoders(&self) -> bool {
-		self.chk_avif.get_active() ||
-		self.chk_jxl.get_active() ||
-		self.chk_webp.get_active()
+		self.chk_avif.is_active() ||
+		self.chk_jxl.is_active() ||
+		self.chk_webp.is_active()
 	}
 
 	/// # Has (Lossy/Lossless) Modes.
 	pub(super) fn has_modes(&self) -> bool {
-		self.chk_lossless.get_active() || self.chk_lossy.get_active()
+		self.chk_lossless.is_active() || self.chk_lossy.is_active()
 	}
 
 	#[inline]
@@ -558,7 +558,7 @@ impl Window {
 			}
 
 			// Toggle the background class.
-			if img.is_some() && self.btn_toggle.get_active() {
+			if img.is_some() && self.btn_toggle.is_active() {
 				add_widget_class(&self.wnd_image, "preview_b");
 			}
 			else {
@@ -588,7 +588,7 @@ impl Window {
 	/// operate with similar consideration. At worst, though, this would just
 	/// be a +1 operation.
 	pub(super) fn toggle_preview(&self, val: bool, force: bool) {
-		if self.btn_toggle.get_active() != val {
+		if self.btn_toggle.is_active() != val {
 			self.add_flag(FLAG_TICK_IMAGE | FLAG_LOCK_PAINT | FLAG_TICK_AB);
 			self.btn_toggle.set_active(val);
 			self.remove_flag(FLAG_LOCK_PAINT);
@@ -599,8 +599,8 @@ impl Window {
 	#[inline]
 	/// # Toggle Spinner.
 	fn toggle_spinner(&self, val: bool) {
-		if val != self.spn_loading.get_property_active() {
-			self.spn_loading.set_property_active(val);
+		if val != self.spn_loading.is_active() {
+			self.spn_loading.set_active(val);
 		}
 	}
 }
@@ -695,7 +695,7 @@ impl Window {
 		window.emit_close();
 
 		if ResponseType::Accept == res {
-			if let Some(file) = window.get_filename() {
+			if let Some(file) = window.filename() {
 				// Store the "last used" directory for next time.
 				if let Some(parent) = file.parent() {
 					self.dir.borrow_mut().replace(parent.to_path_buf());
@@ -734,7 +734,7 @@ impl Window {
 		window.emit_close();
 
 		if ResponseType::Accept == res {
-			if let Some(dir) = window.get_filename() {
+			if let Some(dir) = window.filename() {
 				// Store the "last used" directory for next time.
 				self.dir.borrow_mut().replace(dir.clone());
 
@@ -757,8 +757,6 @@ impl Window {
 	///
 	/// If successful, the path the file was saved to is returned.
 	fn maybe_save(&self, path: &Path, src: &Output) -> Result<PathBuf, RefractError> {
-		use std::io::Write;
-
 		let kind = src.kind();
 		let (filter, ext) = match kind {
 			ImageKind::Avif => (&self.flt_avif, E_AVIF),
@@ -780,11 +778,11 @@ impl Window {
 		window.set_do_overwrite_confirmation(true);
 
 		// Suggest a file name.
-		window.set_current_name(OsStr::from_bytes(&[
-			path.file_name().map_or_else(|| &b"image"[..], OsStr::as_bytes),
-			b".",
-			src.kind().extension().as_bytes(),
-		].concat()));
+		window.set_current_name(&[
+			path.file_name().map_or_else(|| Cow::Borrowed("image"), OsStr::to_string_lossy).as_ref(),
+			".",
+			src.kind().extension(),
+		].concat());
 
 		// Read the result!
 		let res = window.run();
@@ -794,7 +792,7 @@ impl Window {
 		// Make sure the chosen path has an appropriate extension. If not, toss
 		// it onto the end.
 		let mut path: PathBuf =
-			if ResponseType::Accept == res { window.get_filename() }
+			if ResponseType::Accept == res { window.filename() }
 			else { None }
 			.ok_or(RefractError::NoSave)?;
 		if ext != path {
@@ -805,15 +803,8 @@ impl Window {
 			].concat()));
 		}
 
-		// Touch the file to set sane default permissions.
-		if ! path.exists() {
-			std::fs::File::create(&path).map_err(|_| RefractError::Write)?;
-		}
-
 		// Save it.
-		tempfile_fast::Sponge::new_for(&path)
-			.and_then(|mut out| out.write_all(src).and_then(|_| out.commit()))
-			.map_err(|_| RefractError::Write)?;
+		write_atomic::write_file(&path, src).map_err(|_| RefractError::Write)?;
 
 		Ok(path)
 	}
@@ -856,7 +847,7 @@ impl Window {
 			// Which image are we dealing with?
 			if self.remove_flag(FLAG_TICK_AB) {
 				let ptr =
-					if self.btn_toggle.get_active() {
+					if self.btn_toggle.is_active() {
 						self.candidate.borrow()
 					}
 					else {
@@ -1154,8 +1145,8 @@ fn _encode_source(path: &Path) -> Result<(Input, Candidate), RefractError> {
 ///
 /// This adds a class to a widget.
 fn add_widget_class<W>(widget: &W, class: &str)
-where W: gtk::WidgetExt {
-	let style_context = widget.get_style_context();
+where W: gtk::traits::WidgetExt {
+	let style_context = widget.style_context();
 	style_context.add_class(class);
 }
 
@@ -1184,8 +1175,8 @@ fn is_jpeg_png(path: &Path) -> bool {
 ///
 /// This removes a class from a widget.
 fn remove_widget_class<W>(widget: &W, class: &str)
-where W: gtk::WidgetExt {
-	let style_context = widget.get_style_context();
+where W: gtk::traits::WidgetExt {
+	let style_context = widget.style_context();
 	style_context.remove_class(class);
 }
 
@@ -1193,8 +1184,8 @@ where W: gtk::WidgetExt {
 ///
 /// This adds a CSS resource (mini stylesheet) to the given widget.
 fn set_widget_style<W>(widget: &W, src: &str)
-where W: gtk::WidgetExt {
-	let style_context = widget.get_style_context();
+where W: gtk::traits::WidgetExt {
+	let style_context = widget.style_context();
 	let provider = gtk::CssProvider::new();
 	provider.load_from_resource(src);
 	style_context.add_provider(&provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);

@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.6.4"
+version = "0.6.5"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -43,22 +43,19 @@ version-compare = "0.0.*"
 crossbeam-channel = "0.5.*"
 dactyl = "0.1.*"
 dowser = "0.2.*"
-gio = "0.9.*"
-glib = "0.10.*"
+gio = "0.14.*"
+glib = "0.14.*"
 oxford_join = "0.1.*"
+write_atomic = "0.1.*"
 
 [dependencies.gdk-pixbuf]
-version = "0.9.*"
+version = "0.14.*"
 features = [ "v2_36" ]
 
 [dependencies.gtk]
-version = "0.9.*"
+version = "0.14.*"
 features = [ "v3_22" ]
 
 [dependencies.refract_core]
 path = "../refract_core"
 features = [ "bin", "decode_ng" ]
-
-[dependencies.tempfile-fast]
-git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
-rev = "7cd84b2"
