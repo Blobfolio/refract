@@ -106,7 +106,7 @@ macro_rules! gtk_obj {
 /// # Helper: Toggle GTK Widget Sensitivity En Masse.
 macro_rules! gtk_sensitive {
 	($sensitive:expr, $($obj:expr),+) => ($(
-		if $obj.get_sensitive() != $sensitive {
+		if $obj.is_sensitive() != $sensitive {
 			$obj.set_sensitive($sensitive);
 		}
 	)+);
