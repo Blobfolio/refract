@@ -811,9 +811,7 @@ impl Window {
 		}
 
 		// Save it.
-		tempfile_fast::Sponge::new_for(&path)
-			.and_then(|mut out| out.write_all(src).and_then(|_| out.commit()))
-			.map_err(|_| RefractError::Write)?;
+		write_atomic::write_file(&path, src).map_err(|_| RefractError::Write)?;
 
 		Ok(path)
 	}

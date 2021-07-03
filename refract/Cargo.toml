@@ -46,6 +46,7 @@ dowser = "0.2.*"
 gio = "0.9.*"
 glib = "0.10.*"
 oxford_join = "0.1.*"
+write_atomic = "0.1.*"
 
 [dependencies.gdk-pixbuf]
 version = "0.9.*"
@@ -58,7 +59,3 @@ features = [ "v3_22" ]
 [dependencies.refract_core]
 path = "../refract_core"
 features = [ "bin", "decode_ng" ]
-
-[dependencies.tempfile-fast]
-git = "https://github.com/FauxFaux/tempfile-fast-rs.git"
-rev = "7cd84b2"
