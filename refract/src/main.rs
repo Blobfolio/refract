@@ -41,9 +41,10 @@ pub(self) use share::{
 };
 pub(self) use window::Window;
 
-use gio::prelude::*;
-use glib::Bytes;
-use gtk::prelude::*;
+use gtk::{
+	glib::Bytes,
+	prelude::*,
+};
 use refract_core::RefractError;
 use std::{
 	convert::TryFrom,
@@ -79,7 +80,7 @@ fn _main() -> Result<(), RefractError> {
 	init_resources()?;
 	let application = gtk::Application::new(
 		Some("com.refract.gtk"),
-		gio::ApplicationFlags::default()
+		gtk::gio::ApplicationFlags::default()
 	);
 
 	application.connect_activate(|app| {
@@ -98,9 +99,9 @@ fn _main() -> Result<(), RefractError> {
 fn init_resources() -> Result<(), RefractError> {
 	/// # Resource Bundle.
 	const RESOURCES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/resources.gresource"));
-	let resources = gio::Resource::from_data(&Bytes::from(RESOURCES))
+	let resources = gtk::gio::Resource::from_data(&Bytes::from(RESOURCES))
 		.map_err(|_| RefractError::GtkInit)?;
-	gio::resources_register(&resources);
+	gtk::gio::resources_register(&resources);
 	Ok(())
 }
 
