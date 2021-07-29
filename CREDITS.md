@@ -19,7 +19,7 @@ License details for project dependencies are listed below.
 **Used By:**
 
 * [ahash 0.7.4](https://github.com/tkaitchuck/ahash)
-* [anyhow 1.0.41](https://github.com/dtolnay/anyhow)
+* [anyhow 1.0.42](https://github.com/dtolnay/anyhow)
 * [arrayvec 0.5.2](https://github.com/bluss/arrayvec)
 * [bitflags 1.2.1](https://github.com/bitflags/bitflags)
 * [bitstream-io 1.1.0](https://github.com/tuffy/bitstream-io)
@@ -34,21 +34,21 @@ License details for project dependencies are listed below.
 * [itertools 0.10.1](https://github.com/rust-itertools/itertools)
 * [jpeg-decoder 0.1.22](https://github.com/image-rs/jpeg-decoder)
 * [lazy_static 1.4.0](https://github.com/rust-lang-nursery/lazy-static.rs)
-* [libc 0.2.97](https://github.com/rust-lang/libc)
+* [libc 0.2.98](https://github.com/rust-lang/libc)
 * [libz-sys 1.1.3](https://github.com/rust-lang/libz-sys)
 * [num-derive 0.3.3](https://github.com/rust-num/num-derive)
 * [num-traits 0.2.14](https://github.com/rust-num/num-traits)
 * [num_cpus 1.13.0](https://github.com/seanmonstar/num_cpus)
 * [once_cell 1.8.0](https://github.com/matklad/once_cell)
 * [paste 1.0.5](https://github.com/dtolnay/paste)
-* [proc-macro2 1.0.27](https://github.com/alexcrichton/proc-macro2)
+* [proc-macro2 1.0.28](https://github.com/alexcrichton/proc-macro2)
 * [quote 1.0.9](https://github.com/dtolnay/quote)
 * [rayon 1.5.1](https://github.com/rayon-rs/rayon)
 * [rayon-core 1.9.1](https://github.com/rayon-rs/rayon)
 * [scopeguard 1.1.0](https://github.com/bluss/scopeguard)
 * [serde 1.0.126](https://github.com/serde-rs/serde)
 * [smallvec 1.6.1](https://github.com/servo/rust-smallvec)
-* [syn 1.0.73](https://github.com/dtolnay/syn)
+* [syn 1.0.74](https://github.com/dtolnay/syn)
 * [tempfile 3.2.0](https://github.com/Stebalien/tempfile)
 * [thiserror 1.0.26](https://github.com/dtolnay/thiserror)
 * [thiserror-impl 1.0.26](https://github.com/dtolnay/thiserror)
@@ -266,7 +266,7 @@ limitations under the License.
 
 **Used By:**
 
-* [bytemuck 1.7.0](https://github.com/Lokathor/bytemuck)
+* [bytemuck 1.7.2](https://github.com/Lokathor/bytemuck)
 
 
 ```
@@ -427,12 +427,12 @@ limitations under the License.
 
 **Used By:**
 
-* [futures-channel 0.3.15](https://github.com/rust-lang/futures-rs)
-* [futures-core 0.3.15](https://github.com/rust-lang/futures-rs)
-* [futures-executor 0.3.15](https://github.com/rust-lang/futures-rs)
-* [futures-io 0.3.15](https://github.com/rust-lang/futures-rs)
-* [futures-task 0.3.15](https://github.com/rust-lang/futures-rs)
-* [futures-util 0.3.15](https://github.com/rust-lang/futures-rs)
+* [futures-channel 0.3.16](https://github.com/rust-lang/futures-rs)
+* [futures-core 0.3.16](https://github.com/rust-lang/futures-rs)
+* [futures-executor 0.3.16](https://github.com/rust-lang/futures-rs)
+* [futures-io 0.3.16](https://github.com/rust-lang/futures-rs)
+* [futures-task 0.3.16](https://github.com/rust-lang/futures-rs)
+* [futures-util 0.3.16](https://github.com/rust-lang/futures-rs)
 
 
 ```
@@ -2930,12 +2930,12 @@ SOFTWARE.
 **Used By:**
 
 * [atk 0.14.0](https://github.com/gtk-rs/gtk3-rs)
-* [cairo-rs 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
+* [cairo-rs 0.14.1](https://github.com/gtk-rs/gtk-rs-core)
 * [gdk 0.14.0](https://github.com/gtk-rs/gtk3-rs)
 * [gdk-pixbuf 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
 * [gio 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
-* [glib 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
-* [glib-macros 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
+* [glib 0.14.2](https://github.com/gtk-rs/gtk-rs-core)
+* [glib-macros 0.14.1](https://github.com/gtk-rs/gtk-rs-core)
 * [gtk 0.14.0](https://github.com/gtk-rs/gtk3-rs)
 * [gtk3-macros 0.14.0](https://github.com/gtk-rs/gtk3-rs)
 * [pango 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
@@ -3128,8 +3128,8 @@ DEALINGS IN THE SOFTWARE.
 * [dactyl 0.1.8](https://github.com/Blobfolio/dactyl)
 * [dowser 0.2.4](https://github.com/Blobfolio/dowser)
 * [oxford_join 0.1.1](https://github.com/Blobfolio/oxford_join)
-* [refract 0.6.5](https://github.com/Blobfolio/refract)
-* [refract_core 0.6.5](https://github.com/Blobfolio/refract)
+* [refract 0.6.6](https://github.com/Blobfolio/refract)
+* [refract_core 0.6.6](https://github.com/Blobfolio/refract)
 * [write_atomic 0.1.0](https://github.com/Blobfolio/write_atomic)
 
 

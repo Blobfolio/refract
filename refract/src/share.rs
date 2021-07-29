@@ -108,9 +108,9 @@ impl Share {
 	pub(super) fn sync(tx: &SisterTx, rx: &SisterRx, share: SharePayload)
 	-> ShareFeedback {
 		tx.send(share).unwrap();
-		glib::source::idle_add(|| {
+		gtk::glib::source::idle_add(|| {
 			get_share();
-			glib::source::Continue(false)
+			gtk::glib::source::Continue(false)
 		});
 
 		loop {

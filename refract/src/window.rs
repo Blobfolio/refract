@@ -20,10 +20,10 @@ use dowser::{
 	Dowser,
 	Extension,
 };
-use gdk_pixbuf::Pixbuf;
 use gtk::{
-	prelude::*,
 	FileChooserAction,
+	gdk_pixbuf::Pixbuf,
+	prelude::*,
 	ResponseType,
 };
 use refract_core::{

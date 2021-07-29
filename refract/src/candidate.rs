@@ -2,7 +2,7 @@
 # `Refract GTK` - Candidate
 */
 
-use gdk_pixbuf::{
+use gtk::gdk_pixbuf::{
 	Colorspace,
 	Pixbuf,
 };
