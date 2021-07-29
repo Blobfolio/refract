@@ -94,15 +94,17 @@ impl Decoder for ImageJxl {
 
 		loop {
 			match unsafe { JxlDecoderProcessInput(decoder.0) } {
-				JxlDecoderStatus::BasicInfo => decoder.get_basic_info(
-					&mut basic_info,
-					&mut pixel_format
-				)?,
+				JxlDecoderStatus::BasicInfo => {
+					decoder.get_basic_info(
+						&mut basic_info,
+						&mut pixel_format
+					)?;
+				},
 				JxlDecoderStatus::ColorEncoding => {
 					decoder.get_icc_profile(
 						pixel_format.as_ref().ok_or(RefractError::Decode)?,
 						&mut icc_profile
-					)?
+					)?;
 				},
 				JxlDecoderStatus::NeedImageOutBuffer => {
 					decoder.output(
@@ -112,7 +114,7 @@ impl Decoder for ImageJxl {
 				},
 				JxlDecoderStatus::FullImage => continue,
 				JxlDecoderStatus::Success => {
-					unsafe { JxlDecoderReset(decoder.0) };
+					unsafe { JxlDecoderReset(decoder.0); }
 
 					let info = basic_info.ok_or(RefractError::Decode)?;
 					let width = usize::try_from(info.xsize)
@@ -272,7 +274,7 @@ impl LibJxlDecoder {
 #[cfg(feature = "decode_ng")]
 impl Drop for LibJxlDecoder {
 	#[inline]
-	fn drop(&mut self) { unsafe { JxlDecoderDestroy(self.0) }; }
+	fn drop(&mut self) { unsafe { JxlDecoderDestroy(self.0); } }
 }
 
 
@@ -359,7 +361,7 @@ impl LibJxlEncoder {
 
 impl Drop for LibJxlEncoder {
 	#[inline]
-	fn drop(&mut self) { unsafe { JxlEncoderDestroy(self.0) }; }
+	fn drop(&mut self) { unsafe { JxlEncoderDestroy(self.0); } }
 }
 
 
@@ -383,7 +385,7 @@ impl LibJxlThreadParallelRunner {
 impl Drop for LibJxlThreadParallelRunner {
 	#[inline]
 	fn drop(&mut self) {
-		unsafe { JxlThreadParallelRunnerDestroy(self.0) };
+		unsafe { JxlThreadParallelRunnerDestroy(self.0); }
 	}
 }
 
@@ -469,7 +471,7 @@ fn encode(
 	})?;
 
 	// Finalize the encoder.
-	unsafe { JxlEncoderCloseInput(enc.0) };
+	unsafe { JxlEncoderCloseInput(enc.0); }
 
 	enc.write(candidate)
 }

@@ -183,7 +183,7 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 
 impl Drop for LibWebpPicture {
 	#[inline]
-	fn drop(&mut self) { unsafe { WebPPictureFree(&mut self.0) } }
+	fn drop(&mut self) { unsafe { WebPPictureFree(&mut self.0); } }
 }
 
 
