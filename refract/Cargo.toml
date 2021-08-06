@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.6.6"
+version = "0.7.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2018"
@@ -13,7 +13,7 @@ publish = false
 maintainer = "Josh Stoik <hello@blobfolio.com>"
 copyright = "2021, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
-revision = "2"
+revision = "1"
 depends = "libc6 (>= 2.27), libgcc1 (>= 1:4.2), libgdk-pixbuf2.0-0 (>= 2.25.2), libglib2.0-0 (>= 2.31.18), libgtk-3-0 (>= 3.16.2), libstdc++6 (>= 6)"
 replaces = "refract-gtk"
 conflicts = "refract-gtk"
