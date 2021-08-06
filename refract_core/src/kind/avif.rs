@@ -13,7 +13,7 @@ use crate::{
 use libavif_sys::{
 	AVIF_CHROMA_SAMPLE_POSITION_COLOCATED,
 	AVIF_CHROMA_UPSAMPLING_BILINEAR,
-	AVIF_CODEC_CHOICE_RAV1E,
+	AVIF_CODEC_CHOICE_AOM,
 	AVIF_COLOR_PRIMARIES_BT709,
 	AVIF_MATRIX_COEFFICIENTS_BT709,
 	AVIF_MATRIX_COEFFICIENTS_IDENTITY,
@@ -53,7 +53,6 @@ use crate::{
 
 #[cfg(feature = "decode_ng")]
 use libavif_sys::{
-	AVIF_CODEC_CHOICE_DAV1D,
 	avifDecoder,
 	avifDecoderCreate,
 	avifDecoderDestroy,
@@ -204,7 +203,7 @@ impl LibAvifDecoder {
 			.max(1);
 
 		unsafe {
-			(*decoder).codecChoice = AVIF_CODEC_CHOICE_DAV1D;
+			(*decoder).codecChoice = AVIF_CODEC_CHOICE_AOM;
 			(*decoder).maxThreads = threads;
 		}
 
@@ -244,7 +243,7 @@ impl TryFrom<NonZeroU8> for LibAvifEncoder {
 		if encoder.is_null() { return Err(RefractError::Encode); }
 
 		unsafe {
-			(*encoder).codecChoice = AVIF_CODEC_CHOICE_RAV1E;
+			(*encoder).codecChoice = AVIF_CODEC_CHOICE_AOM;
 			(*encoder).maxThreads = threads;
 
 			(*encoder).minQuantizer = i32::from(q);
