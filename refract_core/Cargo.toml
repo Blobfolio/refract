@@ -25,7 +25,7 @@ features = [ "threads" ]
 [dependencies.libavif-sys]
 version = "0.10.0"
 default-features = false
-features = [ "codec-rav1e" ]
+features = [ "codec-aom" ]
 
 [dependencies.libwebp-sys2]
 version = "0.1.2"
@@ -40,4 +40,4 @@ bin = []
 
 # This feature enables decoding support for the next-gen image formats, i.e.
 # WebP, AVIF, and JPEG XL.
-decode_ng = [ "libavif-sys/codec-dav1d" ]
+decode_ng = []
