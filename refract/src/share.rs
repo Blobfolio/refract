@@ -107,16 +107,18 @@ impl Share {
 	/// immediately.
 	pub(super) fn sync(tx: &SisterTx, rx: &SisterRx, share: SharePayload)
 	-> ShareFeedback {
-		tx.send(share).unwrap();
-		gtk::glib::source::idle_add(|| {
-			get_share();
-			gtk::glib::source::Continue(false)
-		});
+		if tx.send(share).is_ok() {
+			gtk::glib::source::idle_add(|| {
+				get_share();
+				gtk::glib::source::Continue(false)
+			});
 
-		loop {
-			let res = rx.recv().unwrap_or(ShareFeedback::Abort);
-			if res != ShareFeedback::Wait { return res; }
+			loop {
+				let res = rx.recv().unwrap_or(ShareFeedback::Abort);
+				if res != ShareFeedback::Wait { return res; }
+			}
 		}
+		else { ShareFeedback::Abort }
 	}
 }
 
