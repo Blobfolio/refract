@@ -173,6 +173,10 @@ fn setup_ui_window(window: &Arc<Window>) {
 		adj.set_value(adj.upper());
 	});
 
+	// Dark mode toggle.
+	let wnd2 = Arc::clone(window);
+	window.chk_dark.connect_toggled(move |_| { wnd2.toggle_dark(); });
+
 	// Make sure people don't disable every encoder or encoding mode. This will
 	// flip the last (just clicked) value back on if none of its sisters are
 	// active.

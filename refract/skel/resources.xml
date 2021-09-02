@@ -4,6 +4,8 @@
     <file alias="refract.glade">refract.glade</file>
     <file alias="bg-b.png">img/bg-b.png</file>
     <file alias="bg.png">img/bg.png</file>
+    <file alias="dark-bg-b.png">img/dark-bg-b.png</file>
+    <file alias="dark-bg.png">img/dark-bg.png</file>
     <file alias="comic.png">img/comic.png</file>
     <file alias="start.png">img/start.png</file>
     <file alias="stop.png">img/stop.png</file>
