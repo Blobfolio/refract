@@ -199,6 +199,30 @@
               </object>
             </child>
             <child>
+              <object class="GtkMenuItem" id="mnu_view">
+                <property name="name">mnu_settings</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">_View</property>
+                <property name="use-underline">True</property>
+                <child type="submenu">
+                  <object class="GtkMenu">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkCheckMenuItem" id="chk_dark">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="tooltip-text" translatable="yes">Use a dark checkboard background to e.g. make previewing light images easier.</property>
+                        <property name="label" translatable="yes">Dark Mode</property>
+                        <accelerator key="n" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
               <object class="GtkMenuItem" id="mnu_help">
                 <property name="name">mnu_help</property>
                 <property name="visible">True</property>

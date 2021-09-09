@@ -5,6 +5,14 @@
 	transition: background .3s ease 0s;
 }
 
+#wnd_image.dark {
+	background-image: url("resource:///gtk/refract/dark-bg.png");
+}
+
 #wnd_image.preview_b {
 	background-image: url("resource:///gtk/refract/bg-b.png");
+}
+
+#wnd_image.dark.preview_b {
+	background-image: url("resource:///gtk/refract/dark-bg-b.png");
 }

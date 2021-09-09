@@ -216,7 +216,6 @@ pub(super) struct Window {
 	img_main: gtk::Image,
 	box_preview: gtk::Box,
 	pub(super) box_ab: gtk::Box,
-	box_menu: gtk::MenuBar,
 
 	pub(super) btn_discard: gtk::Button,
 	pub(super) btn_keep: gtk::Button,
@@ -228,6 +227,7 @@ pub(super) struct Window {
 	pub(super) chk_lossless: gtk::CheckMenuItem,
 	pub(super) chk_lossy: gtk::CheckMenuItem,
 	pub(super) chk_ycbcr: gtk::CheckMenuItem,
+	pub(super) chk_dark: gtk::CheckMenuItem,
 
 	pub(super) lbl_format: gtk::Label,
 	pub(super) lbl_format_val: gtk::Label,
@@ -235,6 +235,11 @@ pub(super) struct Window {
 	pub(super) lbl_quality_val: gtk::Label,
 
 	pub(super) lbl_status: gtk::Label,
+
+	pub(super) mnu_file: gtk::MenuItem,
+	pub(super) mnu_settings: gtk::MenuItem,
+	pub(super) mnu_view: gtk::MenuItem,
+	pub(super) mnu_help: gtk::MenuItem,
 
 	pub(super) mnu_about: gtk::MenuItem,
 	pub(super) mnu_fopen: gtk::MenuItem,
@@ -280,7 +285,6 @@ impl TryFrom<&gtk::Application> for Window {
 			img_main: gtk_obj!(builder, "img_main"),
 			box_preview: gtk_obj!(builder, "box_preview"),
 			box_ab: gtk_obj!(builder, "box_ab"),
-			box_menu: gtk_obj!(builder, "box_menu"),
 
 			btn_discard: gtk_obj!(builder, "btn_discard"),
 			btn_keep: gtk_obj!(builder, "btn_keep"),
@@ -293,12 +297,19 @@ impl TryFrom<&gtk::Application> for Window {
 			chk_lossy: gtk_obj!(builder, "chk_lossy"),
 			chk_ycbcr: gtk_obj!(builder, "chk_ycbcr"),
 
+			chk_dark: gtk_obj!(builder, "chk_dark"),
+
 			lbl_format: gtk_obj!(builder, "lbl_format"),
 			lbl_format_val: gtk_obj!(builder, "lbl_format_val"),
 			lbl_quality: gtk_obj!(builder, "lbl_quality"),
 			lbl_quality_val: gtk_obj!(builder, "lbl_quality_val"),
 
 			lbl_status: gtk_obj!(builder, "lbl_status"),
+
+			mnu_file: gtk_obj!(builder, "mnu_file"),
+			mnu_settings: gtk_obj!(builder, "mnu_settings"),
+			mnu_view: gtk_obj!(builder, "mnu_view"),
+			mnu_help: gtk_obj!(builder, "mnu_help"),
 
 			mnu_about: gtk_obj!(builder, "mnu_about"),
 			mnu_fopen: gtk_obj!(builder, "mnu_fopen"),
@@ -577,6 +588,17 @@ impl Window {
 		Ok(ShareFeedback::Continue)
 	}
 
+	/// # Toggle Dark Mode.
+	pub(super) fn toggle_dark(&self) {
+		// Toggle the background class.
+		if self.chk_dark.is_active() {
+			add_widget_class(&self.wnd_image, "dark");
+		}
+		else {
+			remove_widget_class(&self.wnd_image, "dark");
+		}
+	}
+
 	/// # Toggle Preview.
 	///
 	/// This is a special handler for the source/candidate `btn_toggle` widget.
@@ -827,7 +849,9 @@ impl Window {
 	/// Really we just need to disable these fields when encoding is underway.
 	fn paint_settings(&self) {
 		let sensitive: bool = ! self.is_encoding();
-		gtk_sensitive!(sensitive, self.box_menu);
+		gtk_sensitive!(sensitive, self.mnu_file);
+		gtk_sensitive!(sensitive, self.mnu_settings);
+		gtk_sensitive!(sensitive, self.mnu_help);
 	}
 
 	/// # Paint Preview.
