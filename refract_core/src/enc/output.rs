@@ -9,7 +9,6 @@ use crate::{
 	RefractError,
 };
 use std::{
-	convert::TryFrom,
 	num::NonZeroUsize,
 	ops::Deref,
 };

@@ -27,10 +27,7 @@ use libwebp_sys::{
 	WebPPictureInit,
 	WebPValidateConfig,
 };
-use std::{
-	convert::TryFrom,
-	num::NonZeroU8,
-};
+use std::num::NonZeroU8;
 
 #[cfg(feature = "decode_ng")]
 use crate::{

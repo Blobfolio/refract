@@ -39,7 +39,6 @@ use jpegxl_sys::{
 	},
 };
 use std::{
-	convert::TryFrom,
 	ffi::c_void,
 	num::NonZeroU8,
 };

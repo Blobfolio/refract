@@ -37,10 +37,7 @@ use libavif_sys::{
 	avifRWData,
 	avifRWDataFree,
 };
-use std::{
-	convert::TryFrom,
-	num::NonZeroU8,
-};
+use std::num::NonZeroU8;
 
 #[cfg(feature = "decode_ng")]
 use crate::{

@@ -12,7 +12,6 @@ use std::{
 		Borrow,
 		Cow,
 	},
-	convert::TryFrom,
 	fmt,
 	num::{
 		NonZeroU32,
@@ -52,7 +51,6 @@ use std::{
 ///
 /// ```no_run
 /// use refract_core::Input;
-/// use std::convert::TryFrom;
 ///
 /// let raw = std::fs::read("/path/to/my.jpg").unwrap();
 /// let input = Input::try_from(raw.as_slice()).unwrap();
