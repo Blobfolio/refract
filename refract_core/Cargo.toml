@@ -19,8 +19,10 @@ rgb = "0.8.*"
 spng = "0.1.0"
 
 [dependencies.jpegxl-sys]
-version = "0.3.7"
+version = "0.6.0"
 default-features = false
+git = "https://github.com/inflation/jpegxl-sys"
+branch = "master"
 features = [ "threads" ]
 
 [dependencies.libavif-sys]
