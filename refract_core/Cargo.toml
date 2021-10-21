@@ -12,7 +12,7 @@ publish = false
 
 [dependencies]
 ahash = "0.7.*"
-dactyl = "0.1.*"
+dactyl = "0.2.*"
 jpeg-decoder = "0.1.*"
 num_cpus = "1.13.*"
 rgb = "0.8.*"
@@ -21,8 +21,6 @@ spng = "0.1.0"
 [dependencies.jpegxl-sys]
 version = "0.6.0"
 default-features = false
-git = "https://github.com/inflation/jpegxl-sys"
-branch = "master"
 features = [ "threads" ]
 
 [dependencies.libavif-sys]

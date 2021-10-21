@@ -38,14 +38,14 @@ assets = [
 
 [build-dependencies]
 toml = "0.5.*"
-version-compare = "0.0.*"
+version-compare = "0.1.*"
 
 [dependencies]
 crossbeam-channel = "0.5.*"
-dactyl = "0.1.*"
-dowser = "0.2.*"
-oxford_join = "0.1.*"
-write_atomic = "0.1.*"
+dactyl = "0.2.*"
+dowser = "0.3.*"
+oxford_join = "0.2.*"
+write_atomic = "0.2.*"
 
 [dependencies.gtk]
 version = "0.14.*"
