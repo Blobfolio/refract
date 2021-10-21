@@ -301,12 +301,12 @@ impl LibJxlEncoder {
 		};
 		basic_info.xsize = width;
 		basic_info.ysize = height;
-		basic_info.uses_original_profile = false as _;
-		basic_info.have_container = false as _;
+		basic_info.uses_original_profile = false.into();
+		basic_info.have_container = false.into();
 
 		basic_info.bits_per_sample = 8;
 		basic_info.exponent_bits_per_sample = 0;
-		basic_info.alpha_premultiplied = false as _;
+		basic_info.alpha_premultiplied = false.into();
 		basic_info.alpha_exponent_bits = 0;
 
 		if alpha {
