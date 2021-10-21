@@ -18,6 +18,7 @@ use jpegxl_sys::{
 	JxlEncoderCloseInput,
 	JxlEncoderCreate,
 	JxlEncoderDestroy,
+	JxlEncoderInitBasicInfo,
 	JxlEncoderOptions,
 	JxlEncoderOptionsCreate,
 	JxlEncoderOptionsSetDecodingSpeed,
@@ -32,14 +33,13 @@ use jpegxl_sys::{
 	JxlEndianness,
 	JxlPixelFormat,
 	NewUninit,
-	thread_runner::{
+	parallel_runner::{
 		JxlThreadParallelRunner,
 		JxlThreadParallelRunnerCreate,
 		JxlThreadParallelRunnerDestroy,
 	},
 };
 use std::{
-	convert::TryFrom,
 	ffi::c_void,
 	num::NonZeroU8,
 };
@@ -294,15 +294,19 @@ impl LibJxlEncoder {
 	/// # Set Basic Info.
 	fn set_basic_info(&self, width: u32, height: u32, alpha: bool) -> Result<(), RefractError> {
 		// Set up JPEG XL's "basic info" struct.
-		let mut basic_info = unsafe { JxlBasicInfo::new_uninit().assume_init() };
+		let mut basic_info = unsafe {
+			let mut info = JxlBasicInfo::new_uninit().assume_init();
+			JxlEncoderInitBasicInfo(&mut info);
+			info
+		};
 		basic_info.xsize = width;
 		basic_info.ysize = height;
-		basic_info.uses_original_profile = false as _;
-		basic_info.have_container = false as _;
+		basic_info.uses_original_profile = false.into();
+		basic_info.have_container = false.into();
 
 		basic_info.bits_per_sample = 8;
 		basic_info.exponent_bits_per_sample = 0;
-		basic_info.alpha_premultiplied = false as _;
+		basic_info.alpha_premultiplied = false.into();
 		basic_info.alpha_exponent_bits = 0;
 
 		if alpha {
@@ -410,7 +414,7 @@ fn encode(
 	maybe_die(unsafe {
 		&JxlEncoderSetParallelRunner(
 			enc.0,
-			Some(JxlThreadParallelRunner),
+			JxlThreadParallelRunner,
 			runner.0
 		)
 	})?;
@@ -472,7 +476,6 @@ fn encode(
 
 	// Finalize the encoder.
 	unsafe { JxlEncoderCloseInput(enc.0); }
-
 	enc.write(candidate)
 }
 

@@ -43,7 +43,6 @@ use std::{
 		Cell,
 		RefCell,
 	},
-	convert::TryFrom,
 	ffi::OsStr,
 	num::NonZeroUsize,
 	os::unix::ffi::OsStrExt,

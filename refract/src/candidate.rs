@@ -13,7 +13,6 @@ use refract_core::{
 	Quality,
 	RefractError,
 };
-use std::convert::TryFrom;
 
 
 

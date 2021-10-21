@@ -46,10 +46,7 @@ use gtk::{
 	prelude::*,
 };
 use refract_core::RefractError;
-use std::{
-	convert::TryFrom,
-	sync::Arc,
-};
+use std::sync::Arc;
 
 
 

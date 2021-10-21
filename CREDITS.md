@@ -18,8 +18,8 @@ License details for project dependencies are listed below.
 
 **Used By:**
 
-* [ahash 0.7.4](https://github.com/tkaitchuck/ahash)
-* [anyhow 1.0.43](https://github.com/dtolnay/anyhow)
+* [ahash 0.7.6](https://github.com/tkaitchuck/ahash)
+* [anyhow 1.0.44](https://github.com/dtolnay/anyhow)
 * [bitflags 1.3.2](https://github.com/bitflags/bitflags)
 * [cfg-if 0.1.10](https://github.com/alexcrichton/cfg-if)
 * [cfg-if 1.0.0](https://github.com/alexcrichton/cfg-if)
@@ -31,22 +31,22 @@ License details for project dependencies are listed below.
 * [heck 0.3.3](https://github.com/withoutboats/heck)
 * [jpeg-decoder 0.1.22](https://github.com/image-rs/jpeg-decoder)
 * [lazy_static 1.4.0](https://github.com/rust-lang-nursery/lazy-static.rs)
-* [libc 0.2.101](https://github.com/rust-lang/libc)
+* [libc 0.2.104](https://github.com/rust-lang/libc)
 * [libz-sys 1.1.3](https://github.com/rust-lang/libz-sys)
 * [num-traits 0.2.14](https://github.com/rust-num/num-traits)
 * [num_cpus 1.13.0](https://github.com/seanmonstar/num_cpus)
 * [once_cell 1.8.0](https://github.com/matklad/once_cell)
-* [proc-macro2 1.0.29](https://github.com/alexcrichton/proc-macro2)
-* [quote 1.0.9](https://github.com/dtolnay/quote)
+* [proc-macro2 1.0.30](https://github.com/alexcrichton/proc-macro2)
+* [quote 1.0.10](https://github.com/dtolnay/quote)
 * [rayon 1.5.1](https://github.com/rayon-rs/rayon)
 * [rayon-core 1.9.1](https://github.com/rayon-rs/rayon)
 * [scopeguard 1.1.0](https://github.com/bluss/scopeguard)
 * [serde 1.0.130](https://github.com/serde-rs/serde)
-* [smallvec 1.6.1](https://github.com/servo/rust-smallvec)
-* [syn 1.0.76](https://github.com/dtolnay/syn)
+* [smallvec 1.7.0](https://github.com/servo/rust-smallvec)
+* [syn 1.0.80](https://github.com/dtolnay/syn)
 * [tempfile 3.2.0](https://github.com/Stebalien/tempfile)
-* [thiserror 1.0.29](https://github.com/dtolnay/thiserror)
-* [thiserror-impl 1.0.29](https://github.com/dtolnay/thiserror)
+* [thiserror 1.0.30](https://github.com/dtolnay/thiserror)
+* [thiserror-impl 1.0.30](https://github.com/dtolnay/thiserror)
 * [toml 0.5.8](https://github.com/alexcrichton/toml-rs)
 * [unicode-segmentation 1.8.0](https://github.com/unicode-rs/unicode-segmentation)
 * [unicode-xid 0.2.2](https://github.com/unicode-rs/unicode-xid)
@@ -1252,7 +1252,7 @@ limitations under the License.
 
 **Used By:**
 
-* [ppv-lite86 0.2.10](https://github.com/cryptocorrosion/cryptocorrosion)
+* [ppv-lite86 0.2.14](https://github.com/cryptocorrosion/cryptocorrosion)
 
 
 ```
@@ -1464,7 +1464,7 @@ limitations under the License.
 
 **Used By:**
 
-* [proc-macro-crate 1.0.0](https://github.com/bkchr/proc-macro-crate)
+* [proc-macro-crate 1.1.0](https://github.com/bkchr/proc-macro-crate)
 
 
 ```
@@ -2302,7 +2302,7 @@ limitations under the License.
 
 **Used By:**
 
-* [libaom-sys 0.9.1](https://github.com/njaard/libavif-rs)
+* [libaom-sys 0.10.1](https://github.com/njaard/libavif-rs)
 
 
 ```
@@ -2340,7 +2340,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 **Used By:**
 
-* [libavif-sys 0.10.0](https://github.com/njaard/libavif-rs)
+* [libavif-sys 0.10.2](https://github.com/njaard/libavif-rs)
 
 
 ```
@@ -2401,7 +2401,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 **Used By:**
 
-* [jpegxl-sys 0.3.7](https://github.com/inflation/jpegxl-sys)
+* [jpegxl-sys 0.6.0](https://github.com/inflation/jpegxl-sys)
 
 
 ```
@@ -2645,15 +2645,16 @@ The GNU General Public License does not permit incorporating your program into p
 **Used By:**
 
 * [atk 0.14.0](https://github.com/gtk-rs/gtk3-rs)
-* [cairo-rs 0.14.3](https://github.com/gtk-rs/gtk-rs-core)
-* [gdk 0.14.2](https://github.com/gtk-rs/gtk3-rs)
+* [cairo-rs 0.14.9](https://github.com/gtk-rs/gtk-rs-core)
+* [cairo-sys-rs 0.14.9](https://github.com/gtk-rs/gtk-rs-core)
+* [gdk 0.14.3](https://github.com/gtk-rs/gtk3-rs)
 * [gdk-pixbuf 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
-* [gio 0.14.5](https://github.com/gtk-rs/gtk-rs-core)
-* [glib 0.14.5](https://github.com/gtk-rs/gtk-rs-core)
+* [gio 0.14.8](https://github.com/gtk-rs/gtk-rs-core)
+* [glib 0.14.8](https://github.com/gtk-rs/gtk-rs-core)
 * [glib-macros 0.14.1](https://github.com/gtk-rs/gtk-rs-core)
-* [gtk 0.14.1](https://github.com/gtk-rs/gtk3-rs)
+* [gtk 0.14.3](https://github.com/gtk-rs/gtk3-rs)
 * [gtk3-macros 0.14.0](https://github.com/gtk-rs/gtk3-rs)
-* [pango 0.14.3](https://github.com/gtk-rs/gtk-rs-core)
+* [pango 0.14.8](https://github.com/gtk-rs/gtk-rs-core)
 
 
 ```
@@ -2683,7 +2684,6 @@ SOFTWARE.
 **Used By:**
 
 * [atk-sys 0.14.0](https://github.com/gtk-rs/gtk3-rs)
-* [cairo-sys-rs 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
 * [gdk-pixbuf-sys 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
 * [gdk-sys 0.14.0](https://github.com/gtk-rs/gtk3-rs)
 * [gio-sys 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
@@ -2771,7 +2771,7 @@ SOFTWARE.
 
 **Used By:**
 
-* [slab 0.4.4](https://github.com/tokio-rs/slab)
+* [slab 0.4.5](https://github.com/tokio-rs/slab)
 
 
 ```
@@ -2807,12 +2807,12 @@ DEALINGS IN THE SOFTWARE.
 
 **Used By:**
 
-* [dactyl 0.1.8](https://github.com/Blobfolio/dactyl)
-* [dowser 0.2.4](https://github.com/Blobfolio/dowser)
-* [oxford_join 0.1.1](https://github.com/Blobfolio/oxford_join)
-* [refract 0.7.1](https://github.com/Blobfolio/refract)
-* [refract_core 0.7.1](https://github.com/Blobfolio/refract)
-* [write_atomic 0.1.0](https://github.com/Blobfolio/write_atomic)
+* [dactyl 0.2.0](https://github.com/Blobfolio/dactyl)
+* [dowser 0.3.0](https://github.com/Blobfolio/dowser)
+* [oxford_join 0.2.0](https://github.com/Blobfolio/oxford_join)
+* [refract 0.7.2](https://github.com/Blobfolio/refract)
+* [refract_core 0.7.2](https://github.com/Blobfolio/refract)
+* [write_atomic 0.2.0](https://github.com/Blobfolio/write_atomic)
 
 
 ```

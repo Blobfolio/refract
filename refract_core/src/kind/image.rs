@@ -14,7 +14,6 @@ use crate::{
 	traits::DecoderResult,
 };
 use std::{
-	convert::TryFrom,
 	fmt,
 	num::NonZeroU8,
 };

@@ -17,7 +17,6 @@ use refract_core::{
 };
 use std::{
 	cell::RefCell,
-	convert::TryFrom,
 	path::PathBuf,
 	sync::Arc,
 };
