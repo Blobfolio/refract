@@ -15,7 +15,7 @@ ahash = "0.7.*"
 dactyl = "0.2.*"
 jpeg-decoder = "0.1.*"
 num_cpus = "1.13.*"
-rgb = "0.8.*"
+rgb = "0.8.*, >=0.8.20"
 spng = "0.1.0"
 
 [dependencies.jpegxl-sys]
