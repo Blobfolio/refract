@@ -31,19 +31,19 @@ License details for project dependencies are listed below.
 * [heck 0.3.3](https://github.com/withoutboats/heck)
 * [jpeg-decoder 0.1.22](https://github.com/image-rs/jpeg-decoder)
 * [lazy_static 1.4.0](https://github.com/rust-lang-nursery/lazy-static.rs)
-* [libc 0.2.104](https://github.com/rust-lang/libc)
+* [libc 0.2.106](https://github.com/rust-lang/libc)
 * [libz-sys 1.1.3](https://github.com/rust-lang/libz-sys)
 * [num-traits 0.2.14](https://github.com/rust-num/num-traits)
 * [num_cpus 1.13.0](https://github.com/seanmonstar/num_cpus)
 * [once_cell 1.8.0](https://github.com/matklad/once_cell)
-* [proc-macro2 1.0.30](https://github.com/alexcrichton/proc-macro2)
+* [proc-macro2 1.0.32](https://github.com/dtolnay/proc-macro2)
 * [quote 1.0.10](https://github.com/dtolnay/quote)
 * [rayon 1.5.1](https://github.com/rayon-rs/rayon)
 * [rayon-core 1.9.1](https://github.com/rayon-rs/rayon)
 * [scopeguard 1.1.0](https://github.com/bluss/scopeguard)
 * [serde 1.0.130](https://github.com/serde-rs/serde)
 * [smallvec 1.7.0](https://github.com/servo/rust-smallvec)
-* [syn 1.0.80](https://github.com/dtolnay/syn)
+* [syn 1.0.81](https://github.com/dtolnay/syn)
 * [tempfile 3.2.0](https://github.com/Stebalien/tempfile)
 * [thiserror 1.0.30](https://github.com/dtolnay/thiserror)
 * [thiserror-impl 1.0.30](https://github.com/dtolnay/thiserror)
@@ -1252,7 +1252,7 @@ limitations under the License.
 
 **Used By:**
 
-* [ppv-lite86 0.2.14](https://github.com/cryptocorrosion/cryptocorrosion)
+* [ppv-lite86 0.2.15](https://github.com/cryptocorrosion/cryptocorrosion)
 
 
 ```
@@ -2302,7 +2302,7 @@ limitations under the License.
 
 **Used By:**
 
-* [libaom-sys 0.10.1](https://github.com/njaard/libavif-rs)
+* [libaom-sys 0.11.0](https://github.com/njaard/libavif-rs)
 
 
 ```
@@ -2340,7 +2340,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 **Used By:**
 
-* [libavif-sys 0.10.2](https://github.com/njaard/libavif-rs)
+* [libavif-sys 0.11.0](https://github.com/njaard/libavif-rs)
 
 
 ```
@@ -2739,7 +2739,7 @@ SOFTWARE.
 
 **Used By:**
 
-* [rgb 0.8.27](https://github.com/kornelski/rust-rgb)
+* [rgb 0.8.29](https://github.com/kornelski/rust-rgb)
 
 
 ```
@@ -2810,8 +2810,8 @@ DEALINGS IN THE SOFTWARE.
 * [dactyl 0.2.0](https://github.com/Blobfolio/dactyl)
 * [dowser 0.3.0](https://github.com/Blobfolio/dowser)
 * [oxford_join 0.2.0](https://github.com/Blobfolio/oxford_join)
-* [refract 0.7.2](https://github.com/Blobfolio/refract)
-* [refract_core 0.7.2](https://github.com/Blobfolio/refract)
+* [refract 0.7.3](https://github.com/Blobfolio/refract)
+* [refract_core 0.7.3](https://github.com/Blobfolio/refract)
 * [write_atomic 0.2.0](https://github.com/Blobfolio/write_atomic)
 
 
