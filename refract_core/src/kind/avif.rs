@@ -4,7 +4,6 @@
 
 use crate::{
 	FLAG_AVIF_RGB,
-	FLAG_AVIF_ROUND_3,
 	Input,
 	Output,
 	RefractError,
@@ -60,14 +59,6 @@ use libavif_sys::{
 	avifRGBImageFreePixels,
 	avifRGBImageSetDefaults,
 };
-
-
-// These constants are used by the tiling functions.
-const MAX_TILE_AREA: usize = 4096 * 2304;
-const MAX_TILE_COLS: usize = 64;
-const MAX_TILE_ROWS: usize = 64;
-const MAX_TILE_WIDTH: usize = 4096;
-const SB_SIZE_LOG2: usize = 6;
 
 
 
@@ -139,16 +130,6 @@ impl Encoder for ImageAvif {
 	-> Result<(), RefractError> {
 		let image = LibAvifImage::new(img, flags)?;
 		let encoder = LibAvifEncoder::try_from(quality)?;
-
-		// Configure tiling.
-		if 0 == FLAG_AVIF_ROUND_3 & flags {
-			if let Some((x, y)) = tiles(img.width(), img.height()) {
-				unsafe {
-					(*encoder.0).tileRowsLog2 = x;
-					(*encoder.0).tileColsLog2 = y;
-				}
-			}
-		}
 
 		// Encode!
 		let mut data = LibAvifRwData(avifRWData::default());
@@ -382,111 +363,6 @@ impl Drop for LibAvifRwData {
 
 
 
-/// # Tiling Helper.
-///
-/// This struct exists solely to collect and hold basic image tiling variables
-/// for use by [`tiles`].
-///
-/// It is a stripped down version of `rav1e`'s `TilingInfo` struct, containing
-/// only the bits needed for x/y tile figuring.
-struct LibAvifTiles {
-	cols: usize,
-	rows: usize,
-
-	max_tile_cols_log2: usize,
-	max_tile_rows_log2: usize,
-
-	tile_rows_log2: usize,
-
-	tile_width_sb: usize,
-	tile_height_sb: usize,
-}
-
-impl LibAvifTiles {
-	/// # Tile Info.
-	fn from_target_tiles(
-		frame_width: usize,
-		frame_height: usize,
-		tile_cols_log2: usize,
-		tile_rows_log2: usize,
-	) -> Option<Self> {
-		// Align frames to the next multiple of 8.
-		let frame_width = ceil_log2(frame_width, 3);
-		let frame_height = ceil_log2(frame_height, 3);
-		let frame_width_sb = align_shift_pow2(frame_width, SB_SIZE_LOG2);
-		let frame_height_sb = align_shift_pow2(frame_height, SB_SIZE_LOG2);
-		let sb_cols = align_shift_pow2(frame_width, SB_SIZE_LOG2);
-		let sb_rows = align_shift_pow2(frame_height, SB_SIZE_LOG2);
-
-		// Set up some hard-coded limits. These are mostly format-dictated.
-		let max_tile_width_sb = MAX_TILE_WIDTH >> SB_SIZE_LOG2;
-		let max_tile_area_sb = MAX_TILE_AREA >> (2 * SB_SIZE_LOG2);
-		let min_tile_cols_log2 = tile_log2(max_tile_width_sb, sb_cols)?;
-		let max_tile_cols_log2 = tile_log2(1, sb_cols.min(MAX_TILE_COLS))?;
-		let max_tile_rows_log2 = tile_log2(1, sb_rows.min(MAX_TILE_ROWS))?;
-		let min_tiles_log2 = min_tile_cols_log2
-		  .max(tile_log2(max_tile_area_sb, sb_cols * sb_rows)?);
-
-		let mut tile_cols_log2 =
-			tile_cols_log2.max(min_tile_cols_log2).min(max_tile_cols_log2);
-		let tile_width_sb_pre = align_shift_pow2(sb_cols, tile_cols_log2);
-
-		let tile_width_sb = tile_width_sb_pre;
-
-		let cols = dactyl::div_usize(
-			frame_width_sb + tile_width_sb - 1,
-			tile_width_sb
-		);
-
-		// Adjust tile_cols_log2 to account for rounding.
-		tile_cols_log2 = tile_log2(1, cols)?;
-		if tile_cols_log2 < min_tile_cols_log2 {
-			return None;
-		}
-
-		let min_tile_rows_log2 =
-			if min_tiles_log2 > tile_cols_log2 {
-				min_tiles_log2 - tile_cols_log2
-			}
-			else { 0 };
-
-		let tile_rows_log2 = tile_rows_log2
-			.max(min_tile_rows_log2)
-			.min(max_tile_rows_log2);
-		let tile_height_sb = align_shift_pow2(sb_rows, tile_rows_log2);
-
-		let rows = dactyl::div_usize(
-			frame_height_sb + tile_height_sb - 1,
-			tile_height_sb
-		);
-
-		// We're done!
-		Some(Self {
-			cols,
-			rows,
-			max_tile_cols_log2,
-			max_tile_rows_log2,
-			tile_rows_log2,
-			tile_width_sb,
-			tile_height_sb,
-		})
-	}
-}
-
-
-
-#[inline]
-/// # Align and Shift to Power of 2.
-const fn align_shift_pow2(a: usize, n: usize) -> usize { (a + (1 << n) - 1) >> n }
-
-#[inline]
-/// # Ceiled Log2.
-const fn ceil_log2(a: usize, n: usize) -> usize { floor_log2(a + (1 << n) - 1, n) }
-
-#[inline]
-/// # Floored Log2.
-const fn floor_log2(a: usize, n: usize) -> usize { a & !((1 << n) - 1) }
-
 #[inline]
 /// # Verify Encoder Status.
 ///
@@ -541,92 +417,4 @@ fn ratio_of(e: u8, d: u8, base: u8) -> u8 {
 	(f32::from(e.min(d)) / f32::from(d) * f32::from(base))
 		.max(0.0)
 		.min(f32::from(base)) as u8
-}
-
-/// Return the smallest value for `k` such that `blkSize << k` is greater
-/// than or equal to `target`.
-fn tile_log2(blk_size: usize, target: usize) -> Option<usize> {
-	let mut k = 0;
-	while (blk_size.checked_shl(k)?) < target {
-		k += 1;
-	}
-	Some(k as usize)
-}
-
-#[must_use]
-/// # Tile Rows and Columns.
-///
-/// This is essentially a stripped-down version of the formula `rav1e` uses
-/// to convert a singular "tiles" setting into separate row and column tile
-/// settings.
-///
-/// It is a lot of figuring just to split a number, but greatly improves
-/// encoding performance.
-///
-/// There is some compression savings tradeoff to be considered. Refract
-/// actually re-runs the "best" image again at the end to see if it can
-/// recover the losses (while still gaining the speed benefits from all
-/// the other runs).
-///
-/// Not all images are suitable for tiling; this will return `None` in such
-/// cases. If it returns `Some`, at least one value will be > 0.
-fn tiles(width: usize, height: usize) -> Option<(i32, i32)> {
-	// The tiling values should roughly match the number of CPUs, while
-	// also not exceeding 6 (2^6 = 128). Aside from 6 being a hardcoded
-	// limit, it isn't worth generating a million tiny tiles if the CPU has
-	// to wait to deal with them.
-	let tiles_max: usize = num_cpus::get()
-		.min(dactyl::div_usize(width * height, 128 * 128));
-	if tiles_max < 2 { return None; }
-
-	// A starting point.
-	let mut tile_rows_log2 = 0;
-	let mut tile_cols_log2 = 0;
-	let mut tiling = LibAvifTiles::from_target_tiles(
-		width,
-		height,
-		tile_cols_log2,
-		tile_rows_log2,
-	)?;
-
-	// Loop until the limits are reached.
-	while
-		(tile_rows_log2 < tiling.max_tile_rows_log2) ||
-		(tile_cols_log2 < tiling.max_tile_cols_log2)
-	{
-		tiling = LibAvifTiles::from_target_tiles(
-			width,
-			height,
-			tile_cols_log2,
-			tile_rows_log2,
-		)?;
-
-		// The end.
-		if tiling.rows * tiling.cols >= tiles_max { break; }
-
-		// Bump the row count.
-		if
-			tile_cols_log2 >= tiling.max_tile_cols_log2 ||
-			(
-				(tiling.tile_height_sb >= tiling.tile_width_sb) &&
-				(tiling.tile_rows_log2 < tiling.max_tile_rows_log2)
-			)
-		{
-			tile_rows_log2 += 1;
-		}
-		// Bump the column count.
-		else {
-			tile_cols_log2 += 1;
-		}
-	}
-
-	// Return what we've found if at least one of the values is non-zero
-	// and both values fit within i32. (They shouldn't ever not fit, but
-	// verbosity feels right after so much crunching.)
-	if 0 < tile_rows_log2 || 0 < tile_cols_log2 {
-		let rows = i32::try_from(tile_rows_log2).ok()?;
-		let cols = i32::try_from(tile_cols_log2).ok()?;
-		Some((rows, cols))
-	}
-	else { None }
 }

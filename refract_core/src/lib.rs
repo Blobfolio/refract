@@ -97,21 +97,14 @@ pub(crate) const FLAG_AVIF_RGB: u8     = 0b0000_1000;
 /// color compression.
 pub(crate) const FLAG_AVIF_ROUND_2: u8 = 0b0001_0000;
 
-/// # (Internal) Encoder Flag: `AVIF` Round Three.
-///
-/// The final `AVIF` encoding stage reattempts conversion of the previous best
-/// with tiling optimizations disabled. This is slow, hence only done once, but
-/// will often shave off a few additional bytes.
-pub(crate) const FLAG_AVIF_ROUND_3: u8 = 0b0010_0000;
-
 /// # (Internal) Encoder Flag: Valid Output.
 ///
 /// This is used by [`Output`] to determine whether or not the buffer has been
 /// validated.
-pub(crate) const FLAG_VALID:        u8 = 0b0100_0000;
+pub(crate) const FLAG_VALID:        u8 = 0b0010_0000;
 
 /// # (Internal) Encoder Flag: Tried Lossless.
 ///
 /// This is used by [`EncodeIter`] to determine whether or not lossless
 /// encoding needs to be completed during iteration.
-pub(crate) const FLAG_DID_LOSSLESS: u8 = 0b1000_0000;
+pub(crate) const FLAG_DID_LOSSLESS: u8 = 0b0100_0000;

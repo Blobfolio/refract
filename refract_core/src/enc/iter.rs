@@ -5,7 +5,6 @@
 use crate::{
 	FLAG_AVIF_RGB,
 	FLAG_AVIF_ROUND_2,
-	FLAG_AVIF_ROUND_3,
 	FLAG_NO_AVIF_YCBCR,
 	FLAG_NO_LOSSLESS,
 	FLAG_NO_LOSSY,
@@ -197,10 +196,7 @@ impl EncodeIter<'_> {
 		self.set_candidate_quality(None);
 
 		let kind = self.output_kind();
-		if (0 == flags & FLAG_AVIF_ROUND_3) || kind == ImageKind::Avif {
-			kind.encode_lossless(&self.src, &mut self.candidate, flags)?;
-		}
-		else { return Err(RefractError::NothingDoing); }
+		kind.encode_lossless(&self.src, &mut self.candidate, flags)?;
 
 		self.finish_candidate()
 	}
@@ -217,10 +213,7 @@ impl EncodeIter<'_> {
 		self.set_candidate_quality(Some(quality));
 
 		let kind = self.output_kind();
-		if (0 == flags & FLAG_AVIF_ROUND_3) || kind == ImageKind::Avif {
-			kind.encode_lossy(&self.src, &mut self.candidate, quality, flags)?;
-		}
-		else { return Err(RefractError::NothingDoing); }
+		kind.encode_lossy(&self.src, &mut self.candidate, quality, flags)?;
 
 		self.finish_candidate()
 	}
@@ -296,9 +289,8 @@ impl EncodeIter<'_> {
 	/// # Next AVIF Round.
 	///
 	/// `AVIF` is complicated, even by next-gen image standards. Haha. Unlike
-	/// `WebP` and `JPEG XL`, we need to test `AVIF` encoding in three rounds:
-	/// once using full-range `RGB`, once using limited-range `YCbCr`, and one
-	/// final (single) re-encoding of the best candidate with tiling disabled.
+	/// `WebP` and `JPEG XL`, we need to test `AVIF` encoding in two rounds:
+	/// once using full-range `RGB`, and once using limited-range `YCbCr`.
 	fn next_avif(&mut self) -> Option<()> {
 		let kind = self.output_kind();
 		if kind != ImageKind::Avif { return None; }
@@ -316,31 +308,9 @@ impl EncodeIter<'_> {
 				self.steps.reboot(kind.min_encoder_quality(), kind.max_encoder_quality());
 				self.flags &= ! FLAG_AVIF_RGB;
 
-				// Recurse to pull the next result. If there isn't one, we can
-				// continue onto step three.
+				// Recurse to pull the next result. If there isn't one, we're
+				// done!
 				if self.next_inner().is_some() { return Some(()); }
-			}
-		}
-
-		// The third round is a final one-off action: re-encode the "best"
-		// (if any) using the same quality and mode, but with parallel
-		// tiling disabled.
-		//
-		// If this pass manages to shrink the image some more, great, we'll
-		// silently accept it; if not, no the previous best stays.
-		if 0 == self.flags & FLAG_AVIF_ROUND_3 {
-			self.flags |= FLAG_AVIF_ROUND_3;
-
-			if self.best.is_valid() {
-				let flags = self.best.flags() | FLAG_AVIF_ROUND_3;
-				if self.best.quality().is_lossless() {
-					self.lossless(flags).ok()?;
-				}
-				else {
-					let quality = self.best.quality().raw();
-					self.lossy(quality, flags).ok()?;
-				}
-				self.keep_candidate();
 			}
 		}
 
