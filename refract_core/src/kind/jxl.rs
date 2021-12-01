@@ -333,7 +333,7 @@ impl LibJxlEncoder {
 
 			// Make sure we can write at least 64KiB to the buffer.
 			if avail_out < 65_536 {
-				buf.reserve(65_536);
+				buf.try_reserve(65_536).map_err(|_| RefractError::Overflow)?;
 				avail_out = buf.capacity() - len;
 			}
 
