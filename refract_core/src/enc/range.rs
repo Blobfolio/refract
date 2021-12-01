@@ -94,7 +94,7 @@ impl QualityRange {
 
 		// If the difference is greater than one, cut it in half.
 		if diff > 1 {
-			diff = dactyl::div_u8(diff, 2);
+			diff = diff.wrapping_div(2);
 		}
 
 		// See if this is new! We can't exceed u8::MAX here, so unsafe is fine.

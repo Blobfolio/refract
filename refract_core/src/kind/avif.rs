@@ -398,9 +398,8 @@ fn quality_to_quantizers(quality: NonZeroU8) -> (u8, u8) {
 	// easier on the brain to recalibrate the value to be out of 100, then
 	// re-recalibrate it to be out of 63.
 	let aq = ratio_of(quality.get(), 63, 100);
-	let aq = dactyl::div_u8(aq + 100, 2).min(
-		aq + dactyl::div_u8(aq, 4) + 2
-	);
+	let aq = (aq + 100).wrapping_div(2)
+		.min(aq + aq.wrapping_div(4) + 2);
 	let aq = 63 - ratio_of(aq, 100, 63);
 
 	(q, aq)

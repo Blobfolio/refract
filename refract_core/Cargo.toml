@@ -12,7 +12,6 @@ publish = false
 
 [dependencies]
 ahash = "0.7.*"
-dactyl = "0.2.*"
 jpeg-decoder = "0.1.*"
 num_cpus = "1.13.*"
 rgb = "0.8.*, >=0.8.20"
