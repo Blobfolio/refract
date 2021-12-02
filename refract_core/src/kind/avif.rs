@@ -332,17 +332,12 @@ impl Drop for LibAvifImage {
 
 
 #[cfg(feature = "decode_ng")]
+#[derive(Default)]
 /// # Avif RGB Image.
 ///
 /// This struct exists only for garbage collection purposes. It is used for
 /// decoding.
 struct LibAvifRGBImage(avifRGBImage);
-
-#[cfg(feature = "decode_ng")]
-impl Default for LibAvifRGBImage {
-	#[inline]
-	fn default() -> Self { Self(avifRGBImage::default()) }
-}
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibAvifRGBImage {
