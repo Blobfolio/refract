@@ -213,7 +213,6 @@ pub(super) struct Window {
 	pub(super) wnd_status: gtk::ScrolledWindow,
 
 	img_main: gtk::Image,
-	box_preview: gtk::Box,
 	pub(super) box_ab: gtk::Box,
 
 	pub(super) btn_discard: gtk::Button,
@@ -237,7 +236,6 @@ pub(super) struct Window {
 
 	pub(super) mnu_file: gtk::MenuItem,
 	pub(super) mnu_settings: gtk::MenuItem,
-	pub(super) mnu_view: gtk::MenuItem,
 	pub(super) mnu_help: gtk::MenuItem,
 
 	pub(super) mnu_about: gtk::MenuItem,
@@ -282,7 +280,6 @@ impl TryFrom<&gtk::Application> for Window {
 			wnd_status: gtk_obj!(builder, "wnd_status"),
 
 			img_main: gtk_obj!(builder, "img_main"),
-			box_preview: gtk_obj!(builder, "box_preview"),
 			box_ab: gtk_obj!(builder, "box_ab"),
 
 			btn_discard: gtk_obj!(builder, "btn_discard"),
@@ -307,7 +304,6 @@ impl TryFrom<&gtk::Application> for Window {
 
 			mnu_file: gtk_obj!(builder, "mnu_file"),
 			mnu_settings: gtk_obj!(builder, "mnu_settings"),
-			mnu_view: gtk_obj!(builder, "mnu_view"),
 			mnu_help: gtk_obj!(builder, "mnu_help"),
 
 			mnu_about: gtk_obj!(builder, "mnu_about"),
