@@ -7,9 +7,10 @@ License details for project dependencies are listed below.
 * Apache License 2.0 (13)
 * MIT License (5)
 * BSD 2-Clause &quot;Simplified&quot; License (2)
+* GNU General Public License v3.0 only (2)
 * BSD 3-Clause &quot;New&quot; or &quot;Revised&quot; License (1)
-* GNU General Public License v3.0 only (1)
 * Do What The F*ck You Want To Public License (1)
+
 ## Complete Licenses:
 
 ### Apache License 2.0
@@ -17,6 +18,7 @@ License details for project dependencies are listed below.
 **Used By:**
 
 * [pin-project-lite 0.2.7](https://github.com/taiki-e/pin-project-lite)
+
 ```
 
                                  Apache License
@@ -208,6 +210,7 @@ License details for project dependencies are listed below.
 * [futures-io 0.3.18](https://github.com/rust-lang/futures-rs)
 * [futures-task 0.3.18](https://github.com/rust-lang/futures-rs)
 * [futures-util 0.3.18](https://github.com/rust-lang/futures-rs)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -419,6 +422,7 @@ limitations under the License.
 **Used By:**
 
 * [pin-utils 0.1.0](https://github.com/rust-lang-nursery/pin-utils)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -629,6 +633,7 @@ limitations under the License.
 **Used By:**
 
 * [ppv-lite86 0.2.15](https://github.com/cryptocorrosion/cryptocorrosion)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -839,6 +844,7 @@ limitations under the License.
 **Used By:**
 
 * [proc-macro-error-attr 1.0.4](https://gitlab.com/CreepySkeleton/proc-macro-error)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -1049,7 +1055,7 @@ limitations under the License.
 **Used By:**
 
 * [ahash 0.7.6](https://github.com/tkaitchuck/ahash)
-* [anyhow 1.0.48](https://github.com/dtolnay/anyhow)
+* [anyhow 1.0.51](https://github.com/dtolnay/anyhow)
 * [bitflags 1.3.2](https://github.com/bitflags/bitflags)
 * [cfg-if 0.1.10](https://github.com/alexcrichton/cfg-if)
 * [cfg-if 1.0.0](https://github.com/alexcrichton/cfg-if)
@@ -1080,6 +1086,7 @@ limitations under the License.
 * [toml 0.5.8](https://github.com/alexcrichton/toml-rs)
 * [unicode-segmentation 1.8.0](https://github.com/unicode-rs/unicode-segmentation)
 * [unicode-xid 0.2.2](https://github.com/unicode-rs/unicode-xid)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -1293,6 +1300,7 @@ limitations under the License.
 * [rand 0.8.4](https://github.com/rust-random/rand)
 * [rand_chacha 0.3.1](https://github.com/rust-random/rand)
 * [rand_core 0.6.3](https://github.com/rust-random/rand)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -1503,6 +1511,7 @@ limitations under the License.
 **Used By:**
 
 * [proc-macro-crate 1.1.0](https://github.com/bkchr/proc-macro-crate)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -1713,6 +1722,7 @@ limitations under the License.
 **Used By:**
 
 * [proc-macro-error 1.0.4](https://gitlab.com/CreepySkeleton/proc-macro-error)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -1923,6 +1933,7 @@ limitations under the License.
 **Used By:**
 
 * [remove_dir_all 0.5.3](https://github.com/XAMPPRocky/remove_dir_all.git)
+
 ```
                               Apache License
                         Version 2.0, January 2004
@@ -2125,6 +2136,7 @@ limitations under the License.
 * [field-offset 0.3.4](https://github.com/Diggsey/rust-field-offset)
 * [spng 0.1.0](https://github.com/aloucks/spng-rs)
 * [spng-sys 0.1.0](https://github.com/aloucks/spng-rs)
+
 ```
 Apache License
 Version 2.0, January 2004
@@ -2207,6 +2219,7 @@ limitations under the License.
 **Used By:**
 
 * [bytemuck 1.7.2](https://github.com/Lokathor/bytemuck)
+
 ```
 Apache License
 Version 2.0, January 2004
@@ -2278,6 +2291,7 @@ limitations under the License.
 
 * [unicode-segmentation 1.8.0](https://github.com/unicode-rs/unicode-segmentation)
 * [unicode-xid 0.2.2](https://github.com/unicode-rs/unicode-xid)
+
 ```
 Licensed under the Apache License, Version 2.0
 <LICENSE-APACHE or
@@ -2294,6 +2308,7 @@ according to those terms.
 **Used By:**
 
 * [libaom-sys 0.11.0](https://github.com/njaard/libavif-rs)
+
 ```
 Copyright (c) 2016, Alliance for Open Media. All rights reserved.
 
@@ -2330,6 +2345,7 @@ POSSIBILITY OF SUCH DAMAGE.
 **Used By:**
 
 * [libavif-sys 0.12.0](https://github.com/njaard/libavif-rs)
+
 ```
 Copyright (c) <year> <owner> All rights reserved.
 
@@ -2348,6 +2364,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 **Used By:**
 
 * [libwebp-sys2 0.1.2](https://github.com/qnighy/libwebp-sys2-rs)
+
 ```
 Copyright (c) 2010, Google Inc. All rights reserved.
 
@@ -2387,6 +2404,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **Used By:**
 
 * [jpegxl-sys 0.6.1](https://github.com/inflation/jpegxl-sys)
+
 ```
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
@@ -3064,11 +3082,36 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
 ```
 
+### GNU General Public License v3.0 only
+
+**Used By:**
+
+* [jpegxl-sys 0.6.1](https://github.com/inflation/jpegxl-sys)
+
+```
+jpegxl-sys is a wrapper around jpeg-xl decoder's C API
+Copyright (C) 2020 Inflation
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+```
+
 ### MIT License
 
 **Used By:**
 
 * [memoffset 0.6.4](https://github.com/Gilnaa/memoffset)
+
 ```
 Copyright (c) 2017 Gilad Naaman
 
@@ -3096,6 +3139,7 @@ SOFTWARE.
 **Used By:**
 
 * [slab 0.4.5](https://github.com/tokio-rs/slab)
+
 ```
 Copyright (c) 2019 Carl Lerche
 
@@ -3130,6 +3174,7 @@ DEALINGS IN THE SOFTWARE.
 **Used By:**
 
 * [rgb 0.8.29](https://github.com/kornelski/rust-rgb)
+
 ```
 MIT License
 
@@ -3167,6 +3212,7 @@ SOFTWARE.
 * [gobject-sys 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
 * [gtk-sys 0.14.0](https://github.com/gtk-rs/gtk3-rs)
 * [pango-sys 0.14.0](https://github.com/gtk-rs/gtk-rs-core)
+
 ```
 MIT License
 
@@ -3195,6 +3241,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 * [gtk 0.14.3](https://github.com/gtk-rs/gtk3-rs)
 * [gtk3-macros 0.14.0](https://github.com/gtk-rs/gtk3-rs)
 * [pango 0.14.8](https://github.com/gtk-rs/gtk-rs-core)
+
 ```
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -3221,12 +3268,13 @@ SOFTWARE.
 
 **Used By:**
 
-* [dactyl 0.2.0](https://github.com/Blobfolio/dactyl)
+* [dactyl 0.2.1](https://github.com/Blobfolio/dactyl)
 * [dowser 0.3.0](https://github.com/Blobfolio/dowser)
 * [oxford_join 0.2.0](https://github.com/Blobfolio/oxford_join)
-* [refract 0.7.4](https://github.com/Blobfolio/refract)
-* [refract_core 0.7.4](https://github.com/Blobfolio/refract)
+* [refract 0.7.5](https://github.com/Blobfolio/refract)
+* [refract_core 0.7.5](https://github.com/Blobfolio/refract)
 * [write_atomic 0.2.0](https://github.com/Blobfolio/write_atomic)
+
 ```
 DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
 Version 2, December 2004

@@ -41,7 +41,7 @@ impl Decoder for ImagePng {
 
 			// Throw the pixels into a buffer.
 			let mut out = Vec::new();
-			out.reserve_exact(info.buffer_size);
+			out.try_reserve_exact(info.buffer_size).map_err(|_| RefractError::Overflow)?;
 			unsafe { out.set_len(info.buffer_size); }
 			reader.next_frame(&mut out)
 				.map_err(|_| RefractError::Decode)?;

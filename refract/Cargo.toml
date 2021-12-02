@@ -1,10 +1,10 @@
 [package]
 name = "refract"
-version = "0.7.4"
+version = "0.7.5"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.57"
 description = "Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources."
 repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"

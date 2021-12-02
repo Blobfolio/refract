@@ -90,9 +90,9 @@ impl Nine {
 		// This is a straight average of the entire block, which always
 		// has nine members (even if some will be duplicates).
 		self.normalize_avg(
-			dactyl::div_u16(r, 9) as u8,
-			dactyl::div_u16(g, 9) as u8,
-			dactyl::div_u16(b, 9) as u8,
+			r.wrapping_div(9) as u8,
+			g.wrapping_div(9) as u8,
+			b.wrapping_div(9) as u8,
 		)
 	}
 
@@ -144,9 +144,9 @@ impl Nine {
 		// If there were visible neighbors, make the adjustment!
 		if weight > 0 {
 			self.normalize_avg(
-				dactyl::div_u32(r, weight) as u8,
-				dactyl::div_u32(g, weight) as u8,
-				dactyl::div_u32(b, weight) as u8,
+				r.wrapping_div(weight) as u8,
+				g.wrapping_div(weight) as u8,
+				b.wrapping_div(weight) as u8,
 			)
 		}
 		else { None }
@@ -228,9 +228,9 @@ fn blur_alpha(img: &mut Vec<u8>, width: usize, height: usize) {
 fn clamp(px_new: u8, px_old: u8, alpha: u8) -> u8 {
 	// Leave some spare room for rounding.
 	let alpha = u16::from(alpha);
-	let rounded = dactyl::div_u16(u16::from(px_old) * alpha, 255) * 255;
-	let low = px_old.min(dactyl::div_u16(rounded + 16, alpha) as u8);
-	let high = px_old.max(dactyl::div_u16(rounded + 239, alpha) as u8);
+	let rounded = (u16::from(px_old) * alpha).wrapping_div(255) * 255;
+	let low = px_old.min((rounded + 16).wrapping_div(alpha) as u8);
+	let high = px_old.max((rounded + 239).wrapping_div(alpha) as u8);
 
 	px_new.max(low).min(high)
 }
@@ -260,9 +260,9 @@ fn neutral_pixel(img: &[u8], width: usize, height: usize) -> Option<[u8; 4]> {
 	if 0 < t {
 		// Finish the average calculation to give us the neutral color.
 		Some([
-			dactyl::div_u64(r, t) as u8,
-			dactyl::div_u64(g, t) as u8,
-			dactyl::div_u64(b, t) as u8,
+			r.wrapping_div(t) as u8,
+			g.wrapping_div(t) as u8,
+			b.wrapping_div(t) as u8,
 			0,
 		])
 	}
@@ -345,9 +345,9 @@ mod tests {
 	/// look at the rest.
 	fn premultiplied_minmax(px_old: u8, alpha: u8) -> (u8, u8) {
 		let alpha = u16::from(alpha);
-		let rounded = dactyl::div_u16(u16::from(px_old) * alpha, 255) * 255;
-		let low = px_old.min(dactyl::div_u16(rounded + 16, alpha) as u8);
-		let high = px_old.max(dactyl::div_u16(rounded + 239, alpha) as u8);
+		let rounded = (u16::from(px_old) * alpha).wrapping_div(255) * 255;
+		let low = px_old.min((rounded + 16).wrapping_div(alpha) as u8);
+		let high = px_old.max((rounded + 239).wrapping_div(alpha) as u8);
 
 		(low, high)
 	}
