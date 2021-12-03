@@ -50,7 +50,7 @@ rustflags   := "-C link-arg=-s"
 	cargo-deb \
 		--no-build \
 		-p {{ pkg_id }} \
-		-o "{{ justfile_directory() }}/release"
+		-o "{{ release_dir }}"
 
 	just _fix-chown "{{ release_dir }}"
 	mv "{{ justfile_directory() }}/target" "{{ cargo_dir }}"
@@ -90,12 +90,7 @@ rustflags   := "-C link-arg=-s"
 
 # Generate CREDITS.
 @credits:
-	# Update CREDITS.html.
-	cargo about \
-		generate \
-		-m "{{ pkg_dir1 }}/Cargo.toml" \
-		"{{ pkg_dir1 }}/skel/about.hbs" > "{{ justfile_directory() }}/CREDITS.md"
-
+	cargo bashman -m "{{ pkg_dir1 }}/Cargo.toml" --no-bash --no-man
 	just _fix-chown "{{ justfile_directory() }}/CREDITS.md"
 
 

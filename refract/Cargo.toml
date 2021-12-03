@@ -36,6 +36,12 @@ assets = [
     ["./skel/deb/pixmaps/refract.xpm", "/usr/share/pixmaps/", "644"],
 ]
 
+[package.metadata.bashman]
+name = "Refract"
+bash-dir = "../"
+man-dir = "../"
+credits-dir = "../"
+
 [build-dependencies]
 toml = "0.5.*"
 version-compare = "0.1.*"
