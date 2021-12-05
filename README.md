@@ -76,6 +76,7 @@ For keyboard afficionados, the following hot-keys may be used:
 | ------ | ------ |
 | Open File | `CTRL + o` |
 | Open Directory | `SHIFT + CTRL + o` |
+| Toggle Dark Mode | `CTRL + n` |
 | Toggle View | `SPACE` |
 | Discard Candidate | `d` |
 | Keep Candidate | `k` |
