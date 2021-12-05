@@ -65,7 +65,7 @@ impl RefractError {
 	/// Return the error as an English string slice.
 	pub const fn as_str(self) -> &'static str {
 		match self {
-			Self::Color => "Unsupported color encoding.",
+			Self::Color => "Unsupported color encoding format.",
 			Self::Decode => "The image could not be decoded.",
 			Self::Encode => "The image could not be encoded.",
 			Self::Image => "Invalid image.",

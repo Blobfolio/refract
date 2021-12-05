@@ -59,8 +59,8 @@ impl Decoder for ImageJpeg {
 						acc.1 || px.r != px.g || px.r != px.b,
 					)
 				}),
-			// CMYK isn't supported.
-			PixelFormat::CMYK32 => return Err(RefractError::Color),
+			// Lossless and CMYK aren't supported.
+			PixelFormat::CMYK32 | PixelFormat::L16 => return Err(RefractError::Color),
 		};
 
 		// JPEGs don't have alpha.

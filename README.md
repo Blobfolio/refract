@@ -44,7 +44,7 @@ But if you're looking to obsessively optimize a small project or single web page
 
 | Format | Decoding (Input/Display) | Encoding (Output) |
 | ------ | -------- | -------- |
-| JPEG | Yes, except CMYK. ||
+| JPEG | Yes, except CMYK and 16-bit lossless. ||
 | PNG  | Yes* ||
 | AVIF | Yes | Lossless, lossy, `RGB`, and `YCbCr` |
 | JPEG XL | Yes* | Lossless, lossy. |
