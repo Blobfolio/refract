@@ -368,8 +368,6 @@ const fn maybe_die(res: avifResult) -> Result<(), RefractError> {
 	else { Err(RefractError::Encode) }
 }
 
-#[allow(clippy::cast_sign_loss)]
-#[allow(clippy::cast_possible_truncation)]
 /// # Quality to Quantizer(s).
 ///
 /// This converts the quality stepping from [`EncodeIter`] into appropriate
@@ -400,8 +398,8 @@ fn quality_to_quantizers(quality: NonZeroU8) -> (u8, u8) {
 	(q, aq)
 }
 
-#[allow(clippy::cast_sign_loss)]
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)] // Unsigned in, unsigned out.
+#[allow(clippy::cast_possible_truncation)] // u8 in, u8 out.
 #[inline]
 /// # Ratio Of.
 ///
