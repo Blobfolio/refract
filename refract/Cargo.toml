@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.7.7"
+version = "0.7.8"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -12,7 +12,7 @@ publish = false
 
 [package.metadata.deb]
 maintainer = "Josh Stoik <hello@blobfolio.com>"
-copyright = "2021, Blobfolio, LLC <hello@blobfolio.com>"
+copyright = "2022, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
 revision = "1"
 depends = "$auto"
@@ -54,7 +54,7 @@ oxford_join = "0.2.*"
 write_atomic = "0.2.*"
 
 [dependencies.gtk]
-version = "0.14.*"
+version = "0.15.*"
 features = [ "v3_22" ]
 
 [dependencies.refract_core]
