@@ -151,7 +151,7 @@ fn _credits_deps_formatted(key: &str, map: &HashMap<String, (String, Vec<String>
 			// Ignore our build dependencies, etc.
 			.filter(|x| ! matches!(
 				x.as_str(),
-				"argyle" | "refract_core" | "toml" | "version-compare"
+				"refract_core" | "toml" | "version-compare"
 			))
 			.filter_map(|name| map.get(name).map(|entry| format!(
 				"\"{} v{} https://crates.io/crates/{}\"",

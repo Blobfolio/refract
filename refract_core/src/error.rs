@@ -26,6 +26,9 @@ pub enum RefractError {
 	TooBig,
 
 	#[cfg(feature = "bin")]
+	Argue(argyle::ArgyleError),
+
+	#[cfg(feature = "bin")]
 	GtkInit,
 
 	#[cfg(feature = "bin")]
@@ -49,6 +52,12 @@ impl Error for RefractError {}
 impl AsRef<str> for RefractError {
 	#[inline]
 	fn as_ref(&self) -> &str { self.as_str() }
+}
+
+#[cfg(feature = "bin")]
+impl From<argyle::ArgyleError> for RefractError {
+	#[inline]
+	fn from(err: argyle::ArgyleError) -> Self { Self::Argue(err) }
 }
 
 impl fmt::Display for RefractError {
@@ -89,6 +98,9 @@ impl RefractError {
 			Self::NothingDoing => "There is nothing else to do.",
 			Self::Overflow => "The image dimensions are out of range.",
 			Self::TooBig => "The encoded image was too big.",
+
+			#[cfg(feature = "bin")]
+			Self::Argue(a) => a.as_str(),
 
 			#[cfg(feature = "bin")]
 			Self::GtkInit => "Failed to initialize GTK.",

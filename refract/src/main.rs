@@ -41,12 +41,40 @@ pub(self) use share::{
 };
 pub(self) use window::Window;
 
+use argyle::{
+	Argue,
+	ArgyleError,
+	FLAG_HELP,
+	FLAG_VERSION,
+};
+use dowser::{
+	Dowser,
+	Extension,
+};
 use gtk::{
 	glib::Bytes,
 	prelude::*,
 };
 use refract_core::RefractError;
-use std::sync::Arc;
+use std::{
+	borrow::Cow,
+	ffi::OsStr,
+	os::unix::ffi::OsStrExt,
+	path::PathBuf,
+	sync::Arc,
+};
+
+
+
+pub(crate) const CLI_FORMATS: u8 =     0b0000_0111;
+pub(crate) const CLI_NO_AVIF: u8 =     0b0000_0001;
+pub(crate) const CLI_NO_JXL: u8 =      0b0000_0010;
+pub(crate) const CLI_NO_WEBP: u8 =     0b0000_0100;
+
+pub(crate) const CLI_MODES: u8 =       0b0001_1000;
+pub(crate) const CLI_NO_LOSSLESS: u8 = 0b0000_1000;
+pub(crate) const CLI_NO_LOSSY: u8 =    0b0001_0000;
+pub(crate) const CLI_NO_YCBCR: u8 =    0b0010_0000;
 
 
 
@@ -54,9 +82,18 @@ use std::sync::Arc;
 ///
 /// This lets us bubble up startup errors so they can be pretty-printed.
 fn main() {
-	if let Err(e) = _main() {
-		eprintln!("Error: {}", e);
-		std::process::exit(1);
+	match _main() {
+		Ok(()) => {},
+		Err(RefractError::Argue(ArgyleError::WantsVersion)) => {
+			println!(concat!("Refract v", env!("CARGO_PKG_VERSION")));
+		},
+		Err(RefractError::Argue(ArgyleError::WantsHelp)) => {
+			helper();
+		},
+		Err(e) => {
+			eprintln!("Error: {}", e);
+			std::process::exit(1);
+		},
 	}
 }
 
@@ -80,13 +117,27 @@ fn _main() -> Result<(), RefractError> {
 		gtk::gio::ApplicationFlags::default()
 	);
 
-	application.connect_activate(|app| {
-		let window = Arc::new(Window::try_from(app).expect("Unable to build GTK window."));
-		setup_ui(&window);
+	// Load CLI arguments, if any.
+	let args = Argue::new(FLAG_HELP | FLAG_VERSION)?.with_list();
+
+	application.connect_activate(move |app| {
+		// Parse CLI setting overrides.
+		let flags = args.bitflags([
+			(&b"--no-avif"[..], CLI_NO_AVIF),
+			(&b"--no-jxl"[..], CLI_NO_JXL),
+			(&b"--no-webp"[..], CLI_NO_WEBP),
+			(&b"--no-lossless"[..], CLI_NO_LOSSLESS),
+			(&b"--no-lossy"[..], CLI_NO_LOSSY),
+			(&b"--no-ycbcr"[..], CLI_NO_YCBCR),
+		]);
+
+		let window = Arc::new(Window::new(app, flags).expect("Unable to build GTK window."));
+		setup_ui(&window, resolve_cli_paths(args.args()));
 		window.paint();
 	});
 
-	application.run();
+	let args: &[&str] = &[];
+	application.run_with_args(args);
 	Ok(())
 }
 
@@ -102,12 +153,31 @@ fn init_resources() -> Result<(), RefractError> {
 	Ok(())
 }
 
+/// # Resolve CLI Paths.
+///
+/// When image and/or directory paths are passed through the CLI call, we need
+/// to get crunching right away!
+fn resolve_cli_paths(args: &[Cow<'static, [u8]>]) -> Vec<PathBuf> {
+	const E_JPEG: Extension = Extension::new4(*b"jpeg");
+	const E_JPG: Extension = Extension::new3(*b"jpg");
+	const E_PNG: Extension = Extension::new3(*b"png");
+
+	Dowser::filtered(|p|
+		Extension::try_from3(p).map_or_else(
+			|| Extension::try_from4(p).map_or(false, |e| e == E_JPEG),
+			|e| e == E_JPG || e == E_PNG
+		)
+	)
+		.with_paths(args.iter().map(|x| OsStr::from_bytes(x.as_ref())))
+		.into_vec()
+}
+
 #[allow(clippy::similar_names)] // We're being consistent.
 /// # Setup UI.
 ///
 /// This finishes the UI setup, hooking up communication channels, event
 /// bindings, etc.
-fn setup_ui(window: &Arc<Window>) {
+fn setup_ui(window: &Arc<Window>, paths: Vec<PathBuf>) {
 	let (stx, mtx, srx) = Share::init(Arc::clone(window));
 
 	// Bind things that just need the window.
@@ -148,9 +218,25 @@ fn setup_ui(window: &Arc<Window>) {
 
 	// Add a directory! (Note: stx and srx go out of scope here.)
 	let wnd2 = Arc::clone(window);
+	let srx2 = srx.clone();
+	let stx2 = stx.clone();
 	window.mnu_dopen.connect_activate(move |_| {
-		if wnd2.maybe_add_directory() { wnd2.encode(&stx, &srx); }
+		if wnd2.maybe_add_directory() { wnd2.encode(&stx2, &srx2); }
 	});
+
+	// Add files from CLI?
+	if ! paths.is_empty() {
+		let mut any: bool = false;
+		for path in paths {
+			if window.add_file(path) {
+				any = true;
+			}
+		}
+
+		if any {
+			window.encode(&stx, &srx);
+		}
+	}
 }
 
 /// # Setup UI (Callbacks Needing Window).
@@ -225,4 +311,55 @@ fn setup_ui_window(window: &Arc<Window>) {
 		preview_cb!(connect_show, show, 1.0);
 		preview_cb!(connect_hide, hide, 0.0);
 	}
+}
+
+#[cold]
+/// # Print Help.
+fn helper() {
+	println!(concat!(
+		r"
+       ..oFaa7l;'
+   =>r??\O@@@@QNk;
+  :|Fjjug@@@@@@@@N}}:
+ ^/aPePN@@@@peWQ@Qez;
+ =iKBDB@@@O^:.::\kQO=~
+ =iKQ@QWOP: ~gBQw'|Qgz,
+ =i6RwEQ#s' N@RQQl i@D:   ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r"
+ =?|>a@@Nv'^Q@@@Qe ,aW|   Guided image conversion from
+ ==;.\QQ@6,|Q@@@@p.;;+\,  JPEG/PNG to AVIF/JPEG-XL/WebP.
+ '\tlFw9Wgs~W@@@@S   ,;'
+ .^|QQp6D6t^iDRo;
+   ~b@BEwDEu|:::
+    rR@Q6t7|=='
+     'i6Ko\=;
+       `''''`
+
+USAGE:
+    refract [FLAGS] [OPTIONS] <PATH(S)>...
+
+FORMAT FLAGS:
+        --no-avif     Skip AVIF encoding.
+        --no-jxl      Skip JPEG-XL encoding.
+        --no-webp     Skip WebP encoding.
+
+MODE FLAGS:
+        --no-lossless Skip lossless encoding passes.
+        --no-lossy    Skip lossy encoding passes.
+        --no-ycbcr    Skip AVIF YCbCr encoding passes.
+
+MISC FLAGS:
+    -h, --help        Print help information and exit.
+    -V, --version     Print version information and exit.
+
+OPTIONS:
+    -l, --list <FILE> Read (absolute) image and/or directory paths from this
+                      text file, one path per line. This is equivalent to
+                      specifying the same paths as trailing arguments, but can
+                      be cleaner if there are lots of them.
+
+TRAILING ARGS:
+    <PATH(S)>...      Image and/or directory paths to re-encode. Directories
+                      will be crawled recursively.
+"
+	));
 }

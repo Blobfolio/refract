@@ -4,6 +4,14 @@
 
 use crate::{
 	Candidate,
+	CLI_FORMATS,
+	CLI_MODES,
+	CLI_NO_AVIF,
+	CLI_NO_JXL,
+	CLI_NO_LOSSLESS,
+	CLI_NO_LOSSY,
+	CLI_NO_WEBP,
+	CLI_NO_YCBCR,
 	MainTx,
 	Share,
 	ShareFeedback,
@@ -247,9 +255,10 @@ pub(super) struct Window {
 	spn_loading: gtk::Spinner,
 }
 
-impl TryFrom<&gtk::Application> for Window {
-	type Error = RefractError;
-	fn try_from(app: &gtk::Application) -> Result<Self, Self::Error> {
+/// ## Instantiation.
+impl Window {
+	/// # New Instance.
+	pub(super) fn new(app: &gtk::Application, flags: u8) -> Result<Self, RefractError> {
 		// Start the builder.
 		let builder = gtk::Builder::new();
 		builder.add_from_resource(gtk_src!("refract.glade"))
@@ -329,6 +338,40 @@ impl TryFrom<&gtk::Application> for Window {
 		set_widget_style(&out.btn_keep, gtk_src!("btn-keep.css"));
 		set_widget_style(&out.spn_loading, gtk_src!("spn-loading.css"));
 		set_widget_style(&out.wnd_image, gtk_src!("wnd-image.css"));
+
+		// Change encoder defaults?
+		match flags & CLI_FORMATS {
+			0 | CLI_FORMATS => {},
+			_ => {
+				if 0 != flags & CLI_NO_AVIF {
+					out.chk_avif.set_active(false);
+				}
+				if 0 != flags & CLI_NO_JXL {
+					out.chk_jxl.set_active(false);
+				}
+				if 0 != flags & CLI_NO_WEBP {
+					out.chk_webp.set_active(false);
+				}
+			},
+		}
+
+		// Change encoding mode defaults?
+		match flags & CLI_MODES {
+			0 | CLI_MODES => {},
+			_ => {
+				if 0 != flags & CLI_NO_LOSSLESS {
+					out.chk_lossless.set_active(false);
+				}
+				else if 0 != flags & CLI_NO_LOSSY {
+					out.chk_lossy.set_active(false);
+				}
+			},
+		}
+
+		// One other mode, only this isn't affected by the other two.
+		if 0 != flags & CLI_NO_YCBCR {
+			out.chk_ycbcr.set_active(false);
+		}
 
 		// Enable drag-and-drop.
 		out.toggle_drag_and_drop(true);

@@ -17,6 +17,10 @@ num_cpus = "1.13.*"
 rgb = "0.8.*, >=0.8.20"
 spng = "0.1.0"
 
+[dependencies.argyle]
+version = "0.5.*"
+optional = true
+
 [dependencies.jpegxl-sys]
 version = "0.6.0"
 default-features = false
@@ -36,7 +40,7 @@ default = []
 
 # This feature adds a few generic RefractError types for the binary. It is not
 # something external crates implementing this library would really need to use.
-bin = []
+bin = [ "argyle" ]
 
 # This feature enables decoding support for the next-gen image formats, i.e.
 # WebP, AVIF, and JPEG XL.

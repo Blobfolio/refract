@@ -34,19 +34,67 @@ assets = [
     ["./skel/deb/icons/hicolor/256x256/apps/refract.png", "/usr/share/icons/hicolor/256x256/apps/", "644"],
     ["./skel/deb/icons/hicolor/512x512/apps/refract.png", "/usr/share/icons/hicolor/512x512/apps/", "644"],
     ["./skel/deb/pixmaps/refract.xpm", "/usr/share/pixmaps/", "644"],
+    ["../release/completions/refract.bash", "etc/bash_completion.d/", "644"],
+    ["../release/man/refract.1.gz", "usr/share/man/man1/", "644"],
 ]
 
 [package.metadata.bashman]
 name = "Refract"
-bash-dir = "../"
-man-dir = "../"
+bash-dir = "../release/completions"
+man-dir = "../release/man"
 credits-dir = "../"
+
+[[package.metadata.bashman.switches]]
+short = "-h"
+long = "--help"
+description = "Print help information."
+
+[[package.metadata.bashman.switches]]
+long = "--no-avif"
+description = "Skip AVIF encoding."
+
+[[package.metadata.bashman.switches]]
+long = "--no-jxl"
+description = "Skip JPEG-XL encoding."
+
+[[package.metadata.bashman.switches]]
+long = "--no-webp"
+description = "Skip WebP encoding."
+
+[[package.metadata.bashman.switches]]
+long = "--no-lossless"
+description = "Skip lossless encoding passes."
+
+[[package.metadata.bashman.switches]]
+long = "--no-lossy"
+description = "Skip lossy encoding passes."
+
+[[package.metadata.bashman.switches]]
+long = "--no-ycbcr"
+description = "Skip AVIF YCbCr encoding passes."
+
+[[package.metadata.bashman.switches]]
+short = "-V"
+long = "--version"
+description = "Print program version."
+
+[[package.metadata.bashman.options]]
+short = "-l"
+long = "--list"
+label = "<FILE>"
+description = "Read (absolute) image and/or directory paths from this text file, one path per line. This is equivalent to specifying the same paths as trailing arguments, but can be cleaner if there are lots of them."
+path = true
+
+[[package.metadata.bashman.arguments]]
+label = "<PATH(s)…>"
+description = "Image and/or directory paths to re-encode. Directories will be crawled recursively."
 
 [build-dependencies]
 toml = "0.5.*"
 version-compare = "0.1.*"
 
 [dependencies]
+argyle = "0.5.*"
 crossbeam-channel = "0.5.*"
 dactyl = "0.2.*"
 dowser = "0.3.*"
