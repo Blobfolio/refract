@@ -22,6 +22,7 @@ use dowser::{
 };
 use gtk::{
 	FileChooserAction,
+	FileFilter,
 	gdk_pixbuf::Pixbuf,
 	prelude::*,
 	ResponseType,
@@ -203,10 +204,10 @@ pub(super) struct Window {
 	source: RefCell<Option<WindowSource>>,
 	candidate: RefCell<Option<WindowSource>>,
 
-	flt_image: gtk::FileFilter,
-	flt_avif: gtk::FileFilter,
-	flt_jxl: gtk::FileFilter,
-	flt_webp: gtk::FileFilter,
+	flt_image: FileFilter,
+	flt_avif: FileFilter,
+	flt_jxl: FileFilter,
+	flt_webp: FileFilter,
 
 	pub(super) wnd_main: gtk::ApplicationWindow,
 	wnd_image: gtk::ScrolledWindow,
@@ -645,7 +646,7 @@ impl Window {
 					gtk::TargetFlags::OTHER_APP,
 					0,
 				)],
-				gdk::DragAction::COPY
+				gtk::gdk::DragAction::COPY
 			);
 		}
 		else {
@@ -696,7 +697,7 @@ impl Window {
 		action: FileChooserAction,
 		btn: &str,
 		dir: Option<P>,
-		filter: Option<&gtk::FileFilter>,
+		filter: Option<&FileFilter>,
 	) -> gtk::FileChooserDialog
 	where P: AsRef<Path> {
 		let out = gtk::FileChooserDialog::with_buttons(
@@ -1193,7 +1194,7 @@ fn _encode_source(path: &Path) -> Result<(Input, Candidate), RefractError> {
 ///
 /// This adds a class to a widget.
 fn add_widget_class<W>(widget: &W, class: &str)
-where W: gtk::traits::WidgetExt {
+where W: WidgetExt {
 	let style_context = widget.style_context();
 	style_context.add_class(class);
 }
@@ -1223,7 +1224,7 @@ fn is_jpeg_png(path: &Path) -> bool {
 ///
 /// This removes a class from a widget.
 fn remove_widget_class<W>(widget: &W, class: &str)
-where W: gtk::traits::WidgetExt {
+where W: WidgetExt {
 	let style_context = widget.style_context();
 	style_context.remove_class(class);
 }
@@ -1232,7 +1233,7 @@ where W: gtk::traits::WidgetExt {
 ///
 /// This adds a CSS resource (mini stylesheet) to the given widget.
 fn set_widget_style<W>(widget: &W, src: &str)
-where W: gtk::traits::WidgetExt {
+where W: WidgetExt {
 	let style_context = widget.style_context();
 	let provider = gtk::CssProvider::new();
 	provider.load_from_resource(src);

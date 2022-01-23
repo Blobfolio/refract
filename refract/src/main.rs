@@ -136,7 +136,7 @@ fn setup_ui(window: &Arc<Window>) {
 	let stx2 = stx.clone();
 	window.img_main.connect_drag_data_received(move |_, _, _, _, d, _, _| {
 		for p in d.uris() {
-			let file = gio::File::for_uri(&p);
+			let file = gtk::gio::File::for_uri(&p);
 			if let Some(p) = file.path() {
 				wnd2.add_file(p);
 			}

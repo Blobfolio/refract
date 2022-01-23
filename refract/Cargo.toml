@@ -50,13 +50,8 @@ version-compare = "0.1.*"
 crossbeam-channel = "0.5.*"
 dactyl = "0.2.*"
 dowser = "0.3.*"
-gio = "0.15.*"
 oxford_join = "0.2.*"
 write_atomic = "0.2.*"
-
-[dependencies.gdk]
-version = "0.15.*"
-features = [ "v3_22" ]
 
 [dependencies.gtk]
 version = "0.15.*"
