@@ -23,6 +23,7 @@ use version_compare::Version;
 
 /// # Build!
 pub fn main() {
+	println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
 	println!("cargo:rerun-if-changed=Cargo.toml");
 	println!("cargo:rerun-if-changed=skel");
 
