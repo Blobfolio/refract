@@ -212,7 +212,7 @@ pub(super) struct Window {
 	wnd_image: gtk::ScrolledWindow,
 	pub(super) wnd_status: gtk::ScrolledWindow,
 
-	img_main: gtk::Image,
+	pub(super) img_main: gtk::Image,
 	pub(super) box_ab: gtk::Box,
 
 	pub(super) btn_discard: gtk::Button,
@@ -329,6 +329,9 @@ impl TryFrom<&gtk::Application> for Window {
 		set_widget_style(&out.spn_loading, gtk_src!("spn-loading.css"));
 		set_widget_style(&out.wnd_image, gtk_src!("wnd-image.css"));
 
+		// Enable drag-and-drop.
+		out.toggle_drag_and_drop(true);
+
 		// Start it up!
 		out.wnd_main.set_application(Some(app));
 		out.wnd_main.show_all();
@@ -378,6 +381,7 @@ impl Window {
 		self.remove_source();
 		if unlock {
 			self.remove_flag(FLAG_LOCK_ENCODING);
+			self.toggle_drag_and_drop(true);
 			self.spn_loading.stop();
 		}
 	}
@@ -400,6 +404,10 @@ impl Window {
 	) -> bool {
 		// We can abort early if we have no paths or are already encoding.
 		if ! self.has_paths() || ! self.add_flag(FLAG_LOCK_ENCODING) { return false; }
+
+		// Disable drag-and-drop. This will be re-enabled once encoding
+		// finishes.
+		self.toggle_drag_and_drop(false);
 
 		// Pull out the data we need.
 		let paths: Vec<PathBuf> = self.paths.borrow_mut().split_off(0);
@@ -624,8 +632,29 @@ impl Window {
 
 /// ## Paths.
 impl Window {
+	/// # Toggle Drag-and-Drop.
+	///
+	/// File(s) can be dragged-and-dropped directly onto the main image to kick
+	/// off the encoding process, except when encoding is already underway.
+	fn toggle_drag_and_drop(&self, val: bool) {
+		if val {
+			self.img_main.drag_dest_set(
+				gtk::DestDefaults::ALL,
+				&[gtk::TargetEntry::new(
+					"text/uri-list",
+					gtk::TargetFlags::OTHER_APP,
+					0,
+				)],
+				gdk::DragAction::COPY
+			);
+		}
+		else {
+			self.img_main.drag_dest_unset();
+		}
+	}
+
 	/// # Add File.
-	fn add_file<P>(&self, path: P) -> bool
+	pub(super) fn add_file<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
 		let path = match std::fs::canonicalize(path) {
 			Ok(p) => p,

@@ -130,6 +130,22 @@ fn setup_ui(window: &Arc<Window>) {
 		if wnd2.maybe_add_file() { wnd2.encode(&stx2, &srx2); }
 	});
 
+	// Add file(s) via drag-and-drop.
+	let wnd2 = Arc::clone(window);
+	let srx2 = srx.clone();
+	let stx2 = stx.clone();
+	window.img_main.connect_drag_data_received(move |_, _, _, _, d, _, _| {
+		for p in d.uris() {
+			let file = gio::File::for_uri(&p);
+			if let Some(p) = file.path() {
+				wnd2.add_file(p);
+			}
+		}
+
+		// Start encoding, maybe!
+		wnd2.encode(&stx2, &srx2);
+	});
+
 	// Add a directory! (Note: stx and srx go out of scope here.)
 	let wnd2 = Arc::clone(window);
 	window.mnu_dopen.connect_activate(move |_| {
