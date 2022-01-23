@@ -1085,7 +1085,7 @@ impl Window {
 				env!("CARGO_PKG_DESCRIPTION"),
 				"\nFor best results, optimize your source images prior to running any conversions."
 			))
-			.copyright("\u{a9}2021 Blobfolio, LLC.")
+			.copyright("\u{a9}2022 Blobfolio, LLC.")
 			.license(include_str!("../LICENSE"))
 			.license_type(gtk::License::Custom)
 			.logo(&Pixbuf::from_resource(gtk_src!("comic.png")).unwrap())
