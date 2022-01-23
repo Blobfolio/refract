@@ -4,6 +4,14 @@
 
 use crate::{
 	Candidate,
+	CLI_FORMATS,
+	CLI_MODES,
+	CLI_NO_AVIF,
+	CLI_NO_JXL,
+	CLI_NO_LOSSLESS,
+	CLI_NO_LOSSY,
+	CLI_NO_WEBP,
+	CLI_NO_YCBCR,
 	MainTx,
 	Share,
 	ShareFeedback,
@@ -22,6 +30,7 @@ use dowser::{
 };
 use gtk::{
 	FileChooserAction,
+	FileFilter,
 	gdk_pixbuf::Pixbuf,
 	prelude::*,
 	ResponseType,
@@ -203,16 +212,16 @@ pub(super) struct Window {
 	source: RefCell<Option<WindowSource>>,
 	candidate: RefCell<Option<WindowSource>>,
 
-	flt_image: gtk::FileFilter,
-	flt_avif: gtk::FileFilter,
-	flt_jxl: gtk::FileFilter,
-	flt_webp: gtk::FileFilter,
+	flt_image: FileFilter,
+	flt_avif: FileFilter,
+	flt_jxl: FileFilter,
+	flt_webp: FileFilter,
 
 	pub(super) wnd_main: gtk::ApplicationWindow,
 	wnd_image: gtk::ScrolledWindow,
 	pub(super) wnd_status: gtk::ScrolledWindow,
 
-	img_main: gtk::Image,
+	pub(super) img_main: gtk::Image,
 	pub(super) box_ab: gtk::Box,
 
 	pub(super) btn_discard: gtk::Button,
@@ -246,9 +255,10 @@ pub(super) struct Window {
 	spn_loading: gtk::Spinner,
 }
 
-impl TryFrom<&gtk::Application> for Window {
-	type Error = RefractError;
-	fn try_from(app: &gtk::Application) -> Result<Self, Self::Error> {
+/// ## Instantiation.
+impl Window {
+	/// # New Instance.
+	pub(super) fn new(app: &gtk::Application, flags: u8) -> Result<Self, RefractError> {
 		// Start the builder.
 		let builder = gtk::Builder::new();
 		builder.add_from_resource(gtk_src!("refract.glade"))
@@ -329,6 +339,43 @@ impl TryFrom<&gtk::Application> for Window {
 		set_widget_style(&out.spn_loading, gtk_src!("spn-loading.css"));
 		set_widget_style(&out.wnd_image, gtk_src!("wnd-image.css"));
 
+		// Change encoder defaults?
+		match flags & CLI_FORMATS {
+			0 | CLI_FORMATS => {},
+			_ => {
+				if 0 != flags & CLI_NO_AVIF {
+					out.chk_avif.set_active(false);
+				}
+				if 0 != flags & CLI_NO_JXL {
+					out.chk_jxl.set_active(false);
+				}
+				if 0 != flags & CLI_NO_WEBP {
+					out.chk_webp.set_active(false);
+				}
+			},
+		}
+
+		// Change encoding mode defaults?
+		match flags & CLI_MODES {
+			0 | CLI_MODES => {},
+			_ => {
+				if 0 != flags & CLI_NO_LOSSLESS {
+					out.chk_lossless.set_active(false);
+				}
+				else if 0 != flags & CLI_NO_LOSSY {
+					out.chk_lossy.set_active(false);
+				}
+			},
+		}
+
+		// One other mode, only this isn't affected by the other two.
+		if 0 != flags & CLI_NO_YCBCR {
+			out.chk_ycbcr.set_active(false);
+		}
+
+		// Enable drag-and-drop.
+		out.toggle_drag_and_drop(true);
+
 		// Start it up!
 		out.wnd_main.set_application(Some(app));
 		out.wnd_main.show_all();
@@ -378,6 +425,7 @@ impl Window {
 		self.remove_source();
 		if unlock {
 			self.remove_flag(FLAG_LOCK_ENCODING);
+			self.toggle_drag_and_drop(true);
 			self.spn_loading.stop();
 		}
 	}
@@ -400,6 +448,10 @@ impl Window {
 	) -> bool {
 		// We can abort early if we have no paths or are already encoding.
 		if ! self.has_paths() || ! self.add_flag(FLAG_LOCK_ENCODING) { return false; }
+
+		// Disable drag-and-drop. This will be re-enabled once encoding
+		// finishes.
+		self.toggle_drag_and_drop(false);
 
 		// Pull out the data we need.
 		let paths: Vec<PathBuf> = self.paths.borrow_mut().split_off(0);
@@ -624,8 +676,29 @@ impl Window {
 
 /// ## Paths.
 impl Window {
+	/// # Toggle Drag-and-Drop.
+	///
+	/// File(s) can be dragged-and-dropped directly onto the main image to kick
+	/// off the encoding process, except when encoding is already underway.
+	fn toggle_drag_and_drop(&self, val: bool) {
+		if val {
+			self.img_main.drag_dest_set(
+				gtk::DestDefaults::ALL,
+				&[gtk::TargetEntry::new(
+					"text/uri-list",
+					gtk::TargetFlags::OTHER_APP,
+					0,
+				)],
+				gtk::gdk::DragAction::COPY
+			);
+		}
+		else {
+			self.img_main.drag_dest_unset();
+		}
+	}
+
 	/// # Add File.
-	fn add_file<P>(&self, path: P) -> bool
+	pub(super) fn add_file<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
 		let path = match std::fs::canonicalize(path) {
 			Ok(p) => p,
@@ -667,7 +740,7 @@ impl Window {
 		action: FileChooserAction,
 		btn: &str,
 		dir: Option<P>,
-		filter: Option<&gtk::FileFilter>,
+		filter: Option<&FileFilter>,
 	) -> gtk::FileChooserDialog
 	where P: AsRef<Path> {
 		let out = gtk::FileChooserDialog::with_buttons(
@@ -1055,7 +1128,7 @@ impl Window {
 				env!("CARGO_PKG_DESCRIPTION"),
 				"\nFor best results, optimize your source images prior to running any conversions."
 			))
-			.copyright("\u{a9}2021 Blobfolio, LLC.")
+			.copyright("\u{a9}2022 Blobfolio, LLC.")
 			.license(include_str!("../LICENSE"))
 			.license_type(gtk::License::Custom)
 			.logo(&Pixbuf::from_resource(gtk_src!("comic.png")).unwrap())
@@ -1164,7 +1237,7 @@ fn _encode_source(path: &Path) -> Result<(Input, Candidate), RefractError> {
 ///
 /// This adds a class to a widget.
 fn add_widget_class<W>(widget: &W, class: &str)
-where W: gtk::traits::WidgetExt {
+where W: WidgetExt {
 	let style_context = widget.style_context();
 	style_context.add_class(class);
 }
@@ -1194,7 +1267,7 @@ fn is_jpeg_png(path: &Path) -> bool {
 ///
 /// This removes a class from a widget.
 fn remove_widget_class<W>(widget: &W, class: &str)
-where W: gtk::traits::WidgetExt {
+where W: WidgetExt {
 	let style_context = widget.style_context();
 	style_context.remove_class(class);
 }
@@ -1203,7 +1276,7 @@ where W: gtk::traits::WidgetExt {
 ///
 /// This adds a CSS resource (mini stylesheet) to the given widget.
 fn set_widget_style<W>(widget: &W, src: &str)
-where W: gtk::traits::WidgetExt {
+where W: WidgetExt {
 	let style_context = widget.style_context();
 	let provider = gtk::CssProvider::new();
 	provider.load_from_resource(src);

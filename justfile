@@ -90,7 +90,7 @@ rustflags   := "-C link-arg=-s"
 
 # Generate CREDITS.
 @credits:
-	cargo bashman -m "{{ pkg_dir1 }}/Cargo.toml" --no-bash --no-man
+	cargo bashman -m "{{ pkg_dir1 }}/Cargo.toml"
 	just _fix-chown "{{ justfile_directory() }}/CREDITS.md"
 
 

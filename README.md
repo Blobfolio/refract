@@ -8,7 +8,7 @@ It takes [JPEG](https://en.wikipedia.org/wiki/JPEG) and [PNG](https://en.wikiped
 
 <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen0.png" width="30%" alt="The start screen. Nice and clean."></img> <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen1.png" width="30%" alt="Viewing a PNG source image."></img> <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen2.png" width="30%" alt="Previewing a WebP candidate to Discard or Keep."></img> 
 
-The program is named after — and works like — eye doctor Refraction Tests. It generates candidate images at various qualities, asking at each step how it looks, and uses that feedback (you provide) to arrive at the smallest possible "acceptable" output.
+The program is named after — and works like — eye doctor Refraction Tests. It generates candidate images at various qualities, asking at each step how it looks, and uses the feedback (you provide) to arrive at the smallest possible "acceptable" output.
 
 Hence "guided".
 
@@ -65,7 +65,7 @@ All conversion takes place at Pixel Level and is intended for displays with an s
 Refract is pretty straightforward:
 
 1. Tweak the settings — via the `Settings` menu — as desired.
-2. Load a single image or an entire directory.
+2. Load a single image or an entire directory. You can either use the links in the `File` menu, or drag-and-drop images straight onto the window from your file browser.
 3. Sit back and wait for any feedback or save prompts.
 
 For best results, be sure to optimize your input sources before re-encoding them with Refract. (Our [Flaca](https://github.com/Blobfolio/flaca) CLI tool can help with this!)
@@ -80,6 +80,35 @@ For keyboard afficionados, the following hot-keys may be used:
 | Toggle View | `SPACE` |
 | Discard Candidate | `d` |
 | Keep Candidate | `k` |
+
+
+
+## CLI Usage
+
+Refract is a _graphical_ program, but when launching from the command line, you can override the default settings and/or queue up images to re-encode.
+
+```bash
+refract [FLAGS] [OPTIONS] <PATH(S)>...
+```
+
+| Flag | Description |
+| ---- | ----------- |
+| `-h` / `--help` | Print help information and exit. |
+| `-V` / `--version` | Print version information and exit. |
+| `--no-avif` | Skip AVIF encoding. |
+| `--no-jxl` | Skip JPEG-XL encoding. |
+| `--no-webp` | Skip WebP Encoding. |
+| `--no-lossless` | Skip lossless encoding passes. |
+| `--no-lossy` | Skip lossy encoding passes. |
+| `--no-ycbcr` | Skip AVIF YCbCr encoding passes. |
+
+Note: The flags only affect the initial program state. All settings can still be managed through the program's dropdown menus after launch.
+
+| Option | Description |
+| ------ | ----------- |
+| `-l` / `--list` | Read (absolute) image and/or directory paths from this text file, one path per line. This is equivalent to specifying the same paths as trailing arguments, but can be cleaner if there are lots of them. |
+
+When image and/or directory paths are passed as trailing arguments (`<PATH(S)>...`), and/or the `-l`/`--list` option is used, Refract will start crunching all valid sources as soon as the program launches.
 
 
 

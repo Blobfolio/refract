@@ -1,12 +1,13 @@
 # Project Dependencies
     Package:   refract
-    Version:   0.7.8
-    Generated: 2022-01-21 05:24:03 UTC
+    Version:   0.8.0
+    Generated: 2022-01-23 22:57:09 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
 | [ahash](https://github.com/tkaitchuck/ahash) | 0.7.6 | [Tom Kaitchuck](mailto:Tom.Kaitchuck@gmail.com) | Apache-2.0 or MIT |
-| [anyhow](https://github.com/dtolnay/anyhow) | 1.0.52 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [anyhow](https://github.com/dtolnay/anyhow) | 1.0.53 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [argyle](https://github.com/Blobfolio/argyle) | 0.5.2 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
 | [atk](https://github.com/gtk-rs/gtk3-rs) | 0.15.1 | The gtk-rs Project Developers | MIT |
 | [atk-sys](https://github.com/gtk-rs/gtk3-rs) | 0.15.1 | The gtk-rs Project Developers | MIT |
 | [bitflags](https://github.com/bitflags/bitflags) | 1.3.2 | The Rust Project Developers | Apache-2.0 or MIT |
@@ -22,7 +23,7 @@
 | [dactyl](https://github.com/Blobfolio/dactyl) | 0.2.3 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
 | [dowser](https://github.com/Blobfolio/dowser) | 0.3.5 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
 | [either](https://github.com/bluss/either) | 1.6.1 | bluss | Apache-2.0 or MIT |
-| [fastrand](https://github.com/smol-rs/fastrand) | 1.6.0 | [Stjepan Glavina](mailto:stjepang@gmail.com) | Apache-2.0 or MIT |
+| [fastrand](https://github.com/smol-rs/fastrand) | 1.7.0 | [Stjepan Glavina](mailto:stjepang@gmail.com) | Apache-2.0 or MIT |
 | [field-offset](https://github.com/Diggsey/rust-field-offset) | 0.3.4 | [Diggory Blake](mailto:diggsey@googlemail.com) | Apache-2.0 or MIT |
 | [flume](https://github.com/zesterer/flume) | 0.10.10 | [Joshua Barretto](mailto:joshua.s.barretto@gmail.com) | Apache-2.0 or MIT |
 | [futures-channel](https://github.com/rust-lang/futures-rs) | 0.3.19 |  | Apache-2.0 or MIT |
@@ -72,15 +73,15 @@
 | [proc-macro-error](https://gitlab.com/CreepySkeleton/proc-macro-error) | 1.0.4 | [CreepySkeleton](mailto:creepy-skeleton@yandex.ru) | Apache-2.0 or MIT |
 | [proc-macro-error-attr](https://gitlab.com/CreepySkeleton/proc-macro-error) | 1.0.4 | [CreepySkeleton](mailto:creepy-skeleton@yandex.ru) | Apache-2.0 or MIT |
 | [proc-macro2](https://github.com/dtolnay/proc-macro2) | 1.0.36 | [David Tolnay](mailto:dtolnay@gmail.com) and [Alex Crichton](mailto:alex@alexcrichton.com) | Apache-2.0 or MIT |
-| [quote](https://github.com/dtolnay/quote) | 1.0.14 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [quote](https://github.com/dtolnay/quote) | 1.0.15 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [rayon](https://github.com/rayon-rs/rayon) | 1.5.1 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
 | [rayon-core](https://github.com/rayon-rs/rayon) | 1.9.1 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
 | [redox_syscall](https://gitlab.redox-os.org/redox-os/syscall) | 0.2.10 | [Jeremy Soller](mailto:jackpot51@gmail.com) | MIT |
-| [refract_core](https://github.com/Blobfolio/refract) | 0.7.8 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [refract_core](https://github.com/Blobfolio/refract) | 0.8.0 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [remove_dir_all](https://github.com/XAMPPRocky/remove_dir_all.git) | 0.5.3 | [Aaronepower](mailto:theaaronepower@gmail.com) | Apache-2.0 or MIT |
 | [rgb](https://github.com/kornelski/rust-rgb) | 0.8.31 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
 | [scopeguard](https://github.com/bluss/scopeguard) | 1.1.0 | bluss | Apache-2.0 or MIT |
-| [serde](https://github.com/serde-rs/serde) | 1.0.133 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [serde](https://github.com/serde-rs/serde) | 1.0.135 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [slab](https://github.com/tokio-rs/slab) | 0.4.5 | [Carl Lerche](mailto:me@carllerche.com) | MIT |
 | [smallvec](https://github.com/servo/rust-smallvec) | 1.8.0 | The Servo Project Developers | Apache-2.0 or MIT |
 | [spin](https://github.com/mvdnes/spin-rs.git) | 0.9.2 | [Mathijs van de Nes](mailto:git@mathijs.vd-nes.nl), [John Ericson](mailto:git@JohnEricson.me), and [Joshua Barretto](mailto:joshua.s.barretto@gmail.com) | MIT |

@@ -23,6 +23,7 @@ use version_compare::Version;
 
 /// # Build!
 pub fn main() {
+	println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
 	println!("cargo:rerun-if-changed=Cargo.toml");
 	println!("cargo:rerun-if-changed=skel");
 
@@ -150,7 +151,7 @@ fn _credits_deps_formatted(key: &str, map: &HashMap<String, (String, Vec<String>
 			// Ignore our build dependencies, etc.
 			.filter(|x| ! matches!(
 				x.as_str(),
-				"argyle" | "refract_core" | "toml" | "version-compare"
+				"refract_core" | "toml" | "version-compare"
 			))
 			.filter_map(|name| map.get(name).map(|entry| format!(
 				"\"{} v{} https://crates.io/crates/{}\"",

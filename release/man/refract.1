@@ -1,0 +1,40 @@
+.TH "REFRACT" "1" "January 2022" "Refract v0.8.0" "User Commands"
+.SH NAME
+Refract \- Manual page for refract v0.8.0.
+.SH DESCRIPTION
+Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources.
+.SS USAGE:
+.TP
+refract [FLAGS] [OPTIONS] <PATH(s)…>
+.SS FLAGS:
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help information.
+.TP
+\fB\-\-no\-avif\fR
+Skip AVIF encoding.
+.TP
+\fB\-\-no\-jxl\fR
+Skip JPEG\-XL encoding.
+.TP
+\fB\-\-no\-webp\fR
+Skip WebP encoding.
+.TP
+\fB\-\-no\-lossless\fR
+Skip lossless encoding passes.
+.TP
+\fB\-\-no\-lossy\fR
+Skip lossy encoding passes.
+.TP
+\fB\-\-no\-ycbcr\fR
+Skip AVIF YCbCr encoding passes.
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print program version.
+.SS OPTIONS:
+.TP
+\fB\-l\fR, \fB\-\-list\fR <FILE>
+Read (absolute) image and/or directory paths from this text file, one path per line. This is equivalent to specifying the same paths as trailing arguments, but can be cleaner if there are lots of them.
+.SS <PATH(S)…>:
+.TP
+Image and/or directory paths to re\-encode. Directories will be crawled recursively.
