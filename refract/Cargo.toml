@@ -1,11 +1,11 @@
 [package]
 name = "refract"
-version = "0.8.0"
+version = "0.8.1"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
 rust-version = "1.57"
-description = "Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources."
+description = "Guided AVIF/JPEG XL/WebP conversion for JPEG and PNG sources."
 repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
 publish = false
@@ -18,11 +18,10 @@ revision = "1"
 depends = "$auto"
 replaces = "refract-gtk"
 conflicts = "refract-gtk"
-section = "utility"
+section = "graphics"
 extended-description = """\
 .\n\
-Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality.\n \
-"""
+Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality."""
 assets = [
     ["../target/x86_64-unknown-linux-gnu/release/refract", "usr/bin/", "755"],
     ["./skel/deb/applications/refract.desktop", "/usr/share/applications/", "644"],

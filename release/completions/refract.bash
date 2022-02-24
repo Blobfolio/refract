@@ -4,7 +4,6 @@ _basher___refract() {
 	cur="${COMP_WORDS[COMP_CWORD]}"
 	prev="${COMP_WORDS[COMP_CWORD-1]}"
 	opts=()
-
 	if [[ ! " ${COMP_LINE} " =~ " -h " ]] && [[ ! " ${COMP_LINE} " =~ " --help " ]]; then
 		opts+=("-h")
 		opts+=("--help")
@@ -23,13 +22,11 @@ _basher___refract() {
 		opts+=("-l")
 		opts+=("--list")
 	fi
-
 	opts=" ${opts[@]} "
 	if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
 		COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 		return 0
 	fi
-
 	case "${prev}" in
 		-l|--list)
 			if [ -z "$( declare -f _filedir )" ]; then
@@ -43,7 +40,6 @@ _basher___refract() {
 			COMPREPLY=()
 			;;
 	esac
-
 	COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 	return 0
 }
