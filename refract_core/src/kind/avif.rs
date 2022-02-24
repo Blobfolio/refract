@@ -276,7 +276,7 @@ impl LibAvifImage {
 			depth: 8,
 			format: AVIF_RGB_FORMAT_RGBA,
 			chromaUpsampling: AVIF_CHROMA_UPSAMPLING_BILINEAR,
-			ignoreAlpha: ! src.has_alpha() as _,
+			ignoreAlpha: i32::from(! src.has_alpha()),
 			alphaPremultiplied: 0,
 			pixels: raw.as_ptr() as *mut u8,
 			rowBytes: 4 * width,
