@@ -162,14 +162,15 @@ fn resolve_cli_paths(args: &[Cow<'static, [u8]>]) -> Vec<PathBuf> {
 	const E_JPG: Extension = Extension::new3(*b"jpg");
 	const E_PNG: Extension = Extension::new3(*b"png");
 
-	Dowser::filtered(|p|
-		Extension::try_from3(p).map_or_else(
-			|| Extension::try_from4(p).map_or(false, |e| e == E_JPEG),
-			|e| e == E_JPG || e == E_PNG
+	Dowser::default()
+		.with_paths(args.iter().map(|x| OsStr::from_bytes(x)))
+		.filter(|p|
+			Extension::try_from3(p).map_or_else(
+				|| Some(E_JPEG) == Extension::try_from4(p),
+				|e| e == E_JPG || e == E_PNG
+			)
 		)
-	)
-		.with_paths(args.iter().map(|x| OsStr::from_bytes(x.as_ref())))
-		.into_vec()
+		.collect()
 }
 
 #[allow(clippy::similar_names)] // We're being consistent.

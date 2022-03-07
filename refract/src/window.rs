@@ -719,15 +719,17 @@ impl Window {
 	fn add_directory<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
 		// And find the paths.
-		if let Ok(mut paths) = Vec::<PathBuf>::try_from(
-			Dowser::filtered(is_jpeg_png)
-				.with_paths(&[path])
-		) {
+		let mut paths: Vec<PathBuf> = Dowser::default()
+			.with_paths(&[path])
+			.filter(|p| is_jpeg_png(p))
+			.collect();
+
+		if paths.is_empty() { false }
+		else {
 			paths.sort();
 			self.paths.borrow_mut().append(&mut paths);
 			true
 		}
-		else { false }
 	}
 
 	/// # Make File Chooser Dialogue.
