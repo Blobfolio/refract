@@ -275,7 +275,7 @@ fn neutral_pixel(img: &[u8], width: usize, height: usize) -> Option<[u8; 4]> {
 /// containing all of the neighboring pixels (with the main one in the center).
 fn the_nines<Cb>(img: &[u8], width: usize, height: usize, mut cb: Cb)
 where Cb: FnMut(Nine) {
-	let row_size = width * 4;
+	let row_size = width << 2;
 
 	// Make sure we have at least 3 pixels in either direction, and that the
 	// buffer is the correct size.
@@ -320,7 +320,7 @@ where Cb: FnMut(Nine) {
 
 			// Copy in the new right positions, if any.
 			if x + 1 < width {
-				let right = (x + 1) * 4;
+				let right = (x + 1) << 2;
 				nine.0[8..12].copy_from_slice(&img[top + right..top + right + 4]);
 				nine.0[20..24].copy_from_slice(&img[middle + right..middle + right + 4]);
 				nine.0[32..].copy_from_slice(&img[bottom + right..bottom + right + 4]);

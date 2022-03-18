@@ -158,12 +158,12 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 			maybe_die(WebPPictureImportRGBA(
 				&mut out.0,
 				raw.as_ptr().cast(), // This doesn't actually mutate.
-				width * 4,
+				width << 2,
 			))?;
 
 			// A few additional sanity checks.
 			let len = i32::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
-			let expected_size = width * height * 4;
+			let expected_size = (width * height) << 2;
 			if expected_size == 0 || expected_size != len {
 				return Err(RefractError::Encode);
 			}
