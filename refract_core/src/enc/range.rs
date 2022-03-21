@@ -97,7 +97,8 @@ impl QualityRange {
 			diff = diff.wrapping_div(2);
 		}
 
-		// See if this is new! We can't exceed u8::MAX here, so unsafe is fine.
+		// See if this is new!
+		// Safety: we can't exceed u8::MAX here, so unsafe is fine.
 		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
 		if self.tried.insert(next) {
 			return Some(next);
@@ -106,7 +107,7 @@ impl QualityRange {
 		// If the above didn't work, let's see if there are any untested values
 		// left and just run with the first.
 		for i in min..=max {
-			// Again, we can't exceed u8::MAX here, so unsafe is fine.
+			// Safety: again, we can't exceed u8::MAX here, so unsafe is fine.
 			let next = unsafe { NonZeroU8::new_unchecked(i) };
 			if self.tried.insert(next) {
 				return Some(next);

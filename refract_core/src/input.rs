@@ -106,7 +106,7 @@ impl TryFrom<&[u8]> for Input<'_> {
 			.and_then(NonZeroU32::new)
 			.ok_or(RefractError::Overflow)?;
 
-		// We know this is non-empty because decoding survived.
+		// Safety: we know the length is valid because decoding survived.
 		let size = unsafe { NonZeroUsize::new_unchecked(src.len()) };
 
 		Ok(Self {
