@@ -47,10 +47,7 @@ use argyle::{
 	FLAG_HELP,
 	FLAG_VERSION,
 };
-use dowser::{
-	Dowser,
-	Extension,
-};
+use dowser::Dowser;
 use gtk::{
 	glib::Bytes,
 	prelude::*,
@@ -158,19 +155,9 @@ fn init_resources() -> Result<(), RefractError> {
 /// When image and/or directory paths are passed through the CLI call, we need
 /// to get crunching right away!
 fn resolve_cli_paths(args: &[Cow<'static, [u8]>]) -> Vec<PathBuf> {
-	const E_JPEG: Extension = Extension::new4(*b"jpeg");
-	const E_JPG: Extension = Extension::new3(*b"jpg");
-	const E_PNG: Extension = Extension::new3(*b"png");
-
 	Dowser::default()
 		.with_paths(args.iter().map(|x| OsStr::from_bytes(x)))
-		.filter(|p|
-			Extension::try_from3(p).map_or_else(
-				|| Some(E_JPEG) == Extension::try_from4(p),
-				|e| e == E_JPG || e == E_PNG
-			)
-		)
-		.collect()
+		.into_vec(window::is_jpeg_png)
 }
 
 #[allow(clippy::similar_names)] // We're being consistent.

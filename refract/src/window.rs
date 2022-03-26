@@ -721,8 +721,7 @@ impl Window {
 		// And find the paths.
 		let mut paths: Vec<PathBuf> = Dowser::default()
 			.with_paths(&[path])
-			.filter(|p| is_jpeg_png(p))
-			.collect();
+			.into_vec(is_jpeg_png);
 
 		if paths.is_empty() { false }
 		else {
@@ -1256,9 +1255,8 @@ where T: AsRef<str> {
 	[size.as_str(), " ", noun ].concat()
 }
 
-#[inline]
 /// # Is JPEG/PNG File.
-fn is_jpeg_png(path: &Path) -> bool {
+pub(super) fn is_jpeg_png(path: &Path) -> bool {
 	Extension::try_from3(path).map_or_else(
 		|| Extension::try_from4(path).map_or(false, |e| e == E_JPEG),
 		|e| e == E_JPG || e == E_PNG
