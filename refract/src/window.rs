@@ -719,8 +719,7 @@ impl Window {
 	fn add_directory<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
 		// And find the paths.
-		let mut paths: Vec<PathBuf> = Dowser::default()
-			.with_paths(&[path])
+		let mut paths: Vec<PathBuf> = Dowser::from(path.as_ref())
 			.into_vec(is_jpeg_png);
 
 		if paths.is_empty() { false }
