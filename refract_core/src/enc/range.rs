@@ -2,23 +2,12 @@
 # `Refract` - Quality Range.
 */
 
-use ahash::RandomState;
 use crate::ImageKind;
+use dactyl::NoHash;
 use std::{
 	collections::HashSet,
 	num::NonZeroU8,
 };
-
-
-
-/// # (Not) Random State.
-///
-/// Using a fixed seed value for `AHashSet` drops a few dependencies and
-/// stops Valgrind from complaining about 64 lingering bytes from the runtime
-/// static that would be used otherwise.
-///
-/// For our purposes, the variability of truly random keys isn't really needed.
-const AHASH_STATE: RandomState = RandomState::with_seeds(13, 19, 23, 71);
 
 
 
@@ -27,7 +16,7 @@ const AHASH_STATE: RandomState = RandomState::with_seeds(13, 19, 23, 71);
 pub struct QualityRange {
 	bottom: NonZeroU8,
 	top: NonZeroU8,
-	tried: HashSet<NonZeroU8, RandomState>,
+	tried: HashSet<NonZeroU8, NoHash>,
 }
 
 impl From<ImageKind> for QualityRange {
@@ -37,7 +26,7 @@ impl From<ImageKind> for QualityRange {
 		Self {
 			bottom: kind.min_encoder_quality(),
 			top: kind.max_encoder_quality(),
-			tried: HashSet::with_hasher(AHASH_STATE),
+			tried: HashSet::default(),
 		}
 	}
 }
@@ -56,7 +45,7 @@ impl QualityRange {
 		Self {
 			bottom,
 			top,
-			tried: HashSet::with_hasher(AHASH_STATE),
+			tried: HashSet::default(),
 		}
 	}
 

@@ -11,7 +11,7 @@ readme = "README.md"
 publish = false
 
 [dependencies]
-ahash = "0.7.*"
+dactyl = "0.3.*, >=0.3.3"
 jpeg-decoder = "0.2.*"
 num_cpus = "1.13.*"
 rgb = "0.8.*, >=0.8.20"
