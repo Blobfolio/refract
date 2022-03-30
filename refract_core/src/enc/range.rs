@@ -31,52 +31,18 @@ impl From<ImageKind> for QualityRange {
 	}
 }
 
-impl QualityRange {
-	#[must_use]
-	/// # New.
-	///
-	/// Create a new range between bottom and top, both inclusive.
-	pub fn new(mut bottom: NonZeroU8, mut top: NonZeroU8) -> Self {
-		// Make sure they're in the right order.
-		if bottom > top {
-			std::mem::swap(&mut top, &mut bottom);
-		}
+impl Iterator for QualityRange {
+	type Item = NonZeroU8;
 
-		Self {
-			bottom,
-			top,
-			tried: HashSet::default(),
-		}
-	}
-
-	/// # Reboot.
-	///
-	/// Recycle an instance by setting a new bottom and top (and clearing any
-	/// history). The result is the same as calling [`QualityRange::new`], but
-	/// potentially avoids reallocation.
-	pub fn reboot(&mut self, mut bottom: NonZeroU8, mut top: NonZeroU8) {
-		// Make sure they're in the right order.
-		if bottom > top {
-			std::mem::swap(&mut top, &mut bottom);
-		}
-
-		self.bottom = bottom;
-		self.top = top;
-		self.tried.clear();
-	}
-}
-
-/// ## Getters.
-impl QualityRange {
-	#[allow(clippy::should_implement_trait)] // This doesn't need the wiring.
 	/// # Next Quality.
 	///
 	/// Return the next untested quality value from the moving range. In the
 	/// early stages, the value will fall roughly in the middle of the ends,
 	/// but as we run out of options, it may perform more sequentially.
 	///
-	/// Once every possibility has been tried, `None` will be returned.
-	pub fn next(&mut self) -> Option<NonZeroU8> {
+	/// Once every possibility (within the closing range) has been tried, `None`
+	/// will be returned.
+	fn next(&mut self) -> Option<Self::Item> {
 		let min = self.bottom.get();
 		let max = self.top.get();
 		let mut diff = max - min;
@@ -107,6 +73,59 @@ impl QualityRange {
 		None
 	}
 
+	fn size_hint(&self) -> (usize, Option<usize>) {
+		// Log2 is a decent approximation of the number of guesses remaining.
+		let diff = self.top.get() - self.bottom.get();
+		if diff == 0 { (0, None) }
+		else {
+			let log2 = u8::BITS - diff.leading_zeros();
+			(log2 as usize, None)
+		}
+	}
+}
+
+impl QualityRange {
+	#[must_use]
+	/// # New.
+	///
+	/// Create a new range between bottom and top, both inclusive.
+	pub fn new(bottom: NonZeroU8, top: NonZeroU8) -> Self {
+		if bottom <= top {
+			Self {
+				bottom,
+				top,
+				tried: HashSet::default(),
+			}
+		}
+		// Reverse the order if needed.
+		else {
+			Self {
+				bottom: top,
+				top: bottom,
+				tried: HashSet::default(),
+			}
+		}
+	}
+
+	/// # Reboot.
+	///
+	/// Recycle an instance by setting a new bottom and top (and clearing any
+	/// history). The result is the same as calling [`QualityRange::new`], but
+	/// potentially avoids reallocation.
+	pub fn reboot(&mut self, mut bottom: NonZeroU8, mut top: NonZeroU8) {
+		// Make sure they're in the right order.
+		if bottom > top {
+			std::mem::swap(&mut top, &mut bottom);
+		}
+
+		self.bottom = bottom;
+		self.top = top;
+		self.tried.clear();
+	}
+}
+
+/// ## Getters.
+impl QualityRange {
 	#[inline]
 	#[must_use]
 	/// # Get the bottom.
