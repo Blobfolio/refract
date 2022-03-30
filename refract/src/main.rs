@@ -54,9 +54,6 @@ use gtk::{
 };
 use refract_core::RefractError;
 use std::{
-	borrow::Cow,
-	ffi::OsStr,
-	os::unix::ffi::OsStrExt,
 	path::PathBuf,
 	sync::Arc,
 };
@@ -129,7 +126,10 @@ fn _main() -> Result<(), RefractError> {
 		]);
 
 		let window = Arc::new(Window::new(app, flags).expect("Unable to build GTK window."));
-		setup_ui(&window, resolve_cli_paths(args.args()));
+		let paths = Dowser::default()
+			.with_paths(args.args_os())
+			.into_vec(window::is_jpeg_png);
+		setup_ui(&window, paths);
 		window.paint();
 	});
 
@@ -148,16 +148,6 @@ fn init_resources() -> Result<(), RefractError> {
 		.map_err(|_| RefractError::GtkInit)?;
 	gtk::gio::resources_register(&resources);
 	Ok(())
-}
-
-/// # Resolve CLI Paths.
-///
-/// When image and/or directory paths are passed through the CLI call, we need
-/// to get crunching right away!
-fn resolve_cli_paths(args: &[Cow<'static, [u8]>]) -> Vec<PathBuf> {
-	Dowser::default()
-		.with_paths(args.iter().map(|x| OsStr::from_bytes(x)))
-		.into_vec(window::is_jpeg_png)
 }
 
 #[allow(clippy::similar_names)] // We're being consistent.
