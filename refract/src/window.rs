@@ -719,15 +719,15 @@ impl Window {
 	fn add_directory<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
 		// And find the paths.
-		if let Ok(mut paths) = Vec::<PathBuf>::try_from(
-			Dowser::filtered(is_jpeg_png)
-				.with_paths(&[path])
-		) {
+		let mut paths: Vec<PathBuf> = Dowser::from(path.as_ref())
+			.into_vec(is_jpeg_png);
+
+		if paths.is_empty() { false }
+		else {
 			paths.sort();
 			self.paths.borrow_mut().append(&mut paths);
 			true
 		}
-		else { false }
 	}
 
 	/// # Make File Chooser Dialogue.
@@ -1254,9 +1254,8 @@ where T: AsRef<str> {
 	[size.as_str(), " ", noun ].concat()
 }
 
-#[inline]
 /// # Is JPEG/PNG File.
-fn is_jpeg_png(path: &Path) -> bool {
+pub(super) fn is_jpeg_png(path: &Path) -> bool {
 	Extension::try_from3(path).map_or_else(
 		|| Extension::try_from4(path).map_or(false, |e| e == E_JPEG),
 		|e| e == E_JPG || e == E_PNG

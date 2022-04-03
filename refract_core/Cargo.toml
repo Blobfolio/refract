@@ -1,17 +1,17 @@
 [package]
 name = "refract_core"
-version = "0.8.1"
+version = "0.8.2"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
-rust-version = "1.57"
+rust-version = "1.59"
 description = "The library for Refract."
 repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
 publish = false
 
 [dependencies]
-ahash = "0.7.*"
+dactyl = "0.3.*, >=0.3.3"
 jpeg-decoder = "0.2.*"
 num_cpus = "1.13.*"
 rgb = "0.8.*, >=0.8.20"

@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "refract",
     "refract_core",
@@ -8,3 +9,4 @@ members = [
 lto = true
 codegen-units = 1
 opt-level = 3
+strip = true

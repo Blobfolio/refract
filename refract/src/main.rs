@@ -47,19 +47,13 @@ use argyle::{
 	FLAG_HELP,
 	FLAG_VERSION,
 };
-use dowser::{
-	Dowser,
-	Extension,
-};
+use dowser::Dowser;
 use gtk::{
 	glib::Bytes,
 	prelude::*,
 };
 use refract_core::RefractError;
 use std::{
-	borrow::Cow,
-	ffi::OsStr,
-	os::unix::ffi::OsStrExt,
 	path::PathBuf,
 	sync::Arc,
 };
@@ -132,7 +126,10 @@ fn _main() -> Result<(), RefractError> {
 		]);
 
 		let window = Arc::new(Window::new(app, flags).expect("Unable to build GTK window."));
-		setup_ui(&window, resolve_cli_paths(args.args()));
+		let paths = Dowser::default()
+			.with_paths(args.args_os())
+			.into_vec(window::is_jpeg_png);
+		setup_ui(&window, paths);
 		window.paint();
 	});
 
@@ -151,25 +148,6 @@ fn init_resources() -> Result<(), RefractError> {
 		.map_err(|_| RefractError::GtkInit)?;
 	gtk::gio::resources_register(&resources);
 	Ok(())
-}
-
-/// # Resolve CLI Paths.
-///
-/// When image and/or directory paths are passed through the CLI call, we need
-/// to get crunching right away!
-fn resolve_cli_paths(args: &[Cow<'static, [u8]>]) -> Vec<PathBuf> {
-	const E_JPEG: Extension = Extension::new4(*b"jpeg");
-	const E_JPG: Extension = Extension::new3(*b"jpg");
-	const E_PNG: Extension = Extension::new3(*b"png");
-
-	Dowser::filtered(|p|
-		Extension::try_from3(p).map_or_else(
-			|| Extension::try_from4(p).map_or(false, |e| e == E_JPEG),
-			|e| e == E_JPG || e == E_PNG
-		)
-	)
-		.with_paths(args.iter().map(|x| OsStr::from_bytes(x.as_ref())))
-		.into_vec()
 }
 
 #[allow(clippy::similar_names)] // We're being consistent.

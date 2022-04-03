@@ -106,7 +106,7 @@ impl TryFrom<&[u8]> for Input<'_> {
 			.and_then(NonZeroU32::new)
 			.ok_or(RefractError::Overflow)?;
 
-		// We know this is non-empty because decoding survived.
+		// Safety: we know the length is valid because decoding survived.
 		let size = unsafe { NonZeroUsize::new_unchecked(src.len()) };
 
 		Ok(Self {
@@ -315,7 +315,7 @@ impl<'a> Input<'a> {
 			ColorKind::GreyAlpha => (
 				Cow::Owned(
 					self.pixels.chunks_exact(4)
-					.fold(Vec::with_capacity(self.width() * self.height() * 2), |mut acc, px| {
+					.fold(Vec::with_capacity((self.width() * self.height()) << 1), |mut acc, px| {
 						acc.push(px[0]); // Keep one color.
 						acc.push(px[3]); // Keep alpha.
 						acc
@@ -365,7 +365,7 @@ impl<'a> Input<'a> {
 	/// shouldn't happen in practice, but there is an assertion to make sure.
 	pub fn as_rgba(&'a self) -> Self {
 		// The expected size.
-		let size = self.width() * self.height() * 4;
+		let size = (self.width() * self.height()) << 2;
 
 		let buf: Cow<[u8]> = match self.depth {
 			ColorKind::Rgba => Cow::Borrowed(self.pixels.borrow()),

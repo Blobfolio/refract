@@ -279,7 +279,7 @@ impl LibAvifImage {
 			ignoreAlpha: i32::from(! src.has_alpha()),
 			alphaPremultiplied: 0,
 			pixels: raw.as_ptr() as *mut u8,
-			rowBytes: 4 * width,
+			rowBytes: width << 2,
 		};
 
 		// And convert it to YUV.

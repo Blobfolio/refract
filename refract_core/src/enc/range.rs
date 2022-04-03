@@ -2,23 +2,12 @@
 # `Refract` - Quality Range.
 */
 
-use ahash::RandomState;
 use crate::ImageKind;
+use dactyl::NoHash;
 use std::{
 	collections::HashSet,
 	num::NonZeroU8,
 };
-
-
-
-/// # (Not) Random State.
-///
-/// Using a fixed seed value for `AHashSet` drops a few dependencies and
-/// stops Valgrind from complaining about 64 lingering bytes from the runtime
-/// static that would be used otherwise.
-///
-/// For our purposes, the variability of truly random keys isn't really needed.
-const AHASH_STATE: RandomState = RandomState::with_seeds(13, 19, 23, 71);
 
 
 
@@ -27,7 +16,7 @@ const AHASH_STATE: RandomState = RandomState::with_seeds(13, 19, 23, 71);
 pub struct QualityRange {
 	bottom: NonZeroU8,
 	top: NonZeroU8,
-	tried: HashSet<NonZeroU8, RandomState>,
+	tried: HashSet<NonZeroU8, NoHash>,
 }
 
 impl From<ImageKind> for QualityRange {
@@ -37,7 +26,60 @@ impl From<ImageKind> for QualityRange {
 		Self {
 			bottom: kind.min_encoder_quality(),
 			top: kind.max_encoder_quality(),
-			tried: HashSet::with_hasher(AHASH_STATE),
+			tried: HashSet::default(),
+		}
+	}
+}
+
+impl Iterator for QualityRange {
+	type Item = NonZeroU8;
+
+	/// # Next Quality.
+	///
+	/// Return the next untested quality value from the moving range. In the
+	/// early stages, the value will fall roughly in the middle of the ends,
+	/// but as we run out of options, it may perform more sequentially.
+	///
+	/// Once every possibility (within the closing range) has been tried, `None`
+	/// will be returned.
+	fn next(&mut self) -> Option<Self::Item> {
+		let min = self.bottom.get();
+		let max = self.top.get();
+		let mut diff = max - min;
+
+		// If the difference is greater than one, cut it in half.
+		if diff > 1 {
+			diff = diff.wrapping_div(2);
+		}
+
+		// See if this is new!
+		// Safety: we can't exceed u8::MAX here, so unsafe is fine.
+		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
+		if self.tried.insert(next) {
+			return Some(next);
+		}
+
+		// If the above didn't work, let's see if there are any untested values
+		// left and just run with the first.
+		for i in min..=max {
+			// Safety: again, we can't exceed u8::MAX here, so unsafe is fine.
+			let next = unsafe { NonZeroU8::new_unchecked(i) };
+			if self.tried.insert(next) {
+				return Some(next);
+			}
+		}
+
+		// Looks like we're done!
+		None
+	}
+
+	fn size_hint(&self) -> (usize, Option<usize>) {
+		// Log2 is a decent approximation of the number of guesses remaining.
+		let diff = self.top.get() - self.bottom.get();
+		if diff == 0 { (0, None) }
+		else {
+			let log2 = u8::BITS - diff.leading_zeros();
+			(log2 as usize, None)
 		}
 	}
 }
@@ -47,16 +89,21 @@ impl QualityRange {
 	/// # New.
 	///
 	/// Create a new range between bottom and top, both inclusive.
-	pub fn new(mut bottom: NonZeroU8, mut top: NonZeroU8) -> Self {
-		// Make sure they're in the right order.
-		if bottom > top {
-			std::mem::swap(&mut top, &mut bottom);
+	pub fn new(bottom: NonZeroU8, top: NonZeroU8) -> Self {
+		if bottom <= top {
+			Self {
+				bottom,
+				top,
+				tried: HashSet::default(),
+			}
 		}
-
-		Self {
-			bottom,
-			top,
-			tried: HashSet::with_hasher(AHASH_STATE),
+		// Reverse the order if needed.
+		else {
+			Self {
+				bottom: top,
+				top: bottom,
+				tried: HashSet::default(),
+			}
 		}
 	}
 
@@ -79,44 +126,6 @@ impl QualityRange {
 
 /// ## Getters.
 impl QualityRange {
-	#[allow(clippy::should_implement_trait)] // This doesn't need the wiring.
-	/// # Next Quality.
-	///
-	/// Return the next untested quality value from the moving range. In the
-	/// early stages, the value will fall roughly in the middle of the ends,
-	/// but as we run out of options, it may perform more sequentially.
-	///
-	/// Once every possibility has been tried, `None` will be returned.
-	pub fn next(&mut self) -> Option<NonZeroU8> {
-		let min = self.bottom.get();
-		let max = self.top.get();
-		let mut diff = max - min;
-
-		// If the difference is greater than one, cut it in half.
-		if diff > 1 {
-			diff = diff.wrapping_div(2);
-		}
-
-		// See if this is new! We can't exceed u8::MAX here, so unsafe is fine.
-		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
-		if self.tried.insert(next) {
-			return Some(next);
-		}
-
-		// If the above didn't work, let's see if there are any untested values
-		// left and just run with the first.
-		for i in min..=max {
-			// Again, we can't exceed u8::MAX here, so unsafe is fine.
-			let next = unsafe { NonZeroU8::new_unchecked(i) };
-			if self.tried.insert(next) {
-				return Some(next);
-			}
-		}
-
-		// Looks like we're done!
-		None
-	}
-
 	#[inline]
 	#[must_use]
 	/// # Get the bottom.
