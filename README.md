@@ -128,30 +128,26 @@ git clone https://github.com/Blobfolio/refract.git
 cd refract
 
 # Build with Cargo. Feel free to add other build flags as desired.
-cargo build \
-    --bin refract \
-    -p refract \
-    --release
+cargo build --release
 ```
 
 Cargo _will_ handle the entire build process for you, however many of Refract's dependencies have heavy `build.rs` scripts requiring additional system libraries. (Who'd have thought image decoders and encoders were complicated?!)
 
 At a minimum, you'll need up-to-date versions of:
 
-* Clang
 * Cmake
-* GCC
+* `gcc`/`g++`
 * Git
 * Make
 * NASM
 * Ninja
-* Rust/Cargo
+* Rust (>= `1.59`)/Cargo
 
-GTK is a whole other monster, requiring the `-dev` packages for (at least) ATK, Cairo, GDK, GLIB, GTK, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make GTK dependency resolution easier. On Debian Buster, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
+GTK is a whole other monster, requiring the `-dev` packages for (at least) ATK, Cairo, GDK, GLIB, GTK, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make GTK dependency resolution easier. On Debian Bullseye, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
 
-This list is (probably) non-exhaustive. If you find you need something else to build on your system, please open a ticket so the list can be updated!
+[This post](https://github.com/Blobfolio/refract/issues/3#issuecomment-1086924244) provides a good breakdown of how to set up a minimal Docker build environment for Refract.
 
-Likewise, if you try building on Mac, please let us know how it goes!
+If you end up building Refract on a non-Debian system — Red Hat, MacOS, etc. — please let us know what that setup looked like so we can update the docs! Users of those systems will no doubt appreciate it. :)
 
 
 
