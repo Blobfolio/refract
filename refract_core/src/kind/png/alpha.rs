@@ -165,7 +165,7 @@ impl Nine {
 /// * Those same pixels are then averaged again to smooth out the edges.
 ///
 /// Images without any alpha channel data are passed through unchanged.
-pub(super) fn clean_alpha(img: &mut Vec<u8>, width: usize, height: usize) {
+pub(super) fn clean_alpha(img: &mut [u8], width: usize, height: usize) {
 	if let Some(avg) = neutral_pixel(img, width, height) {
 		// Set all invisible pixels to said neutral color.
 		img.chunks_exact_mut(4)
@@ -184,7 +184,7 @@ pub(super) fn clean_alpha(img: &mut Vec<u8>, width: usize, height: usize) {
 /// otherwise) appearing next to visible pixels.
 ///
 /// The less visible a pixel is, the more we can shift it.
-fn blur_alpha(img: &mut Vec<u8>, width: usize, height: usize) {
+fn blur_alpha(img: &mut [u8], width: usize, height: usize) {
 	// First compute a weighted average.
 	let mut diff: Vec<(usize, [u8; 4])> = Vec::new();
 	let mut idx: usize = 0;
