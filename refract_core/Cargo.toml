@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "0.8.2"
+version = "0.8.3"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -12,27 +12,27 @@ publish = false
 
 [dependencies]
 dactyl = "0.3.*, >=0.3.3"
-jpeg-decoder = "0.2.*"
-num_cpus = "1.13.*"
-rgb = "0.8.*, >=0.8.20"
-spng = "0.1.0"
+jpeg-decoder = "=0.2.4"
+num_cpus = "=1.13.1"
+rgb = "=0.8.32"
+spng = "=0.1.0"
 
 [dependencies.argyle]
-version = "0.5.*"
+version = "0.5.*, >=0.5.3"
 optional = true
 
 [dependencies.jpegxl-sys]
-version = "0.6.0"
+version = "=0.6.1"
 default-features = false
 features = [ "threads" ]
 
 [dependencies.libavif-sys]
-version = "0.12.0"
+version = "=0.12.1"
 default-features = false
 features = [ "codec-aom" ]
 
 [dependencies.libwebp-sys2]
-version = "0.1.2"
+version = "=0.1.2"
 features = [ "1_1", "static" ]
 
 [features]

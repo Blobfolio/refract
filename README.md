@@ -12,7 +12,7 @@ The program is named after — and works like — eye doctor Refraction Tests. I
 
 Hence "guided".
 
-The beauty of this approach is that it moots the need for exhaustive testing. Refract's quality stepping works by selecting the mid-point between moving min/max boundaries. Each answer you provide adjusts the range, allowing the final, perfect result to be discovered in just 5-10 steps instead of 100+.
+The beauty of this approach is that it moots the need for exhaustive testing. Refract's quality stepping works by selecting the mid-point between moving min/max boundaries. Similar to a binary search, each answer you provide halves the range of possibilities, allowing the final, perfect result to be discovered in just 5-10 steps instead of 100+.
 
 
 
@@ -22,11 +22,11 @@ Every image is different. The idea of a "Magic Bullet" format is a myth.
 
 If you want to truly maximize the quality and size of next-gen copies, you cannot rely on hardcoded constants or fancy [SSIM](https://en.wikipedia.org/wiki/Structural_similarity) analysis. That will result in frequent over- or under-compression, and some images will just come out looking… worse.
 
-You have to actually _use your eyes_. And you have to pay attention to the resulting file sizes. Sometimes newer formats will result in _larger_ output than the original source, defeating the purpose!
+You have to actually _use your eyes_. And you have to pay attention to the resulting file sizes. Sometimes newer formats will result in _larger_ output than the original source, defeating the purpose. Haha.
 
 While you can do all of this manually — running multiple programs hundreds of times for each and every source you want to convert — that would be incredibly tedious and easy to screw up.
 
-Refract helps makes that manual process _less_ tedious and _more_ foolproof.
+Refract helps make that manual process _less_ tedious and _more_ foolproof.
 
 It automatically uses the strongest (slowest) possible compression settings for each format, keeps track of file sizes and qualities along the way, can process inputs en masse, and reduces the number of conversion tests by around 90%.
 
@@ -54,7 +54,7 @@ But if you're looking to obsessively optimize a small project or single web page
 
 In other words, Refract takes JPEG and PNG sources — either individual files or entire directory trees — and turns them into AVIF, JPEG XL, and/or WebP outputs.
 
-Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjxl`](https://github.com/libjxl/libjxl), and [`libwebp`](https://chromium.googlesource.com/webm/libwebp/) directly. This not only ensures full standards compliance and feature/performance parity with each format's official conversion tools — `avifenc`, `cjxl`, and `cwebp` respectively — it also means you don't need any of that crap separately installed to use it!
+Refract implements [`libavif`](https://github.com/AOMediaCodec/libavif), [`libjxl`](https://github.com/libjxl/libjxl), and [`libwebp`](https://chromium.googlesource.com/webm/libwebp/) directly. This not only ensures full standards compliance and feature/performance parity with each format's official conversion tools — `avifenc`, `cjxl`, and `cwebp` respectively — it also means you don't need any of that crap separately installed to use it.
 
 All conversion takes place at Pixel Level and is intended for displays with an sRGB color space (e.g. web browsers). Gamma correction, color profiles, and other metadata are ignored and stripped out when saving next-gen copies.
 
@@ -68,7 +68,7 @@ Refract is pretty straightforward:
 2. Load a single image or an entire directory. You can either use the links in the `File` menu, or drag-and-drop images straight onto the window from your file browser.
 3. Sit back and wait for any feedback or save prompts.
 
-For best results, be sure to optimize your input sources before re-encoding them with Refract. (Our [Flaca](https://github.com/Blobfolio/flaca) CLI tool can help with this!)
+For best results, be sure to optimize your input sources before re-encoding them with Refract. (The CLI tool [flaca](https://github.com/Blobfolio/flaca) is great for this, and fully automatic.)
 
 For keyboard afficionados, the following hot-keys may be used:
 
@@ -77,7 +77,7 @@ For keyboard afficionados, the following hot-keys may be used:
 | Open File | `CTRL + o` |
 | Open Directory | `SHIFT + CTRL + o` |
 | Toggle Dark Mode | `CTRL + n` |
-| Toggle View | `SPACE` |
+| Toggle A/B View | `SPACE` |
 | Discard Candidate | `d` |
 | Keep Candidate | `k` |
 
@@ -147,7 +147,7 @@ GTK is a whole other monster, requiring the `-dev` packages for (at least) ATK, 
 
 [This post](https://github.com/Blobfolio/refract/issues/3#issuecomment-1086924244) provides a good breakdown of how to set up a minimal Docker build environment for Refract.
 
-If you end up building Refract on a non-Debian system — Red Hat, MacOS, etc. — please let us know what that setup looked like so we can update the docs! Users of those systems will no doubt appreciate it. :)
+If you end up building Refract on a non-Debian system — Red Hat, MacOS, etc. — please let us know what that setup looked like so we can update the docs. Users of those systems will no doubt appreciate it. :)
 
 
 
