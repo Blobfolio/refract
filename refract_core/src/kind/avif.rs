@@ -62,9 +62,8 @@ use libavif_sys::{
 
 
 
-#[allow(unreachable_pub)] // Unsolvable?
 /// # AVIF Image.
-pub struct ImageAvif;
+pub(crate) struct ImageAvif;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageAvif {

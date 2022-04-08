@@ -40,9 +40,8 @@ use crate::{
 
 
 
-#[allow(unreachable_pub)] // Unsolvable?
 /// # `WebP` Image.
-pub struct ImageWebp;
+pub(crate) struct ImageWebp;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageWebp {

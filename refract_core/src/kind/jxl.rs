@@ -74,9 +74,8 @@ use jpegxl_sys::{
 
 
 
-#[allow(unreachable_pub)] // Unsolvable?
 /// # JPEG XL Image.
-pub struct ImageJxl;
+pub(crate) struct ImageJxl;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageJxl {
