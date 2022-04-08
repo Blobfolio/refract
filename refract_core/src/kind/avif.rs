@@ -278,6 +278,7 @@ impl LibAvifImage {
 			chromaUpsampling: AVIF_CHROMA_UPSAMPLING_BILINEAR,
 			ignoreAlpha: i32::from(! src.has_alpha()),
 			alphaPremultiplied: 0,
+			isFloat: 0,
 			pixels: raw.as_ptr() as *mut u8,
 			rowBytes: width << 2,
 		};
