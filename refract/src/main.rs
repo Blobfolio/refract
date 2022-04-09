@@ -2,26 +2,27 @@
 # `Refract GTK`
 */
 
-#![warn(clippy::filetype_is_file)]
-#![warn(clippy::integer_division)]
-#![warn(clippy::needless_borrow)]
-#![warn(clippy::nursery)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::perf)]
-#![warn(clippy::suboptimal_flops)]
-#![warn(clippy::unneeded_field_pattern)]
-#![warn(macro_use_extern_crate)]
-#![warn(missing_copy_implementations)]
-#![warn(missing_debug_implementations)]
-#![warn(missing_docs)]
-#![warn(non_ascii_idents)]
-#![warn(trivial_casts)]
-#![warn(trivial_numeric_casts)]
-#![warn(unreachable_pub)]
-#![warn(unused_crate_dependencies)]
-#![warn(unused_extern_crates)]
-#![warn(unused_import_braces)]
-
+#![warn(
+	clippy::filetype_is_file,
+	clippy::integer_division,
+	clippy::needless_borrow,
+	clippy::nursery,
+	clippy::pedantic,
+	clippy::perf,
+	clippy::suboptimal_flops,
+	clippy::unneeded_field_pattern,
+	macro_use_extern_crate,
+	missing_copy_implementations,
+	missing_debug_implementations,
+	missing_docs,
+	non_ascii_idents,
+	trivial_casts,
+	trivial_numeric_casts,
+	unreachable_pub,
+	unused_crate_dependencies,
+	unused_extern_crates,
+	unused_import_braces,
+)]
 #![allow(clippy::module_name_repetitions)]
 
 
@@ -264,11 +265,23 @@ fn setup_ui_window(window: &Arc<Window>) {
 				window.$btn.connect_toggled(move |btn| {
 					if ! btn.is_active() && ! wnd2.$cb() { btn.set_active(true); }
 				});
+
+				// Stop the menu from closing on button press.
+				window.$btn.connect_button_release_event(|btn, _| {
+					btn.set_active(! btn.is_active());
+					gtk::Inhibit(true)
+				});
 			)+);
 		}
 
 		chk_cb!(has_encoders, chk_avif, chk_jxl, chk_webp);
 		chk_cb!(has_modes, chk_lossless, chk_lossy);
+
+		// Stop the menu from closing on button press.
+		window.chk_ycbcr.connect_button_release_event(|btn, _| {
+			btn.set_active(! btn.is_active());
+			gtk::Inhibit(true)
+		});
 	}
 
 	// Sync preview field display to `lbl_quality` (so we only have to directly

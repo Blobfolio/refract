@@ -1,7 +1,7 @@
 # Project Dependencies
     Package:   refract
-    Version:   0.8.3
-    Generated: 2022-04-07 18:45:40 UTC
+    Version:   0.8.4
+    Generated: 2022-04-09 05:32:00 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
@@ -48,8 +48,8 @@
 | [jpeg-decoder](https://github.com/image-rs/jpeg-decoder) | 0.2.4 | The image-rs Developers | Apache-2.0 or MIT |
 | [jpegxl-sys](https://github.com/inflation/jpegxl-sys) | 0.6.1 | [Inflation](mailto:hypernovagama@gmail.com) | GPL-3.0-or-later |
 | [lazy_static](https://github.com/rust-lang-nursery/lazy-static.rs) | 1.4.0 | [Marvin Löbel](mailto:loebel.marvin@gmail.com) | Apache-2.0 or MIT |
-| [libaom-sys](https://github.com/njaard/libavif-rs) | 0.11.0 | [Charles Samuels](mailto:ks@ks.ax), [Paolo Barbolini](mailto:paolo@paolo565.org), and [Kornel](mailto:kornel@geekhood.net) | BSD-2-Clause |
-| [libavif-sys](https://github.com/njaard/libavif-rs) | 0.12.1 | [Charles Samuels](mailto:ks@ks.ax) and [Paolo Barbolini](mailto:paolo@paolo565.org) | BSD-2-Clause |
+| [libaom-sys](https://github.com/njaard/libavif-rs) | 0.12.0 | [Charles Samuels](mailto:ks@ks.ax), [Paolo Barbolini](mailto:paolo@paolo565.org), and [Kornel](mailto:kornel@geekhood.net) | BSD-2-Clause |
+| [libavif-sys](https://github.com/njaard/libavif-rs) | 0.13.0 | [Charles Samuels](mailto:ks@ks.ax) and [Paolo Barbolini](mailto:paolo@paolo565.org) | BSD-2-Clause |
 | [libc](https://github.com/rust-lang/libc) | 0.2.122 | The Rust Project Developers | Apache-2.0 or MIT |
 | [libwebp-sys2](https://github.com/qnighy/libwebp-sys2-rs) | 0.1.2 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
 | [libz-sys](https://github.com/rust-lang/libz-sys) | 1.1.5 | [Alex Crichton](mailto:alex@alexcrichton.com) and [Josh Triplett](mailto:josh@joshtriplett.org) | Apache-2.0 or MIT |
@@ -72,7 +72,7 @@
 | [quote](https://github.com/dtolnay/quote) | 1.0.17 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [rayon](https://github.com/rayon-rs/rayon) | 1.5.1 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
 | [rayon-core](https://github.com/rayon-rs/rayon) | 1.9.1 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
-| [refract_core](https://github.com/Blobfolio/refract) | 0.8.3 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [refract_core](https://github.com/Blobfolio/refract) | 0.8.4 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [remove_dir_all](https://github.com/XAMPPRocky/remove_dir_all.git) | 0.5.3 | [Aaronepower](mailto:theaaronepower@gmail.com) | Apache-2.0 or MIT |
 | [rgb](https://github.com/kornelski/rust-rgb) | 0.8.32 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
 | [scopeguard](https://github.com/bluss/scopeguard) | 1.1.0 | bluss | Apache-2.0 or MIT |

@@ -18,9 +18,8 @@ use rgb::{
 
 
 
-#[allow(unreachable_pub)] // Unsolvable?
 /// # JPEG Image.
-pub struct ImageJpeg;
+pub(crate) struct ImageJpeg;
 
 impl Decoder for ImageJpeg {
 	/// # Decode.

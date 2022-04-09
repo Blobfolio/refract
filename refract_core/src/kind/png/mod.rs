@@ -15,9 +15,8 @@ use crate::{
 
 
 
-#[allow(unreachable_pub)] // Unsolvable?
 /// # PNG Image.
-pub struct ImagePng;
+pub(crate) struct ImagePng;
 
 impl Decoder for ImagePng {
 	/// # Decode.
