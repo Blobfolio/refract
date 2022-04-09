@@ -265,11 +265,23 @@ fn setup_ui_window(window: &Arc<Window>) {
 				window.$btn.connect_toggled(move |btn| {
 					if ! btn.is_active() && ! wnd2.$cb() { btn.set_active(true); }
 				});
+
+				// Stop the menu from closing on button press.
+				window.$btn.connect_button_release_event(|btn, _| {
+					btn.set_active(! btn.is_active());
+					gtk::Inhibit(true)
+				});
 			)+);
 		}
 
 		chk_cb!(has_encoders, chk_avif, chk_jxl, chk_webp);
 		chk_cb!(has_modes, chk_lossless, chk_lossy);
+
+		// Stop the menu from closing on button press.
+		window.chk_ycbcr.connect_button_release_event(|btn, _| {
+			btn.set_active(! btn.is_active());
+			gtk::Inhibit(true)
+		});
 	}
 
 	// Sync preview field display to `lbl_quality` (so we only have to directly
