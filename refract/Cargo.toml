@@ -89,7 +89,7 @@ label = "<PATH(s)…>"
 description = "Image and/or directory paths to re-encode. Directories will be crawled recursively."
 
 [build-dependencies]
-toml = "=0.5.8"
+toml = "=0.5.9"
 version-compare = "=0.1.0"
 
 [dependencies]
