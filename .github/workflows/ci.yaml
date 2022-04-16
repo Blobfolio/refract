@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  push:
+    branches: [ "feature/next" ]
+  pull_request:
+    branches: [ "feature/next" ]
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  all:
+    name: All
+
+    strategy:
+      matrix:
+        target:
+        - x86_64-unknown-linux-gnu
+        include:
+        - target: x86_64-unknown-linux-gnu
+          os:     ubuntu-latest
+
+    runs-on: ${{matrix.os}}
+
+    env:
+      RUSTFLAGS: "-D warnings"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: BuildDeps
+      run: |
+        sudo sed -i -e "s/# deb/deb/g" /etc/apt/sources.list
+        sudo apt-get update
+        sudo apt-get install -y cmake g++ gcc git librust-gdk-dev librust-gtk-dev make nasm ninja-build
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+        profile: minimal
+        override: true
+        components: clippy
+
+    - name: Info
+      run: |
+        rustup --version
+        cargo --version
+        cargo clippy --version
+
+    - name: Build
+      run: |
+        cargo build --bin refract --release --target ${{ matrix.target }}
+
+    - name: Clippy
+      run: |
+        cargo clippy --release --target ${{ matrix.target }}
+
+    - name: Tests
+      run: |
+        cargo test --release --target ${{ matrix.target }}
