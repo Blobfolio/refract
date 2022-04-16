@@ -120,7 +120,7 @@ Debian and Ubuntu users can just grab the pre-built `.deb` package from the [rel
 
 While specifically written for use on x86-64 Linux systems, both Rust and GTK are cross-platform, so you may well be able to build it from source on other 64-bit Unix systems using `Cargo`:
 
-```
+```bash
 # Clone the repository.
 git clone https://github.com/Blobfolio/refract.git
 
