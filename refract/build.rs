@@ -5,6 +5,7 @@ This is used to compile a resource bundle of the various assets that need to
 be pulled into GTK.
 */
 
+use dowser::Extension;
 use std::{
 	collections::HashMap,
 	ffi::OsStr,
@@ -28,6 +29,7 @@ pub fn main() {
 	println!("cargo:rerun-if-changed=skel");
 
 	build_credits();
+	build_exts();
 	build_resources();
 }
 
@@ -90,6 +92,39 @@ fn build_credits() {
 	file.write_fmt(format_args!("&[{}]", list.join(",")))
 		.and_then(|_| file.flush())
 		.expect("Unable to save credits.");
+}
+
+/// # Build Extensions.
+///
+/// While we're here, we may as we pre-compute our various image extension
+/// constants.
+fn build_exts() {
+	let out = format!(
+		r"
+const E_AVIF: Extension = {};
+const E_JPEG: Extension = {};
+const E_JPG: Extension = {};
+const E_JXL: Extension = {};
+const E_PNG: Extension = {};
+const E_WEBP: Extension = {};
+",
+		Extension::codegen(b"avif"),
+		Extension::codegen(b"jpeg"),
+		Extension::codegen(b"jpg"),
+		Extension::codegen(b"jxl"),
+		Extension::codegen(b"png"),
+		Extension::codegen(b"webp"),
+	);
+
+	// Save them as a slice value!
+	let mut file = _out_path("refract-extensions.rs")
+		.and_then(|p| File::create(p).ok())
+		.expect("Missing OUT_DIR.");
+
+	file.write_all(out.as_bytes())
+		.and_then(|_| file.flush())
+		.expect("Unable to save extensions.");
+
 }
 
 /// # Build Resource Bundle.
