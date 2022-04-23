@@ -27,7 +27,7 @@ default-features = false
 features = [ "threads" ]
 
 [dependencies.libavif-sys]
-version = "=0.13.0"
+version = "=0.13.1"
 default-features = false
 features = [ "codec-aom" ]
 
