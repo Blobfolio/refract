@@ -67,6 +67,7 @@ pub(crate) struct ImageAvif;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageAvif {
+	#[allow(unsafe_code)]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		let rgb = unsafe {
 			// Decode the raw image to an avifImage.
@@ -121,9 +122,11 @@ impl Decoder for ImageAvif {
 }
 
 impl Encoder for ImageAvif {
+	#[allow(unsafe_code)]
 	/// # Maximum Quality.
 	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(63) };
 
+	#[allow(unsafe_code)]
 	/// # Encode Lossy.
 	fn encode_lossy(img: &Input, candidate: &mut Output, quality: NonZeroU8, flags: u8)
 	-> Result<(), RefractError> {
@@ -167,6 +170,7 @@ struct LibAvifDecoder(*mut avifDecoder);
 
 #[cfg(feature = "decode_ng")]
 impl LibAvifDecoder {
+	#[allow(unsafe_code)]
 	/// # New.
 	fn new() -> Result<Self, RefractError> {
 		let decoder = unsafe { avifDecoderCreate() };
@@ -190,6 +194,7 @@ impl LibAvifDecoder {
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibAvifDecoder {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { avifDecoderDestroy(self.0); } }
 }
@@ -205,6 +210,7 @@ struct LibAvifEncoder(*mut avifEncoder);
 impl TryFrom<NonZeroU8> for LibAvifEncoder {
 	type Error = RefractError;
 
+	#[allow(unsafe_code)]
 	/// # New Instance.
 	fn try_from(quality: NonZeroU8) -> Result<Self, RefractError> {
 		// Convert quality to quantizers. AVIF is so convoluted...
@@ -239,6 +245,7 @@ impl TryFrom<NonZeroU8> for LibAvifEncoder {
 }
 
 impl Drop for LibAvifEncoder {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { avifEncoderDestroy(self.0); } }
 }
@@ -253,6 +260,7 @@ struct LibAvifImage(*mut avifImage);
 
 impl LibAvifImage {
 	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
+	#[allow(unsafe_code)]
 	fn new(src: &Input, flags: u8) -> Result<Self, RefractError> {
 		// Make sure dimensions fit u32.
 		let width = src.width_u32();
@@ -316,6 +324,7 @@ impl LibAvifImage {
 	}
 
 	#[cfg(feature = "decode_ng")]
+	#[allow(unsafe_code)]
 	/// # Empty.
 	fn empty() -> Result<Self, RefractError> {
 		let image = unsafe { avifImageCreateEmpty() };
@@ -325,6 +334,7 @@ impl LibAvifImage {
 }
 
 impl Drop for LibAvifImage {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
 }
@@ -341,6 +351,7 @@ struct LibAvifRGBImage(avifRGBImage);
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibAvifRGBImage {
+	#[allow(unsafe_code)]
 	fn drop(&mut self) { unsafe { avifRGBImageFreePixels(&mut self.0); } }
 }
 
@@ -352,6 +363,7 @@ impl Drop for LibAvifRGBImage {
 struct LibAvifRwData(avifRWData);
 
 impl Drop for LibAvifRwData {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { avifRWDataFree(&mut self.0); } }
 }

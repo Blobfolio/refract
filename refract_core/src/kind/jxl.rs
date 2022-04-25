@@ -79,6 +79,7 @@ pub(crate) struct ImageJxl;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageJxl {
+	#[allow(unsafe_code)]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		let decoder = LibJxlDecoder::new()?;
 		let mut basic_info: Option<JxlBasicInfo> = None;
@@ -138,6 +139,7 @@ impl Decoder for ImageJxl {
 }
 
 impl Encoder for ImageJxl {
+	#[allow(unsafe_code)]
 	/// # Maximum Quality.
 	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(150) };
 
@@ -166,6 +168,7 @@ struct LibJxlDecoder(*mut JxlDecoder);
 
 #[cfg(feature = "decode_ng")]
 impl LibJxlDecoder {
+	#[allow(unsafe_code)]
 	/// # New Decoder.
 	fn new() -> Result<Self, RefractError> {
 		let dec = unsafe { JxlDecoderCreate(std::ptr::null()) };
@@ -189,6 +192,7 @@ impl LibJxlDecoder {
 		Ok(Self(dec))
 	}
 
+	#[allow(unsafe_code)]
 	/// # Load Basic Info.
 	fn get_basic_info(
 		&self,
@@ -211,6 +215,7 @@ impl LibJxlDecoder {
 		Ok(())
 	}
 
+	#[allow(unsafe_code)]
 	/// # Load ICC Profile.
 	fn get_icc_profile(&self, format: &JxlPixelFormat, icc_profile: &mut Vec<u8>)
 	-> Result<(), RefractError> {
@@ -244,6 +249,7 @@ impl LibJxlDecoder {
 		Ok(())
 	}
 
+	#[allow(unsafe_code)]
 	fn output(
 		&self,
 		pixel_format: &JxlPixelFormat,
@@ -272,6 +278,7 @@ impl LibJxlDecoder {
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibJxlDecoder {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { JxlDecoderDestroy(self.0); } }
 }
@@ -283,6 +290,7 @@ impl Drop for LibJxlDecoder {
 struct LibJxlEncoder(*mut JxlEncoder);
 
 impl LibJxlEncoder {
+	#[allow(unsafe_code)]
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		let enc = unsafe { JxlEncoderCreate(std::ptr::null()) };
@@ -290,6 +298,7 @@ impl LibJxlEncoder {
 		else { Ok(Self(enc)) }
 	}
 
+	#[allow(unsafe_code)]
 	/// # Set Basic Info.
 	fn set_basic_info(&self, width: u32, height: u32, alpha: bool) -> Result<(), RefractError> {
 		// Set up JPEG XL's "basic info" struct.
@@ -320,6 +329,7 @@ impl LibJxlEncoder {
 		maybe_die(&unsafe { JxlEncoderSetBasicInfo(self.0, &basic_info) })
 	}
 
+	#[allow(unsafe_code)]
 	/// # Write.
 	fn write(&self, candidate: &mut Output) -> Result<(), RefractError> {
 		// Grab the buffer.
@@ -363,6 +373,7 @@ impl LibJxlEncoder {
 }
 
 impl Drop for LibJxlEncoder {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { JxlEncoderDestroy(self.0); } }
 }
@@ -375,6 +386,7 @@ impl Drop for LibJxlEncoder {
 struct LibJxlThreadParallelRunner(*mut c_void);
 
 impl LibJxlThreadParallelRunner {
+	#[allow(unsafe_code)]
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		let threads = unsafe {
@@ -386,6 +398,7 @@ impl LibJxlThreadParallelRunner {
 }
 
 impl Drop for LibJxlThreadParallelRunner {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) {
 		unsafe { JxlThreadParallelRunnerDestroy(self.0); }
@@ -394,6 +407,7 @@ impl Drop for LibJxlThreadParallelRunner {
 
 
 
+#[allow(unsafe_code)]
 /// # Encode.
 ///
 /// This stitches all the pieces together. Who would have thought a

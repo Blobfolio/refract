@@ -269,6 +269,7 @@ fn neutral_pixel(img: &[u8], width: usize, height: usize) -> Option<[u8; 4]> {
 	else { None }
 }
 
+#[allow(unsafe_code)]
 /// # Loop Pixels
 ///
 /// Loop through the pixels of an image, producing a [`Nine`] for each,
