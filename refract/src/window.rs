@@ -63,13 +63,9 @@ use std::{
 
 
 
-// The extensions we're going to be looking for.
-const E_AVIF: Extension = Extension::new4(*b"avif");
-const E_JPEG: Extension = Extension::new4(*b"jpeg");
-const E_JPG: Extension = Extension::new3(*b"jpg");
-const E_JXL: Extension = Extension::new3(*b"jxl");
-const E_PNG: Extension = Extension::new3(*b"png");
-const E_WEBP: Extension = Extension::new4(*b"webp");
+// The E_AVIF, E_JPEG, E_JPG, E_JXL, E_PNG, and E_WEBP constants are generated
+// by build.rs.
+include!(concat!(env!("OUT_DIR"), "/refract-extensions.rs"));
 
 // State flags.
 const FLAG_LOCK_ENCODING: u8 = 0b0000_0001; // We're in the middle of encoding.

@@ -38,9 +38,11 @@ pub(super) trait Decoder {
 /// This is implemented for image formats capable of encoding from RGBA pixels
 /// into a raw image.
 pub(super) trait Encoder {
+	#[allow(unsafe_code)]
 	/// # Minimum Quality.
 	const MIN_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(1) };
 
+	#[allow(unsafe_code)]
 	/// # Maximum Quality.
 	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 

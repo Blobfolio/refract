@@ -34,6 +34,7 @@ impl From<ImageKind> for QualityRange {
 impl Iterator for QualityRange {
 	type Item = NonZeroU8;
 
+	#[allow(unsafe_code)]
 	/// # Next Quality.
 	///
 	/// Return the next untested quality value from the moving range. In the
@@ -166,6 +167,7 @@ impl QualityRange {
 		self.top = top.min(self.top).max(self.bottom);
 	}
 
+	#[allow(unsafe_code)]
 	/// # Lower Top (Minus One).
 	///
 	/// This lowers the range's ceiling to the provided value minus one,

@@ -93,6 +93,7 @@ impl Deref for Input<'_> {
 impl TryFrom<&[u8]> for Input<'_> {
 	type Error = RefractError;
 
+	#[allow(unsafe_code)]
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
 		let kind = ImageKind::try_from(src)?;
 		let (buf, width, height, color) = kind.decode(src)?;

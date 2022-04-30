@@ -45,6 +45,7 @@ pub(crate) struct ImageWebp;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageWebp {
+	#[allow(unsafe_code)]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		let d = LibWebPDecode::try_from(raw)?;
 
@@ -96,6 +97,8 @@ struct LibWebPDecode {
 #[cfg(feature = "decode_ng")]
 impl TryFrom<&[u8]> for LibWebPDecode {
 	type Error = RefractError;
+
+	#[allow(unsafe_code)]
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
 		use std::os::raw::c_int;
 		use libwebp_sys::WebPDecodeRGBA;
@@ -119,6 +122,7 @@ impl TryFrom<&[u8]> for LibWebPDecode {
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibWebPDecode {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { libwebp_sys::WebPFree(self.ptr.cast()); } }
 }
@@ -134,6 +138,7 @@ struct LibWebpPicture(WebPPicture);
 impl TryFrom<&Input<'_>> for LibWebpPicture {
 	type Error = RefractError;
 
+	#[allow(unsafe_code)]
 	fn try_from(img: &Input) -> Result<Self, Self::Error> {
 		// Check the source dimensions.
 		let width = img.width_i32()?;
@@ -178,6 +183,7 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 }
 
 impl Drop for LibWebpPicture {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { WebPPictureFree(&mut self.0); } }
 }
@@ -191,6 +197,7 @@ impl Drop for LibWebpPicture {
 struct LibWebpWriter(*mut WebPMemoryWriter);
 
 impl From<&mut WebPPicture> for LibWebpWriter {
+	#[allow(unsafe_code)]
 	fn from(picture: &mut WebPPicture) -> Self {
 		// A Writer wrapper function. (It has to be "safe".)
 		extern "C" fn on_write(
@@ -216,12 +223,14 @@ impl From<&mut WebPPicture> for LibWebpWriter {
 }
 
 impl Drop for LibWebpWriter {
+	#[allow(unsafe_code)]
 	#[inline]
 	fn drop(&mut self) { unsafe { WebPMemoryWriterClear(self.0); } }
 }
 
 
 
+#[allow(unsafe_code)]
 /// # Encode `WebP`.
 ///
 /// This encodes a raw image source as a `WebP` using the provided
@@ -258,6 +267,7 @@ fn encode(
 	Ok(())
 }
 
+#[allow(unsafe_code)]
 /// # Make Config.
 ///
 /// This generates an encoder configuration profile.

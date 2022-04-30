@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.8.4"
+version = "0.8.5"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -89,19 +89,20 @@ label = "<PATH(s)…>"
 description = "Image and/or directory paths to re-encode. Directories will be crawled recursively."
 
 [build-dependencies]
-toml = "=0.5.8"
+dowser = "0.4.*, >=0.4.6"
+toml = "=0.5.9"
 version-compare = "=0.1.0"
 
 [dependencies]
 argyle = "0.5.*, >=0.5.3"
 crossbeam-channel = "=0.5.4"
 dactyl = "0.3.*, >=0.3.3"
-dowser = "0.4.*, >=0.4.3"
+dowser = "0.4.*, >=0.4.6"
 oxford_join = "0.2.*"
 write_atomic = "0.2.*"
 
 [dependencies.gtk]
-version = "=0.15.4"
+version = "=0.15.5"
 features = [ "v3_22" ]
 
 [dependencies.refract_core]

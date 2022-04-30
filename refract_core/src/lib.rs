@@ -4,6 +4,8 @@
 This is the library powering [Refract](https://github.com/Blobfolio/refract), a guided CLI image encoding tool.
 */
 
+#![deny(unsafe_code)]
+
 #![warn(
 	clippy::filetype_is_file,
 	clippy::integer_division,

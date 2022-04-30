@@ -30,7 +30,7 @@ release_dir := justfile_directory() + "/release"
 
 # Build Release!
 @build:
-	RUSTFLAGS="--emit asm" cargo build \
+	cargo build \
 		--bin "{{ pkg_id }}" \
 		-p "{{ pkg_id }}" \
 		--release \

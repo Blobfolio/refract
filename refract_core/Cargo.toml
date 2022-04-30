@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "0.8.4"
+version = "0.8.5"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -27,7 +27,7 @@ default-features = false
 features = [ "threads" ]
 
 [dependencies.libavif-sys]
-version = "=0.13.0"
+version = "=0.13.1"
 default-features = false
 features = [ "codec-aom" ]
 

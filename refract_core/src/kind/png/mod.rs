@@ -19,6 +19,7 @@ use crate::{
 pub(crate) struct ImagePng;
 
 impl Decoder for ImagePng {
+	#[allow(unsafe_code)]
 	/// # Decode.
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		// Grab the RGBA pixels, width, and height.

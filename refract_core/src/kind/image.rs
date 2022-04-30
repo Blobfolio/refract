@@ -171,6 +171,7 @@ impl ImageKind {
 	}
 
 	#[allow(clippy::unused_self)] // We may need to reference `self` in the future.
+	#[allow(unsafe_code)]
 	#[must_use]
 	/// # Encoding Minimum Quality.
 	///
@@ -179,6 +180,7 @@ impl ImageKind {
 		unsafe { NonZeroU8::new_unchecked(1) }
 	}
 
+	#[allow(unsafe_code)]
 	#[must_use]
 	/// # Encoding Minimum Quality.
 	///
