@@ -102,7 +102,7 @@ oxford_join = "0.2.*"
 write_atomic = "0.2.*"
 
 [dependencies.gtk]
-version = "=0.15.4"
+version = "=0.15.5"
 features = [ "v3_22" ]
 
 [dependencies.refract_core]
