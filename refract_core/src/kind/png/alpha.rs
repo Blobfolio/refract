@@ -178,6 +178,7 @@ pub(super) fn clean_alpha(img: &mut [u8], width: usize, height: usize) {
 	}
 }
 
+#[allow(clippy::iter_with_drain)] // Doesn't work.
 /// # Blur Alpha.
 ///
 /// This optimization pass adjusts the colors of transparent pixels (visible or
