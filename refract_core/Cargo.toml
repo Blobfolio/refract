@@ -32,7 +32,7 @@ default-features = false
 features = [ "codec-aom" ]
 
 [dependencies.libwebp-sys2]
-version = "=0.1.2"
+version = "=0.1.4"
 features = [ "1_1", "static" ]
 
 [features]
