@@ -89,7 +89,7 @@ label = "<PATH(s)…>"
 description = "Image and/or directory paths to re-encode. Directories will be crawled recursively."
 
 [build-dependencies]
-dowser = "0.4.*, >=0.4.6"
+dowser = "0.5.*"
 toml = "=0.5.9"
 version-compare = "=0.1.0"
 
@@ -97,7 +97,7 @@ version-compare = "=0.1.0"
 argyle = "0.5.*, >=0.5.3"
 crossbeam-channel = "=0.5.4"
 dactyl = "0.3.*, >=0.3.3"
-dowser = "0.4.*, >=0.4.6"
+dowser = "0.5.*"
 oxford_join = "0.2.*"
 write_atomic = "0.2.*"
 
