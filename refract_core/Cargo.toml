@@ -18,7 +18,7 @@ rgb = "=0.8.32"
 spng = "=0.1.0"
 
 [dependencies.argyle]
-version = "0.5.*, >=0.5.3"
+version = "0.6.*"
 optional = true
 
 [dependencies.jpegxl-sys]
