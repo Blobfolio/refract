@@ -96,7 +96,7 @@ version-compare = "=0.1.0"
 [dependencies]
 argyle = "0.6.*"
 crossbeam-channel = "=0.5.5"
-dactyl = "0.3.*, >=0.3.3"
+dactyl = "0.4.*"
 dowser = "0.5.*"
 oxford_join = "0.2.*"
 write_atomic = "0.2.*"
