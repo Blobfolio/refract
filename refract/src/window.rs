@@ -1056,6 +1056,8 @@ impl Window {
 	/// This is used to indicate a new image has been saved.
 	fn log_saved<P>(&self, path: P, quality: Quality, old_size: usize, new_size: usize)
 	where P: AsRef<Path> {
+		use std::fmt::Write;
+
 		if 0 == old_size || 0 == new_size || new_size >= old_size { return; }
 
 		// Crunch some numbers.
@@ -1064,13 +1066,14 @@ impl Window {
 
 		let mut buf = self.status.borrow_mut();
 		buf.push_str(log_prefix!("\n    ", "#2ecc71", "Success:"));
-		buf.push_str(&format!(
+		let _ = write!(
+			buf,
 			concat!("Created <b>{}</b> with {}.", log_colored!("#999", "(Saved {} bytes, {}.)")),
 			path.as_ref().to_string_lossy(),
 			quality,
 			NiceU64::from(diff).as_str(),
 			NicePercent::from(per).as_str(),
-		));
+		);
 		self.add_flag(FLAG_TICK_STATUS);
 	}
 
@@ -1092,11 +1095,13 @@ impl Window {
 	/// This triggers when an encoding session starts.
 	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
 		use oxford_join::OxfordJoin;
+		use std::fmt::Write;
 
 		if encoders.is_empty() || count == 0 { return; }
 
 		let mut buf = self.status.borrow_mut();
-		buf.push_str(&format!(
+		let _ = write!(
+			buf,
 			concat!(
 				log_prefix!("\n", "#9b59b6", "Notice:"),
 				"Refracting {} using {}! ",
@@ -1105,7 +1110,7 @@ impl Window {
 			inflect(count, "image", "images"),
 			inflect(encoders.len(), "encoder", "encoders"),
 			encoders.oxford_and(),
-		));
+		);
 		self.add_flag(FLAG_TICK_STATUS);
 	}
 }
