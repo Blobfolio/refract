@@ -276,7 +276,7 @@ impl LibAvifImage {
 		let greyscale: bool = src.is_greyscale();
 
 		// Make an "avifRGBImage" from our buffer.
-		let raw: &[u8] = &*src;
+		let raw: &[u8] = src;
 		let rgb = avifRGBImage {
 			width,
 			height,

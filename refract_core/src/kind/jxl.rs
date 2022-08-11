@@ -477,7 +477,7 @@ fn encode(
 		align: 0,
 	};
 
-	let data: &[u8] = &*img;
+	let data: &[u8] = img;
 	maybe_die(&unsafe {
 		JxlEncoderAddImageFrame(
 			options,

@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.8.7"
+version = "0.8.8"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -95,7 +95,7 @@ version-compare = "=0.1.0"
 
 [dependencies]
 argyle = "0.6.*"
-crossbeam-channel = "=0.5.5"
+crossbeam-channel = "=0.5.6"
 dactyl = "0.4.*"
 dowser = "0.5.*"
 oxford_join = "0.2.*"
