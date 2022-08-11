@@ -158,7 +158,7 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 
 		// Fill the pixel buffers.
 		unsafe {
-			let raw: &[u8] = &*img;
+			let raw: &[u8] = img;
 			maybe_die(WebPPictureImportRGBA(
 				&mut out.0,
 				raw.as_ptr().cast(), // This doesn't actually mutate.
