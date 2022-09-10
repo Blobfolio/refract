@@ -717,7 +717,7 @@ impl Window {
 	where P: AsRef<Path> {
 		// And find the paths.
 		let mut paths: Vec<PathBuf> = Dowser::from(path.as_ref())
-			.into_vec(is_jpeg_png);
+			.into_vec_filtered(is_jpeg_png);
 
 		if paths.is_empty() { false }
 		else {

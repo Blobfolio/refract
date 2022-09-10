@@ -135,7 +135,7 @@ fn _main() -> Result<(), RefractError> {
 		let window = Arc::new(Window::new(app, flags).expect("Unable to build GTK window."));
 		let paths = Dowser::default()
 			.with_paths(args.args_os())
-			.into_vec(window::is_jpeg_png);
+			.into_vec_filtered(window::is_jpeg_png);
 		setup_ui(&window, paths);
 		window.paint();
 	});
