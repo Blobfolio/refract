@@ -1,7 +1,8 @@
 # Refract GTK
 
-[![Dependency Status](https://deps.rs/repo/github/blobfolio/refract/status.svg)](https://deps.rs/repo/github/blobfolio/refract)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/Blobfolio/refract)
+[![deps.rs](https://deps.rs/repo/github/blobfolio/refract/status.svg?style=flat-square&label=deps.rs)](https://deps.rs/repo/github/blobfolio/refract)
+[![license](https://img.shields.io/badge/license-wtfpl-ff1493?style=flat-square)](https://en.wikipedia.org/wiki/WTFPL)
+[![contributions welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square&label=contributions)](https://github.com/Blobfolio/refract/issues)
 
 Refract is a guided image conversion tool written in [Rust](https://www.rust-lang.org/) for x86-64 Linux systems with [GTK](https://www.gtk.org/).
 
