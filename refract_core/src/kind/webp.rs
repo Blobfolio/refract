@@ -27,7 +27,10 @@ use libwebp_sys::{
 	WebPPictureInit,
 	WebPValidateConfig,
 };
-use std::num::NonZeroU8;
+use std::{
+	ffi::c_int,
+	num::NonZeroU8,
+};
 
 #[cfg(feature = "decode_ng")]
 use crate::{
@@ -100,7 +103,6 @@ impl TryFrom<&[u8]> for LibWebPDecode {
 
 	#[allow(unsafe_code)]
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
-		use std::os::raw::c_int;
 		use libwebp_sys::WebPDecodeRGBA;
 
 		let mut width: c_int = 0;
@@ -204,7 +206,7 @@ impl From<&mut WebPPicture> for LibWebpWriter {
 			data: *const u8,
 			data_size: usize,
 			picture: *const WebPPicture,
-		) -> std::os::raw::c_int {
+		) -> c_int {
 			unsafe { WebPMemoryWrite(data, data_size, picture) }
 		}
 
@@ -309,7 +311,7 @@ fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
 ///
 /// This converts unsuccessful AVIF system function results into proper Rust
 /// errors.
-const fn maybe_die(res: std::os::raw::c_int) -> Result<(), RefractError> {
+const fn maybe_die(res: c_int) -> Result<(), RefractError> {
 	if 0 == res { Err(RefractError::Encode) }
 	else { Ok(()) }
 }
