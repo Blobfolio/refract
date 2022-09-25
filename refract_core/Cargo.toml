@@ -1,10 +1,10 @@
 [package]
 name = "refract_core"
-version = "0.8.8"
+version = "0.8.9"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
-rust-version = "1.61"
+rust-version = "1.64"
 description = "The library for Refract."
 repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
@@ -13,8 +13,9 @@ publish = false
 [dependencies]
 dactyl = "0.4.*"
 jpeg-decoder = "=0.2.6"
+link-cplusplus = "1.0.*"
 num_cpus = "=1.13.1"
-rgb = "=0.8.33"
+rgb = "=0.8.34"
 spng = "=0.1.0"
 
 [dependencies.argyle]
@@ -22,9 +23,9 @@ version = "0.6.*"
 optional = true
 
 [dependencies.jpegxl-sys]
-version = "=0.6.1"
+version = "=0.7.0"
 default-features = false
-features = [ "threads" ]
+features = [ "threads", "vendored" ]
 
 [dependencies.libavif-sys]
 version = "=0.13.1"

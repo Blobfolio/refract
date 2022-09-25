@@ -23,6 +23,7 @@ use dactyl::{
 	NicePercent,
 	NiceU64,
 	NiceU8,
+	traits::NiceInflection,
 };
 use dowser::{
 	Dowser,
@@ -716,7 +717,7 @@ impl Window {
 	where P: AsRef<Path> {
 		// And find the paths.
 		let mut paths: Vec<PathBuf> = Dowser::from(path.as_ref())
-			.into_vec(is_jpeg_png);
+			.into_vec_filtered(is_jpeg_png);
 
 		if paths.is_empty() { false }
 		else {
@@ -1107,8 +1108,8 @@ impl Window {
 				"Refracting {} using {}! ",
 				log_colored!("#999", "({}.)"),
 			),
-			inflect(count, "image", "images"),
-			inflect(encoders.len(), "encoder", "encoders"),
+			count.nice_inflect("image", "images"),
+			encoders.len().nice_inflect("encoder", "encoders"),
 			encoders.oxford_and(),
 		);
 		self.add_flag(FLAG_TICK_STATUS);
@@ -1241,18 +1242,6 @@ fn add_widget_class<W>(widget: &W, class: &str)
 where W: WidgetExt {
 	let style_context = widget.style_context();
 	style_context.add_class(class);
-}
-
-/// # Inflect.
-///
-/// Return the singular or plural version of a noun given the count.
-fn inflect<T>(len: usize, singular: T, plural: T) -> String
-where T: AsRef<str> {
-	let size = NiceU64::from(len);
-	let noun =
-		if len == 1 { singular.as_ref() }
-		else { plural.as_ref() };
-	[size.as_str(), " ", noun ].concat()
 }
 
 /// # Is JPEG/PNG File.
