@@ -33,7 +33,8 @@ This is the library powering [Refract](https://github.com/Blobfolio/refract), a 
 	clippy::redundant_pub_crate,
 )]
 
-
+#[allow(unused_extern_crates)] // Needed for JXL.
+extern crate link_cplusplus;
 
 mod enc;
 mod error;

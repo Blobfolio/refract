@@ -9,7 +9,9 @@ use crate::{
 	traits::Encoder,
 };
 use jpegxl_sys::{
+	FrameSetting,
 	JxlBasicInfo,
+	JxlBool,
 	JxlColorEncoding,
 	JxlColorEncodingSetToSRGB,
 	JxlDataType,
@@ -18,22 +20,21 @@ use jpegxl_sys::{
 	JxlEncoderCloseInput,
 	JxlEncoderCreate,
 	JxlEncoderDestroy,
+	JxlEncoderFrameSettings,
+	JxlEncoderFrameSettingsCreate,
+	JxlEncoderFrameSettingsSetOption,
 	JxlEncoderInitBasicInfo,
-	JxlEncoderOptions,
-	JxlEncoderOptionsCreate,
-	JxlEncoderOptionsSetDecodingSpeed,
-	JxlEncoderOptionsSetDistance,
-	JxlEncoderOptionsSetEffort,
-	JxlEncoderOptionsSetLossless,
 	JxlEncoderProcessOutput,
 	JxlEncoderSetBasicInfo,
 	JxlEncoderSetColorEncoding,
+	JxlEncoderSetFrameDistance,
+	JxlEncoderSetFrameLossless,
 	JxlEncoderSetParallelRunner,
 	JxlEncoderStatus,
+	JxlEncoderUseContainer,
 	JxlEndianness,
 	JxlPixelFormat,
-	NewUninit,
-	parallel_runner::{
+	thread_parallel_runner::{
 		JxlThreadParallelRunner,
 		JxlThreadParallelRunnerCreate,
 		JxlThreadParallelRunnerDestroy,
@@ -41,6 +42,7 @@ use jpegxl_sys::{
 };
 use std::{
 	ffi::c_void,
+	mem::MaybeUninit,
 	num::NonZeroU8,
 };
 
@@ -90,7 +92,7 @@ impl Decoder for ImageJxl {
 		let mut buffer: Vec<u8> = Vec::new();
 		let next_in = raw.as_ptr();
 		let avail_in: usize = std::mem::size_of_val(raw);
-		maybe_die_dec(&unsafe { JxlDecoderSetInput(decoder.0, next_in, avail_in) })?;
+		maybe_die_dec(unsafe { JxlDecoderSetInput(decoder.0, next_in, avail_in) })?;
 
 		loop {
 			match unsafe { JxlDecoderProcessInput(decoder.0) } {
@@ -177,7 +179,7 @@ impl LibJxlDecoder {
 		}
 
 		maybe_die_dec(
-			&unsafe {
+			unsafe {
 				JxlDecoderSubscribeEvents(
 					dec,
 					JxlDecoderStatus::BasicInfo as i32 |
@@ -187,7 +189,7 @@ impl LibJxlDecoder {
 			}
 		)?;
 
-		maybe_die_dec(&unsafe { JxlDecoderSetKeepOrientation(dec, true) })?;
+		maybe_die_dec(unsafe { JxlDecoderSetKeepOrientation(dec, JxlBool::True) })?;
 
 		Ok(Self(dec))
 	}
@@ -200,8 +202,8 @@ impl LibJxlDecoder {
 		pixel_format: &mut Option<JxlPixelFormat>,
 	) -> Result<(), RefractError> {
 		*basic_info = Some(unsafe {
-			let mut info = JxlBasicInfo::new_uninit();
-			maybe_die_dec(&JxlDecoderGetBasicInfo(self.0, info.as_mut_ptr()))?;
+			let mut info = MaybeUninit::uninit();
+			maybe_die_dec(JxlDecoderGetBasicInfo(self.0, info.as_mut_ptr()))?;
 			info.assume_init()
 		});
 
@@ -222,7 +224,7 @@ impl LibJxlDecoder {
 		let mut icc_size = 0;
 
 		maybe_die_dec(
-			&unsafe {
+			unsafe {
 				JxlDecoderGetICCProfileSize(
 					self.0,
 					format,
@@ -235,7 +237,7 @@ impl LibJxlDecoder {
 		icc_profile.resize(icc_size, 0);
 
 		maybe_die_dec(
-			&unsafe {
+			unsafe {
 				JxlDecoderGetColorAsICCProfile(
 					self.0,
 					format,
@@ -256,13 +258,13 @@ impl LibJxlDecoder {
 		buffer: &mut Vec<u8>,
 	) -> Result<(), RefractError> {
 		let mut size = 0;
-		maybe_die_dec(&unsafe {
+		maybe_die_dec(unsafe {
 			JxlDecoderImageOutBufferSize(self.0, pixel_format, &mut size)
 		})?;
 
 		buffer.resize(size, 0);
 		maybe_die_dec(
-			&unsafe {
+			unsafe {
 				JxlDecoderSetImageOutBuffer(
 					self.0,
 					pixel_format,
@@ -300,23 +302,25 @@ impl LibJxlEncoder {
 
 	#[allow(unsafe_code)]
 	/// # Set Basic Info.
-	fn set_basic_info(&self, width: u32, height: u32, alpha: bool) -> Result<(), RefractError> {
+	fn set_basic_info(&self, width: u32, height: u32, alpha: bool, grey: bool) -> Result<(), RefractError> {
 		// Set up JPEG XL's "basic info" struct.
 		let mut basic_info = unsafe {
-			let mut info = JxlBasicInfo::new_uninit().assume_init();
-			JxlEncoderInitBasicInfo(&mut info);
-			info
+			let mut info = MaybeUninit::uninit();
+			JxlEncoderInitBasicInfo(info.as_mut_ptr());
+			info.assume_init()
 		};
+
 		basic_info.xsize = width;
 		basic_info.ysize = height;
-		basic_info.uses_original_profile = false.into();
-		basic_info.have_container = false.into();
+		basic_info.uses_original_profile = JxlBool::True;
+		basic_info.have_container = JxlBool::False;
 
 		basic_info.bits_per_sample = 8;
 		basic_info.exponent_bits_per_sample = 0;
-		basic_info.alpha_premultiplied = false.into();
+		basic_info.alpha_premultiplied = JxlBool::False;
 		basic_info.alpha_exponent_bits = 0;
 
+		// Adjust for alpha.
 		if alpha {
 			basic_info.num_extra_channels = 1;
 			basic_info.alpha_bits = 8;
@@ -326,7 +330,11 @@ impl LibJxlEncoder {
 			basic_info.alpha_bits = 0;
 		}
 
-		maybe_die(&unsafe { JxlEncoderSetBasicInfo(self.0, &basic_info) })
+		// Decrease the color count if we're working with greyscale. (The
+		// default is three.)
+		if grey { basic_info.num_color_channels = 1; }
+
+		maybe_die(unsafe { JxlEncoderSetBasicInfo(self.0, &basic_info) })
 	}
 
 	#[allow(unsafe_code)]
@@ -420,12 +428,10 @@ fn encode(
 	// Initialize the encoder.
 	let enc = LibJxlEncoder::new()?;
 
-	let color = img.color();
-
 	// Hook in parallelism.
 	let runner = LibJxlThreadParallelRunner::new()?;
 	maybe_die(unsafe {
-		&JxlEncoderSetParallelRunner(
+		JxlEncoderSetParallelRunner(
 			enc.0,
 			JxlThreadParallelRunner,
 			runner.0
@@ -433,41 +439,40 @@ fn encode(
 	})?;
 
 	// Initialize the options wrapper.
-	let options: *mut JxlEncoderOptions = unsafe {
-		JxlEncoderOptionsCreate(enc.0, std::ptr::null())
+	let options: *mut JxlEncoderFrameSettings = unsafe {
+		JxlEncoderFrameSettingsCreate(enc.0, std::ptr::null())
 	};
 
-	// Color handling.
-	let color_encoding = unsafe {
-		let mut color_encoding = JxlColorEncoding::new_uninit();
+	maybe_die(unsafe { JxlEncoderUseContainer(enc.0, false) })?;
+
+	// Set distance and losslessness.
+	let q = quality.map_or(0.0, |q| {
+		let q = q.get();
+		if q < 150 { f32::from(150_u8 - q) / 10.0 }
+		else { 0.0 }
+	});
+	maybe_die(unsafe { JxlEncoderSetFrameLossless(options, 0.0 == q) })?;
+	maybe_die(unsafe { JxlEncoderSetFrameDistance(options, q) })?;
+
+	// Effort. 9 == Tortoise.
+	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, FrameSetting::Effort, 9) })?;
+
+	// Decoding speed. 0 == Highest quality.
+	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, FrameSetting::DecodingSpeed, 0) })?;
+
+	// Set up JPEG XL's "basic info" struct.
+	let color = img.color();
+	enc.set_basic_info(img.width_u32(), img.height_u32(), color.has_alpha(), color.is_greyscale())?;
+
+	let color_encoding: JxlColorEncoding = unsafe {
+		let mut color_encoding = MaybeUninit::uninit();
 		JxlColorEncodingSetToSRGB(
 			color_encoding.as_mut_ptr(),
 			color.is_greyscale()
 		);
 		color_encoding.assume_init()
 	};
-
-	maybe_die(&unsafe { JxlEncoderSetColorEncoding(enc.0, &color_encoding) })?;
-
-	// Quality. We have to convert the NonZeroU8 to a float because JPEG XL
-	// weird. After translation, 0.0 is lossless, 15.0 is garbage.
-	match quality.map(NonZeroU8::get) {
-		// Lossy distance.
-		Some(q) if q < 150 => maybe_die(&unsafe {
-			JxlEncoderOptionsSetDistance(options, f32::from(150_u8 - q) / 10.0)
-		})?,
-		// Lossless.
-		_ => maybe_die(&unsafe { JxlEncoderOptionsSetLossless(options, true) })?,
-	};
-
-	// Effort. 9 == Tortoise.
-	maybe_die(&unsafe { JxlEncoderOptionsSetEffort(options, 9) })?;
-
-	// Decoding speed. 0 == Highest quality.
-	maybe_die(&unsafe { JxlEncoderOptionsSetDecodingSpeed(options, 0) })?;
-
-	// Set up JPEG XL's "basic info" struct.
-	enc.set_basic_info(img.width_u32(), img.height_u32(), color.has_alpha())?;
+	maybe_die(unsafe { JxlEncoderSetColorEncoding(enc.0, &color_encoding) })?;
 
 	// Set up a "frame".
 	let pixel_format = JxlPixelFormat {
@@ -478,7 +483,7 @@ fn encode(
 	};
 
 	let data: &[u8] = img;
-	maybe_die(&unsafe {
+	maybe_die(unsafe {
 		JxlEncoderAddImageFrame(
 			options,
 			&pixel_format,
@@ -496,7 +501,7 @@ fn encode(
 ///
 /// Most `JPEG XL` API methods return a status; this converts unsuccessful
 /// statuses to a proper Rust error.
-const fn maybe_die(res: &JxlEncoderStatus) -> Result<(), RefractError> {
+const fn maybe_die(res: JxlEncoderStatus) -> Result<(), RefractError> {
 	match res {
 		JxlEncoderStatus::Success => Ok(()),
 		_ => Err(RefractError::Encode),
@@ -505,7 +510,7 @@ const fn maybe_die(res: &JxlEncoderStatus) -> Result<(), RefractError> {
 
 #[cfg(feature = "decode_ng")]
 /// # Verify Decoder Status.
-const fn maybe_die_dec(res: &JxlDecoderStatus) -> Result<(), RefractError> {
+const fn maybe_die_dec(res: JxlDecoderStatus) -> Result<(), RefractError> {
 	match res {
 		JxlDecoderStatus::Success => Ok(()),
 		_ => Err(RefractError::Decode),
