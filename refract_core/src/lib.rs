@@ -85,7 +85,7 @@ pub const FLAG_NO_LOSSLESS: u8         = 0b0000_0010;
 /// range `YCbCr` modes. The latter often, but not always, saves a few
 /// additional bytes, but it does also increase the encoding time quite a bit.
 ///
-/// When enabled, only full-range `RGB` encoding will be attemped.
+/// When enabled, only full-range `RGB` encoding will be attempted.
 pub const FLAG_NO_AVIF_YCBCR: u8       = 0b0000_0100;
 
 /// # (Internal) Encoder Flag: Public Flags Mask.
