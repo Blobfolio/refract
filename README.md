@@ -72,7 +72,7 @@ Refract is pretty straightforward:
 
 For best results, be sure to optimize your input sources before re-encoding them with Refract. (The CLI tool [flaca](https://github.com/Blobfolio/flaca) is great for this, and fully automatic.)
 
-For keyboard afficionados, the following hot-keys may be used:
+For keyboard aficionados, the following hot-keys may be used:
 
 | Action | Key(s) |
 | ------ | ------ |
