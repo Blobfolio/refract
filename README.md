@@ -4,17 +4,17 @@
 [![license](https://img.shields.io/badge/license-wtfpl-ff1493?style=flat-square)](https://en.wikipedia.org/wiki/WTFPL)
 [![contributions welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square&label=contributions)](https://github.com/Blobfolio/refract/issues)
 
-Refract is a guided image conversion tool written in [Rust](https://www.rust-lang.org/) for x86-64 Linux systems with [GTK](https://www.gtk.org/).
+Refract is a guided image conversion tool written in [Rust](https://www.rust-lang.org/) for x86-64 Linux systems with [GTK](https://www.gtk.org/) `v3.22.30` or later.
 
 It takes [JPEG](https://en.wikipedia.org/wiki/JPEG) and [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) image sources and produces [AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF)), [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL), and [WebP](https://en.wikipedia.org/wiki/WebP) clones.
 
 <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen0.png" width="30%" alt="The start screen. Nice and clean."></img> <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen1.png" width="30%" alt="Viewing a PNG source image."></img> <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen2.png" width="30%" alt="Previewing a WebP candidate to Discard or Keep."></img> 
 
-The program is named after — and works like — eye doctor Refraction Tests. It generates candidate images at various qualities, asking at each step how it looks, and uses the feedback (you provide) to arrive at the smallest possible "acceptable" output.
+The program works like an eye doctor Refraction Test. It generates candidate images at various qualities, asking at each step how it looks, and uses the feedback (you provide) to arrive at the smallest possible "acceptable" output.
 
 Hence "guided".
 
-The beauty of this approach is that it moots the need for exhaustive testing. Refract's quality stepping works by selecting the mid-point between moving min/max boundaries. Similar to a binary search, each answer you provide halves the range of possibilities, allowing the final, perfect result to be discovered in just 5-10 steps instead of 100+.
+The beauty of this approach is that it moots the need for exhaustive testing. Refract's quality stepping works by selecting the mid-point between moving min/max boundaries. Similar to a binary search, each answer you provide halves the range of remaining possibilities, allowing the final, perfect result to be discovered in just 5-10 steps instead of 100+.
 
 
 
@@ -22,7 +22,7 @@ The beauty of this approach is that it moots the need for exhaustive testing. Re
 
 Every image is different. The idea of a "Magic Bullet" format is a myth.
 
-If you want to truly maximize the quality and size of next-gen copies, you cannot rely on hardcoded constants or fancy [SSIM](https://en.wikipedia.org/wiki/Structural_similarity) analysis. That will result in frequent over- or under-compression, and some images will just come out looking… worse.
+If you want to truly maximize the quality and size of next-gen copies, you cannot rely on hardcoded constants or automated [SSIM](https://en.wikipedia.org/wiki/Structural_similarity) analysis; your images would come out over- or under-compressed.
 
 You have to actually _use your eyes_. And you have to pay attention to the resulting file sizes. Sometimes newer formats will result in _larger_ output than the original source, defeating the purpose. Haha.
 
@@ -30,7 +30,7 @@ While you can do all of this manually — running multiple programs hundreds of 
 
 Refract helps make that manual process _less_ tedious and _more_ foolproof.
 
-It automatically uses the strongest (slowest) possible compression settings for each format, keeps track of file sizes and qualities along the way, can process inputs en masse, and reduces the number of conversion tests by around 90%.
+It automatically uses the strongest (slowest) possible compression settings for each format, keeps track of file sizes and qualities along the way, supports batch processing, and reduces the number of conversion tests by around 90%.
 
 Should you use it for every image ever?
 
@@ -38,7 +38,7 @@ No, probably not.
 
 The next generation formats, particularly AVIF and JPEG XL, require a lot of computation to eek out their extra byte savings. All those minutes will add up quickly.
 
-But if you're looking to obsessively optimize a small project or single web page, Refract is the way to go!
+But if you're looking to obsessively optimize a small project or single web page, Refract is definitely the way to go!
 
 
 
@@ -120,7 +120,7 @@ Debian and Ubuntu users can just grab the pre-built `.deb` package from the [rel
 
 (Arch Linux users can probably use the `.deb` too, but may need to adjust the icon and `.desktop` paths to match where your system likes to keep those things.)
 
-While specifically written for use on x86-64 Linux systems, both Rust and GTK are cross-platform, so you may well be able to build it from source on other 64-bit Unix systems using `Cargo`:
+While specifically written for use on x86-64 Linux systems, both Rust and GTK3 are cross-platform, so you may well be able to build it from source on other 64-bit Unix systems using `Cargo`:
 
 ```bash
 # Clone the repository.
@@ -145,7 +145,7 @@ At a minimum, you'll need up-to-date versions of:
 * Ninja
 * Rust (>= `1.59`)/Cargo
 
-GTK is a whole other monster, requiring the `-dev` packages for (at least) ATK, Cairo, GDK, GLIB, GTK, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make GTK dependency resolution easier. On Debian Bullseye, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
+GTK3 is a whole other monster, requiring the `-dev` packages for (at least) ATK, Cairo, GDK, GLIB, GTK, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make GTK dependency resolution easier. On Debian Bullseye, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
 
 [This post](https://github.com/Blobfolio/refract/issues/3#issuecomment-1086924244) provides a good breakdown of how to set up a minimal Docker build environment for Refract.
 

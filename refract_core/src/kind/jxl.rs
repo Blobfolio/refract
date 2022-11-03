@@ -415,7 +415,7 @@ impl Drop for LibJxlThreadParallelRunner {
 
 
 
-#[allow(unsafe_code)]
+#[allow(unsafe_code, clippy::option_if_let_else)]
 /// # Encode.
 ///
 /// This stitches all the pieces together. Who would have thought a
@@ -443,14 +443,14 @@ fn encode(
 		JxlEncoderFrameSettingsCreate(enc.0, std::ptr::null())
 	};
 
+	// No containers.
 	maybe_die(unsafe { JxlEncoderUseContainer(enc.0, false) })?;
 
 	// Set distance and losslessness.
-	let q = quality.map_or(0.0, |q| {
-		let q = q.get();
-		if q < 150 { f32::from(150_u8 - q) / 10.0 }
-		else { 0.0 }
-	});
+	let q = match quality.map(NonZeroU8::get) {
+		Some(q) if q < 150 => f32::from(150_u8 - q) / 10.0,
+		_ => 0.0,
+	};
 	maybe_die(unsafe { JxlEncoderSetFrameLossless(options, 0.0 == q) })?;
 	maybe_die(unsafe { JxlEncoderSetFrameDistance(options, q) })?;
 

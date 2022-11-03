@@ -157,12 +157,10 @@ fn get_share() {
 		let (ui, rx, tx) = ptr.as_ref()
 			.expect("Missing main thread state.");
 
-		tx.send(
-			if let Ok(res) = rx.recv() {
-				ui.process_share(res).unwrap_or(ShareFeedback::Abort)
-			}
-			else { ShareFeedback::Abort }
-		).unwrap();
+		tx.send(rx.recv().map_or(
+			ShareFeedback::Abort,
+			|res| ui.process_share(res).unwrap_or(ShareFeedback::Abort)
+		)).unwrap();
 
 		ui.paint();
 	});
