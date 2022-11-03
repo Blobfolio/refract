@@ -415,7 +415,7 @@ impl Drop for LibJxlThreadParallelRunner {
 
 
 
-#[allow(unsafe_code)]
+#[allow(unsafe_code, clippy::option_if_let_else)]
 /// # Encode.
 ///
 /// This stitches all the pieces together. Who would have thought a

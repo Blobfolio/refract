@@ -141,7 +141,7 @@ fn build_resources() {
 	// Build it!
 	if ! Command::new("glib-compile-resources")
 		.current_dir(&skel_dir)
-		.args(&[
+		.args([
 			OsStr::new("--target"),
 			out_file.as_os_str(),
 			in_file.as_os_str(),
