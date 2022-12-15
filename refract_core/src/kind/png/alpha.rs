@@ -233,7 +233,7 @@ fn clamp(px_new: u8, px_old: u8, alpha: u8) -> u8 {
 	let low = px_old.min((rounded + 16).wrapping_div(alpha) as u8);
 	let high = px_old.max((rounded + 239).wrapping_div(alpha) as u8);
 
-	px_new.max(low).min(high)
+	px_new.clamp(low, high)
 }
 
 #[allow(clippy::cast_possible_truncation)] // Values will be in range.

@@ -155,7 +155,7 @@ impl QualityRange {
 	/// Raise the range's floor to this value (clamped to the existing bottom/
 	/// top values).
 	pub fn set_bottom(&mut self, bottom: NonZeroU8) {
-		self.bottom = bottom.max(self.bottom).min(self.top);
+		self.bottom = bottom.clamp(self.bottom, self.top);
 	}
 
 	#[inline]
@@ -164,7 +164,7 @@ impl QualityRange {
 	/// Lower the range's ceiling to this value (clamped to the existing
 	/// bottom/top values).
 	pub fn set_top(&mut self, top: NonZeroU8) {
-		self.top = top.min(self.top).max(self.bottom);
+		self.top = top.clamp(self.bottom, self.top);
 	}
 
 	#[allow(unsafe_code)]
