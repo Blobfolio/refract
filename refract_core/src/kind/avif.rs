@@ -259,6 +259,7 @@ impl Drop for LibAvifEncoder {
 struct LibAvifImage(*mut avifImage);
 
 impl LibAvifImage {
+	#[allow(clippy::as_ptr_cast_mut)] // Doesn't work.
 	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
 	#[allow(unsafe_code)]
 	fn new(src: &Input, flags: u8) -> Result<Self, RefractError> {
@@ -419,6 +420,5 @@ fn quality_to_quantizers(quality: NonZeroU8) -> (u8, u8) {
 /// that value. It's a bit verbose, so is offloaded to its own place.
 fn ratio_of(e: u8, d: u8, base: u8) -> u8 {
 	(f32::from(e.min(d)) / f32::from(d) * f32::from(base))
-		.max(0.0)
-		.min(f32::from(base)) as u8
+		.clamp(0.0, f32::from(base)) as u8
 }

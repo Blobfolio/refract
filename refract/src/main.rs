@@ -92,7 +92,7 @@ fn main() {
 			helper();
 		},
 		Err(e) => {
-			eprintln!("Error: {}", e);
+			eprintln!("Error: {e}");
 			std::process::exit(1);
 		},
 	}

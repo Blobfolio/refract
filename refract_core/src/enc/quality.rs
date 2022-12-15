@@ -146,8 +146,8 @@ pub enum QualityValue {
 impl fmt::Display for QualityValue {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			Self::Float(q) => write!(f, "{:.1}", q),
-			Self::Int(q) => write!(f, "{}", q),
+			Self::Float(q) => write!(f, "{q:.1}"),
+			Self::Int(q) => write!(f, "{q}"),
 			Self::Lossless => f.write_str("lossless"),
 		}
 	}
