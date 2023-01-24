@@ -17,7 +17,10 @@ use std::{
 		Stdio,
 	},
 };
-use toml::Value;
+use toml::{
+	Table,
+	Value,
+};
 use version_compare::Version;
 
 
@@ -44,7 +47,7 @@ fn build_credits() {
 	let lock_toml = _man_path("Cargo.lock")
 		.or_else(|| _man_path("../Cargo.lock"))
 		.and_then(|p| std::fs::read_to_string(p).ok())
-		.and_then(|p| p.parse::<Value>().ok())
+		.and_then(|p| p.parse::<Table>().ok())
 		.expect("Unable to parse Cargo.lock.");
 
 	// Build a list of all package dependencies by crate.
