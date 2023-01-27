@@ -10,6 +10,7 @@ use crate::{
 	traits::Encoder,
 };
 use libavif_sys::{
+	AVIF_CHROMA_DOWNSAMPLING_BEST_QUALITY,
 	AVIF_CHROMA_SAMPLE_POSITION_COLOCATED,
 	AVIF_CHROMA_UPSAMPLING_BILINEAR,
 	AVIF_CODEC_CHOICE_AOM,
@@ -284,6 +285,8 @@ impl LibAvifImage {
 			depth: 8,
 			format: AVIF_RGB_FORMAT_RGBA,
 			chromaUpsampling: AVIF_CHROMA_UPSAMPLING_BILINEAR,
+			chromaDownsampling: AVIF_CHROMA_DOWNSAMPLING_BEST_QUALITY,
+			avoidLibYUV: 0,
 			ignoreAlpha: i32::from(! src.has_alpha()),
 			alphaPremultiplied: 0,
 			isFloat: 0,
@@ -294,8 +297,8 @@ impl LibAvifImage {
 		// And convert it to YUV.
 		let yuv = unsafe {
 			let tmp = avifImageCreate(
-				src.width_i32()?,
-				src.height_i32()?,
+				width,
+				height,
 				8, // Depth.
 				if greyscale { AVIF_PIXEL_FORMAT_YUV400 }
 				else { AVIF_PIXEL_FORMAT_YUV444 }
@@ -307,7 +310,7 @@ impl LibAvifImage {
 			(*tmp).yuvRange =
 				if limited { AVIF_RANGE_LIMITED }
 				else { AVIF_RANGE_FULL };
-			(*tmp).alphaRange = AVIF_RANGE_FULL;
+			//(*tmp).alphaRange = AVIF_RANGE_FULL;
 
 			(*tmp).yuvChromaSamplePosition = AVIF_CHROMA_SAMPLE_POSITION_COLOCATED;
 			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709 as _;

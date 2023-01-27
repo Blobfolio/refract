@@ -28,7 +28,9 @@ default-features = false
 features = [ "threads", "vendored" ]
 
 [dependencies.libavif-sys]
-version = "=0.13.1"
+version = "=0.14.0"
+git = "https://github.com/njaard/libavif-rs/"
+rev = "60e3845c"
 default-features = false
 features = [ "codec-aom" ]
 
