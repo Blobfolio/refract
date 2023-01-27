@@ -310,7 +310,6 @@ impl LibAvifImage {
 			(*tmp).yuvRange =
 				if limited { AVIF_RANGE_LIMITED }
 				else { AVIF_RANGE_FULL };
-			//(*tmp).alphaRange = AVIF_RANGE_FULL;
 
 			(*tmp).yuvChromaSamplePosition = AVIF_CHROMA_SAMPLE_POSITION_COLOCATED;
 			(*tmp).colorPrimaries = AVIF_COLOR_PRIMARIES_BT709 as _;
