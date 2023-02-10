@@ -1120,7 +1120,7 @@ impl Window {
 impl Window {
 	/// # Generate About Dialogue.
 	pub(super) fn about(&self) -> gtk::AboutDialog {
-		let about = gtk::builders::AboutDialogBuilder::new()
+		let about = gtk::AboutDialog::builder()
 			.attached_to(&self.wnd_main)
 			.authors(vec![
 				env!("CARGO_PKG_AUTHORS").to_string(),
