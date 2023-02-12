@@ -1,7 +1,7 @@
 # Project Dependencies
     Package:   refract
     Version:   0.9.3
-    Generated: 2023-02-12 04:15:56 UTC
+    Generated: 2023-02-12 04:48:20 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
