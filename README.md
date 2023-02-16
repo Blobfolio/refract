@@ -118,7 +118,7 @@ When image and/or directory paths are passed as trailing arguments (`<PATH(S)>..
 
 Debian and Ubuntu users can just grab the pre-built `.deb` package from the [release page](https://github.com/Blobfolio/refract/releases/latest).
 
-(Arch Linux users can probably use the `.deb` too, but may need to adjust the icon and `.desktop` paths to match where your system likes to keep those things.)
+Arch Linux users can install Refract via [AUR](https://aur.archlinux.org/packages/refract-bin) (community-maintained).
 
 While specifically written for use on x86-64 Linux systems, both Rust and GTK3 are cross-platform, so you may well be able to build it from source on other 64-bit Unix systems using `Cargo`:
 
