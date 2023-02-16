@@ -1,7 +1,7 @@
 # Project Dependencies
     Package:   refract
     Version:   0.9.3
-    Generated: 2023-02-12 04:48:20 UTC
+    Generated: 2023-02-16 16:43:36 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
@@ -22,7 +22,7 @@
 | [dactyl](https://github.com/Blobfolio/dactyl) | 0.4.7 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
 | [dowser](https://github.com/Blobfolio/dowser) | 0.7.0 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
 | [either](https://github.com/bluss/either) | 1.8.1 | bluss | Apache-2.0 or MIT |
-| [fastrand](https://github.com/smol-rs/fastrand) | 1.8.0 | [Stjepan Glavina](mailto:stjepang@gmail.com) | Apache-2.0 or MIT |
+| [fastrand](https://github.com/smol-rs/fastrand) | 1.9.0 | [Stjepan Glavina](mailto:stjepang@gmail.com) | Apache-2.0 or MIT |
 | [field-offset](https://github.com/Diggsey/rust-field-offset) | 0.3.4 | [Diggory Blake](mailto:diggsey@googlemail.com) | Apache-2.0 or MIT |
 | [futures-channel](https://github.com/rust-lang/futures-rs) | 0.3.26 |  | Apache-2.0 or MIT |
 | [futures-core](https://github.com/rust-lang/futures-rs) | 0.3.26 |  | Apache-2.0 or MIT |
@@ -37,8 +37,8 @@
 | [gdk-sys](https://github.com/gtk-rs/gtk3-rs) | 0.17.0 | The gtk-rs Project Developers | MIT |
 | [gio](https://github.com/gtk-rs/gtk-rs-core) | 0.17.0 | The gtk-rs Project Developers | MIT |
 | [gio-sys](https://github.com/gtk-rs/gtk-rs-core) | 0.17.0 | The gtk-rs Project Developers | MIT |
-| [glib](https://github.com/gtk-rs/gtk-rs-core) | 0.17.0 | The gtk-rs Project Developers | MIT |
-| [glib-macros](https://github.com/gtk-rs/gtk-rs-core) | 0.17.0 | The gtk-rs Project Developers | MIT |
+| [glib](https://github.com/gtk-rs/gtk-rs-core) | 0.17.1 | The gtk-rs Project Developers | MIT |
+| [glib-macros](https://github.com/gtk-rs/gtk-rs-core) | 0.17.1 | The gtk-rs Project Developers | MIT |
 | [glib-sys](https://github.com/gtk-rs/gtk-rs-core) | 0.17.0 | The gtk-rs Project Developers | MIT |
 | [gobject-sys](https://github.com/gtk-rs/gtk-rs-core) | 0.17.0 | The gtk-rs Project Developers | MIT |
 | [gtk](https://github.com/gtk-rs/gtk3-rs) | 0.17.0 | The gtk-rs Project Developers | MIT |
@@ -52,7 +52,7 @@
 | [libaom-sys](https://github.com/njaard/libavif-rs) | 0.14.0 | [Charles Samuels](mailto:ks@ks.ax), [Paolo Barbolini](mailto:paolo@paolo565.org), and [Kornel](mailto:kornel@geekhood.net) | BSD-2-Clause |
 | [libavif-sys](https://github.com/njaard/libavif-rs) | 0.14.1 | [Charles Samuels](mailto:ks@ks.ax) and [Paolo Barbolini](mailto:paolo@paolo565.org) | BSD-2-Clause |
 | [libc](https://github.com/rust-lang/libc) | 0.2.139 | The Rust Project Developers | Apache-2.0 or MIT |
-| [libwebp-sys2](https://github.com/qnighy/libwebp-sys2-rs) | 0.1.6 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
+| [libwebp-sys2](https://github.com/qnighy/libwebp-sys2-rs) | 0.1.7 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
 | [libz-sys](https://github.com/rust-lang/libz-sys) | 1.1.8 | [Alex Crichton](mailto:alex@alexcrichton.com) and [Josh Triplett](mailto:josh@joshtriplett.org) | Apache-2.0 or MIT |
 | [link-cplusplus](https://github.com/dtolnay/link-cplusplus) | 1.0.8 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [memchr](https://github.com/BurntSushi/memchr) | 2.5.0 | [Andrew Gallant](mailto:jamslam@gmail.com) and bluss | MIT or Unlicense |
@@ -61,7 +61,7 @@
 | [nom8](https://github.com/epage/nom-experimental) | 0.2.0 |  | MIT |
 | [num-traits](https://github.com/rust-num/num-traits) | 0.2.15 | The Rust Project Developers | Apache-2.0 or MIT |
 | [num_cpus](https://github.com/seanmonstar/num_cpus) | 1.15.0 | [Sean McArthur](mailto:sean@seanmonstar.com) | Apache-2.0 or MIT |
-| [once_cell](https://github.com/matklad/once_cell) | 1.17.0 | [Aleksey Kladov](mailto:aleksey.kladov@gmail.com) | Apache-2.0 or MIT |
+| [once_cell](https://github.com/matklad/once_cell) | 1.17.1 | [Aleksey Kladov](mailto:aleksey.kladov@gmail.com) | Apache-2.0 or MIT |
 | [oxford_join](https://github.com/Blobfolio/oxford_join) | 0.2.7 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
 | [pango](https://github.com/gtk-rs/gtk-rs-core) | 0.17.0 | The gtk-rs Project Developers | MIT |
 | [pango-sys](https://github.com/gtk-rs/gtk-rs-core) | 0.17.0 | The gtk-rs Project Developers | MIT |
@@ -89,4 +89,4 @@
 | [toml_datetime](https://github.com/toml-rs/toml) | 0.5.1 | [Alex Crichton](mailto:alex@alexcrichton.com) | Apache-2.0 or MIT |
 | [toml_edit](https://github.com/ordian/toml_edit) | 0.18.1 | [Andronik Ordian](mailto:write@reusable.software) and [Ed Page](mailto:eopage@gmail.com) | Apache-2.0 or MIT |
 | [unicode-ident](https://github.com/dtolnay/unicode-ident) | 1.0.6 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 AND Unicode-DFS-2016 or MIT |
-| [write_atomic](https://github.com/Blobfolio/write_atomic) | 0.2.8 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
+| [write_atomic](https://github.com/Blobfolio/write_atomic) | 0.2.9 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
