@@ -171,14 +171,11 @@ impl ImageKind {
 	}
 
 	#[allow(clippy::unused_self)] // We may need to reference `self` in the future.
-	#[allow(unsafe_code)]
 	#[must_use]
 	/// # Encoding Minimum Quality.
 	///
 	/// At the moment, this always returns `1`.
-	pub(crate) const fn min_encoder_quality(self) -> NonZeroU8 {
-		unsafe { NonZeroU8::new_unchecked(1) }
-	}
+	pub(crate) const fn min_encoder_quality(self) -> NonZeroU8 { NonZeroU8::MIN }
 
 	#[allow(unsafe_code)]
 	#[must_use]
