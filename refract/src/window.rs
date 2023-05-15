@@ -697,10 +697,7 @@ impl Window {
 	/// # Add File.
 	pub(super) fn add_file<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
-		let path = match std::fs::canonicalize(path) {
-			Ok(p) => p,
-			Err(_) => { return false; },
-		};
+		let Ok(path) = std::fs::canonicalize(path) else { return false; };
 
 		if
 			path.is_file() &&
