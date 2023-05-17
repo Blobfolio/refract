@@ -270,7 +270,6 @@ fn neutral_pixel(img: &[u8], width: usize, height: usize) -> Option<[u8; 4]> {
 	else { None }
 }
 
-#[allow(unsafe_code)]
 /// # Loop Pixels
 ///
 /// Loop through the pixels of an image, producing a [`Nine`] for each,
@@ -296,14 +295,10 @@ where Cb: FnMut(Nine) {
 
 		// Start each row with 0, 0, 1 columns. We know there's always going to
 		// be a +1 because we refuse images with widths < 3.
-		nine.0[..4].copy_from_slice(&img[top..top + 4]);
-		nine.0[4..12].copy_from_slice(&img[top..top + 8]);
-
-		nine.0[12..16].copy_from_slice(&img[middle..middle + 4]);
-		nine.0[16..24].copy_from_slice(&img[middle..middle + 8]);
-
-		nine.0[24..28].copy_from_slice(&img[bottom..bottom + 4]);
-		nine.0[28..].copy_from_slice(&img[bottom..bottom + 8]);
+		for (chunk, k) in nine.0.chunks_exact_mut(12).zip([top, middle, bottom]) {
+			chunk[..4].copy_from_slice(&img[k..k + 4]);
+			chunk[4..].copy_from_slice(&img[k..k + 8]);
+		}
 
 		// Callback for X zero.
 		cb(nine);
@@ -311,21 +306,16 @@ where Cb: FnMut(Nine) {
 		// Loop the columns.
 		for x in 1..width {
 			// Shift the old middle and right positions down for each row.
-			unsafe {
-				let src = nine.0.as_ptr().add(4);
-				let dst = nine.0.as_mut_ptr();
-
-				std::ptr::copy(src, dst, 8);
-				std::ptr::copy(src.add(12), dst.add(12), 8);
-				std::ptr::copy(src.add(24), dst.add(24), 8);
+			for chunk in nine.0.chunks_exact_mut(12) {
+				chunk.copy_within(4.., 0);
 			}
 
 			// Copy in the new right positions, if any.
 			if x + 1 < width {
 				let right = (x + 1) << 2;
-				nine.0[8..12].copy_from_slice(&img[top + right..top + right + 4]);
-				nine.0[20..24].copy_from_slice(&img[middle + right..middle + right + 4]);
-				nine.0[32..].copy_from_slice(&img[bottom + right..bottom + right + 4]);
+				for (chunk, k) in nine.0.chunks_exact_mut(12).zip([top, middle, bottom]) {
+					chunk[8..].copy_from_slice(&img[k + right..k + right + 4]);
+				}
 			}
 
 			// Callback for the rest!
