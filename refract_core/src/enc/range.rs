@@ -60,7 +60,7 @@ impl Iterator for QualityRange {
 
 		// Otherwise work our way up to max, returning the first new entry, if
 		// any.
-		for _ in min..max {
+		while next < self.top {
 			next = next.saturating_add(1);
 			if self.tried.insert(next) { return Some(next); }
 		}
