@@ -1067,7 +1067,7 @@ impl Window {
 
 		let mut buf = self.status.borrow_mut();
 		buf.push_str(log_prefix!("\n    ", "#2ecc71", "Success:"));
-		let _ = write!(
+		let _res = write!(
 			buf,
 			concat!("Created <b>{}</b> with {}.", log_colored!("#999", "(Saved {} bytes, {}.)")),
 			path.as_ref().to_string_lossy(),
@@ -1101,7 +1101,7 @@ impl Window {
 		if encoders.is_empty() || count == 0 { return; }
 
 		let mut buf = self.status.borrow_mut();
-		let _ = write!(
+		let _res = write!(
 			buf,
 			concat!(
 				log_prefix!("\n", "#9b59b6", "Notice:"),
