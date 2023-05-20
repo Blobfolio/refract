@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches: []
+  pull_request:
+    branches: []
+  schedule:
+    - cron: "0 2 */3 * *"
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  all:
+    name: All
+
+    strategy:
+      matrix:
+        target:
+        - x86_64-unknown-linux-gnu
+        include:
+        - target: x86_64-unknown-linux-gnu
+          os:     ubuntu-latest
+
+    runs-on: ${{matrix.os}}
+
+    env:
+      RUSTFLAGS: "-D warnings"
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+        components: clippy
+
+    - name: Info
+      run: |
+        rustup --version
+        cargo --version
+        cargo clippy --version
+    
+    - name: Apt Dependencies
+      run: |
+        sudo apt-get install -y cmake g++ gcc git librust-gdk-dev librust-gtk-dev make nasm ninja-build
+
+    - name: Build
+      run: |
+        cargo build --target ${{ matrix.target }}
+        cargo build --release --target ${{ matrix.target }}
+
+    - name: Clippy
+      run: |
+        cargo clippy --release --target ${{ matrix.target }}
+        cargo clippy --release --all-features --target ${{ matrix.target }}
+
+    - name: Tests (Debug)
+      run: |
+        cargo test --target ${{ matrix.target }}
+        cargo test --all-features --target ${{ matrix.target }}
+
+    - name: Tests (Release)
+      run: |
+        cargo test --release --target ${{ matrix.target }}
+        cargo test --release --all-features --target ${{ matrix.target }}
