@@ -55,7 +55,6 @@ use std::{
 	},
 	ffi::OsStr,
 	num::NonZeroUsize,
-	os::unix::ffi::OsStrExt,
 	path::{
 		Path,
 		PathBuf,
@@ -697,10 +696,7 @@ impl Window {
 	/// # Add File.
 	pub(super) fn add_file<P>(&self, path: P) -> bool
 	where P: AsRef<Path> {
-		let path = match std::fs::canonicalize(path) {
-			Ok(p) => p,
-			Err(_) => { return false; },
-		};
+		let Ok(path) = std::fs::canonicalize(path) else { return false; };
 
 		if
 			path.is_file() &&
@@ -883,11 +879,8 @@ impl Window {
 			else { None }
 			.ok_or(RefractError::NoSave)?;
 		if ext != path {
-			path = PathBuf::from(OsStr::from_bytes(&[
-				path.as_os_str().as_bytes(),
-				b".",
-				kind.extension().as_bytes()
-			].concat()));
+			path.as_mut_os_string().push(".");
+			path.as_mut_os_string().push(kind.extension());
 		}
 
 		// Save it.

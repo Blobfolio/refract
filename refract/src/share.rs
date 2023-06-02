@@ -44,7 +44,7 @@ thread_local!(
 	/// # Global.
 	///
 	/// This gives us a way to reach the main thread from a sister thread.
-	static GLOBAL: RefCell<Option<(Arc<Window>, MainRx, MainTx)>> = RefCell::new(None);
+	static GLOBAL: RefCell<Option<(Arc<Window>, MainRx, MainTx)>> = const { RefCell::new(None) };
 );
 
 

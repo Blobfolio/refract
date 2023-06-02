@@ -34,7 +34,6 @@ impl From<ImageKind> for QualityRange {
 impl Iterator for QualityRange {
 	type Item = NonZeroU8;
 
-	#[allow(unsafe_code)]
 	/// # Next Quality.
 	///
 	/// Return the next untested quality value from the moving range. In the
@@ -49,25 +48,21 @@ impl Iterator for QualityRange {
 		let mut diff = max - min;
 
 		// If the difference is greater than one, cut it in half.
-		if diff > 1 {
-			diff = diff.wrapping_div(2);
-		}
+		if diff > 1 { diff = diff.wrapping_div(2); }
 
-		// See if this is new!
-		// Safety: we can't exceed u8::MAX here, so unsafe is fine.
-		let next = unsafe { NonZeroU8::new_unchecked(min + diff) };
-		if self.tried.insert(next) {
-			return Some(next);
-		}
+		// Try the mid-point between min and max first.
+		let mut next = self.bottom.saturating_add(diff);
+		if self.tried.insert(next) { return Some(next); }
 
-		// If the above didn't work, let's see if there are any untested values
-		// left and just run with the first.
-		for i in min..=max {
-			// Safety: again, we can't exceed u8::MAX here, so unsafe is fine.
-			let next = unsafe { NonZeroU8::new_unchecked(i) };
-			if self.tried.insert(next) {
-				return Some(next);
-			}
+		// Next try the min.
+		next = self.bottom;
+		if self.tried.insert(next) { return Some(next); }
+
+		// Otherwise work our way up to max, returning the first new entry, if
+		// any.
+		while next < self.top {
+			next = next.saturating_add(1);
+			if self.tried.insert(next) { return Some(next); }
 		}
 
 		// Looks like we're done!
@@ -167,18 +162,12 @@ impl QualityRange {
 		self.top = top.clamp(self.bottom, self.top);
 	}
 
-	#[allow(unsafe_code)]
 	/// # Lower Top (Minus One).
 	///
 	/// This lowers the range's ceiling to the provided value minus one,
 	/// avoiding wraps and overflows and whatnot.
 	pub fn set_top_minus_one(&mut self, top: NonZeroU8) {
 		// We can't go lower than one.
-		if top == unsafe { NonZeroU8::new_unchecked(1) } {
-			self.top = self.bottom;
-		}
-		else {
-			self.set_top(unsafe { NonZeroU8::new_unchecked(top.get() - 1) });
-		}
+		self.set_top(NonZeroU8::new(top.get() - 1).unwrap_or(self.bottom));
 	}
 }

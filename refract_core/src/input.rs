@@ -93,7 +93,6 @@ impl Deref for Input<'_> {
 impl TryFrom<&[u8]> for Input<'_> {
 	type Error = RefractError;
 
-	#[allow(unsafe_code)]
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
 		let kind = ImageKind::try_from(src)?;
 		let (buf, width, height, color) = kind.decode(src)?;
@@ -107,8 +106,8 @@ impl TryFrom<&[u8]> for Input<'_> {
 			.and_then(NonZeroU32::new)
 			.ok_or(RefractError::Overflow)?;
 
-		// Safety: we know the length is valid because decoding survived.
-		let size = unsafe { NonZeroUsize::new_unchecked(src.len()) };
+		// This shouldn't fail since the image decoded, but just in case…
+		let size = NonZeroUsize::new(src.len()).ok_or(RefractError::Image)?;
 
 		Ok(Self {
 			pixels: Cow::Owned(buf),
