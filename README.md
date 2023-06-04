@@ -143,7 +143,7 @@ At a minimum, you'll need up-to-date versions of:
 * Make
 * NASM
 * Ninja
-* Rust (>= `1.59`)/Cargo
+* Rust/Cargo
 
 GTK3 is a whole other monster, requiring the `-dev` packages for (at least) ATK, Cairo, GDK, GLIB, GTK, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make GTK dependency resolution easier. On Debian Bullseye, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
 
