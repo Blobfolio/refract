@@ -169,7 +169,7 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 
 			// A few additional sanity checks.
 			let len = i32::try_from(raw.len()).map_err(|_| RefractError::Overflow)?;
-			let expected_size = (width * height) << 2;
+			let expected_size = width * height * 4;
 			if expected_size == 0 || expected_size != len {
 				return Err(RefractError::Encode);
 			}
