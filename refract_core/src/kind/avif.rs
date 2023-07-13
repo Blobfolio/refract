@@ -291,7 +291,7 @@ impl LibAvifImage {
 			alphaPremultiplied: 0,
 			isFloat: 0,
 			pixels: raw.as_ptr() as *mut u8,
-			rowBytes: width << 2,
+			rowBytes: width * 4,
 		};
 
 		// And convert it to YUV.

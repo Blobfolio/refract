@@ -1,6 +1,7 @@
 # Refract GTK
 
-[![deps.rs](https://deps.rs/repo/github/blobfolio/refract/status.svg?style=flat-square&label=deps.rs)](https://deps.rs/repo/github/blobfolio/refract)
+[![ci](https://img.shields.io/github/actions/workflow/status/Blobfolio/refract/ci.yaml?style=flat-square&label=ci)](https://github.com/Blobfolio/refract/actions)
+[![deps.rs](https://deps.rs/repo/github/blobfolio/refract/status.svg?style=flat-square&label=deps.rs)](https://deps.rs/repo/github/blobfolio/refract)<br>
 [![license](https://img.shields.io/badge/license-wtfpl-ff1493?style=flat-square)](https://en.wikipedia.org/wiki/WTFPL)
 [![contributions welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square&label=contributions)](https://github.com/Blobfolio/refract/issues)
 
