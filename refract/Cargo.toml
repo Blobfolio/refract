@@ -100,7 +100,7 @@ dactyl = "0.5"
 dowser = "0.8.*"
 gtk = "=0.17.1"
 oxford_join = "0.2.*"
-write_atomic = "0.3.*"
+write_atomic = "0.4.*"
 
 [dependencies.refract_core]
 path = "../refract_core"
