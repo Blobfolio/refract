@@ -275,7 +275,7 @@ fn setup_ui_window(window: &Arc<Window>) {
 				// Stop the menu from closing on button press.
 				window.$btn.connect_button_release_event(|btn, _| {
 					btn.set_active(! btn.is_active());
-					gtk::Inhibit(true)
+					gtk::glib::Propagation::Stop
 				});
 			)+);
 		}
@@ -286,7 +286,7 @@ fn setup_ui_window(window: &Arc<Window>) {
 		// Stop the menu from closing on button press.
 		window.chk_ycbcr.connect_button_release_event(|btn, _| {
 			btn.set_active(! btn.is_active());
-			gtk::Inhibit(true)
+			gtk::glib::Propagation::Stop
 		});
 	}
 

@@ -109,7 +109,7 @@ impl Share {
 		if tx.send(share).is_ok() {
 			gtk::glib::source::idle_add(|| {
 				get_share();
-				gtk::glib::source::Continue(false)
+				gtk::glib::ControlFlow::Break
 			});
 
 			loop {
