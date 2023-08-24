@@ -18,7 +18,7 @@ use refract_core::{
 use std::{
 	cell::RefCell,
 	path::PathBuf,
-	sync::Arc,
+	rc::Rc,
 };
 
 
@@ -44,7 +44,7 @@ thread_local!(
 	/// # Global.
 	///
 	/// This gives us a way to reach the main thread from a sister thread.
-	static GLOBAL: RefCell<Option<(Arc<Window>, MainRx, MainTx)>> = const { RefCell::new(None) };
+	static GLOBAL: RefCell<Option<(Rc<Window>, MainRx, MainTx)>> = const { RefCell::new(None) };
 );
 
 
@@ -86,7 +86,7 @@ impl TryFrom<&Output> for Share {
 
 impl Share {
 	/// # Initialize.
-	pub(super) fn init(window: Arc<Window>)
+	pub(super) fn init(window: Rc<Window>)
 	-> (SisterTx, MainTx, SisterRx) {
 		let (tx, rx) = crossbeam_channel::bounded(8);
 		let (tx2, rx2) = crossbeam_channel::bounded(8);
@@ -109,7 +109,7 @@ impl Share {
 		if tx.send(share).is_ok() {
 			gtk::glib::source::idle_add(|| {
 				get_share();
-				gtk::glib::source::Continue(false)
+				gtk::glib::ControlFlow::Break
 			});
 
 			loop {

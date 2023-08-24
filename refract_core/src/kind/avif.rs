@@ -290,7 +290,7 @@ impl LibAvifImage {
 			ignoreAlpha: i32::from(! src.has_alpha()),
 			alphaPremultiplied: 0,
 			isFloat: 0,
-			pixels: raw.as_ptr() as *mut u8,
+			pixels: raw.as_ptr().cast_mut(),
 			rowBytes: width * 4,
 		};
 

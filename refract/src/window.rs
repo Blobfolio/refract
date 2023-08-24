@@ -323,7 +323,7 @@ impl Window {
 		// Close down with the window.
 		out.wnd_main.connect_delete_event(|_, _| {
 			gtk::main_quit();
-			Inhibit(false)
+			gtk::glib::Propagation::Proceed
 		});
 
 		// Start with a fun image.

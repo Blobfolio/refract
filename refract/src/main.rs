@@ -37,8 +37,8 @@ mod candidate;
 mod share;
 mod window;
 
-pub(self) use candidate::Candidate;
-pub(self) use share::{
+use candidate::Candidate;
+use share::{
 	MainTx,
 	Share,
 	ShareFeedback,
@@ -46,7 +46,7 @@ pub(self) use share::{
 	SisterRx,
 	SisterTx,
 };
-pub(self) use window::Window;
+use window::Window;
 
 use argyle::{
 	Argue,
@@ -62,7 +62,7 @@ use gtk::{
 use refract_core::RefractError;
 use std::{
 	path::PathBuf,
-	sync::Arc,
+	rc::Rc,
 };
 
 
@@ -132,7 +132,7 @@ fn _main() -> Result<(), RefractError> {
 			(&b"--no-ycbcr"[..], CLI_NO_YCBCR),
 		]);
 
-		let window = Arc::new(Window::new(app, flags).expect("Unable to build GTK window."));
+		let window = Rc::new(Window::new(app, flags).expect("Unable to build GTK window."));
 		let paths = Dowser::default()
 			.with_paths(args.args_os())
 			.into_vec_filtered(window::is_jpeg_png);
@@ -162,31 +162,31 @@ fn init_resources() -> Result<(), RefractError> {
 ///
 /// This finishes the UI setup, hooking up communication channels, event
 /// bindings, etc.
-fn setup_ui(window: &Arc<Window>, paths: Vec<PathBuf>) {
-	let (stx, mtx, srx) = Share::init(Arc::clone(window));
+fn setup_ui(window: &Rc<Window>, paths: Vec<PathBuf>) {
+	let (stx, mtx, srx) = Share::init(Rc::clone(window));
 
 	// Bind things that just need the window.
 	setup_ui_window(window);
 
 	// Discard button.
 	let mtx2 = mtx.clone();
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	window.btn_discard.connect_clicked(move |_| { wnd2.feedback(&mtx2, ShareFeedback::Discard); });
 
 	// Keep button. (Note: mtx goes out of scope here.)
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	window.btn_keep.connect_clicked(move |_| { wnd2.feedback(&mtx, ShareFeedback::Keep); });
 
 	// Add a file!
 	let srx2 = srx.clone();
 	let stx2 = stx.clone();
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	window.mnu_fopen.connect_activate(move |_| {
 		if wnd2.maybe_add_file() { wnd2.encode(&stx2, &srx2); }
 	});
 
 	// Add file(s) via drag-and-drop.
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	let srx2 = srx.clone();
 	let stx2 = stx.clone();
 	window.img_main.connect_drag_data_received(move |_, _, _, _, d, _, _| {
@@ -202,7 +202,7 @@ fn setup_ui(window: &Arc<Window>, paths: Vec<PathBuf>) {
 	});
 
 	// Add a directory! (Note: stx and srx go out of scope here.)
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	let srx2 = srx.clone();
 	let stx2 = stx.clone();
 	window.mnu_dopen.connect_activate(move |_| {
@@ -231,34 +231,34 @@ fn setup_ui(window: &Arc<Window>, paths: Vec<PathBuf>) {
 /// As we're using `Arc`s already, it is cheaper to clone and pass the whole
 /// thing to these callbacks rather than using `glib::clone!()` to clone
 /// individual references.
-fn setup_ui_window(window: &Arc<Window>) {
+fn setup_ui_window(window: &Rc<Window>) {
 	// The quit menu.
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	window.mnu_quit.connect_activate(move |_| { wnd2.wnd_main.close(); });
 
 	// The about menu.
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	window.mnu_about.connect_activate(move |_| {
 		let about = wnd2.about();
 		if gtk::ResponseType::None != about.run() { about.emit_close(); }
 	});
 
 	// The A/B toggle.
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	window.btn_toggle.connect_state_notify(move |btn| {
 		wnd2.toggle_preview(btn.is_active(), true);
 		wnd2.paint();
 	});
 
 	// Keep the status log scrolled to the end.
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	window.lbl_status.connect_size_allocate(move |_, _| {
 		let adj = wnd2.wnd_status.vadjustment();
 		adj.set_value(adj.upper());
 	});
 
 	// Dark mode toggle.
-	let wnd2 = Arc::clone(window);
+	let wnd2 = Rc::clone(window);
 	window.chk_dark.connect_toggled(move |_| { wnd2.toggle_dark(); });
 
 	// Make sure people don't disable every encoder or encoding mode. This will
@@ -267,7 +267,7 @@ fn setup_ui_window(window: &Arc<Window>) {
 	{
 		macro_rules! chk_cb {
 			($cb:ident, $($btn:ident),+) => ($(
-				let wnd2 = Arc::clone(window);
+				let wnd2 = Rc::clone(window);
 				window.$btn.connect_toggled(move |btn| {
 					if ! btn.is_active() && ! wnd2.$cb() { btn.set_active(true); }
 				});
@@ -275,7 +275,7 @@ fn setup_ui_window(window: &Arc<Window>) {
 				// Stop the menu from closing on button press.
 				window.$btn.connect_button_release_event(|btn, _| {
 					btn.set_active(! btn.is_active());
-					gtk::Inhibit(true)
+					gtk::glib::Propagation::Stop
 				});
 			)+);
 		}
@@ -286,7 +286,7 @@ fn setup_ui_window(window: &Arc<Window>) {
 		// Stop the menu from closing on button press.
 		window.chk_ycbcr.connect_button_release_event(|btn, _| {
 			btn.set_active(! btn.is_active());
-			gtk::Inhibit(true)
+			gtk::glib::Propagation::Stop
 		});
 	}
 
@@ -295,7 +295,7 @@ fn setup_ui_window(window: &Arc<Window>) {
 	{
 		macro_rules! preview_cb {
 			($event:ident, $view:ident, $opacity:literal) => (
-				let wnd2 = Arc::clone(window);
+				let wnd2 = Rc::clone(window);
 				window.lbl_quality.$event(move |_| {
 					wnd2.box_ab.set_opacity($opacity);
 					wnd2.lbl_format.set_opacity($opacity);
