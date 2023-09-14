@@ -90,7 +90,7 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 
 [build-dependencies]
 dowser = "0.8.*"
-toml = "0.7.*"
+toml = "0.8.*"
 version-compare = "=0.1.1"
 
 [dependencies]
