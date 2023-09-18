@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "0.10.4"
+version = "0.10.5"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -33,7 +33,7 @@ default-features = false
 features = [ "codec-aom" ]
 
 [dependencies.libwebp-sys2]
-version = "=0.1.8"
+version = "=0.1.9"
 features = [ "1_1", "static" ]
 
 [features]
