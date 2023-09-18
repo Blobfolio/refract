@@ -1,7 +1,7 @@
 # Project Dependencies
     Package:   refract
-    Version:   0.10.4
-    Generated: 2023-09-14 02:39:42 UTC
+    Version:   0.10.5
+    Generated: 2023-09-18 03:49:58 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
@@ -12,8 +12,8 @@
 | [bitflags](https://github.com/bitflags/bitflags) | 1.3.2 | The Rust Project Developers | Apache-2.0 or MIT |
 | [bitflags](https://github.com/bitflags/bitflags) | 2.4.0 | The Rust Project Developers | Apache-2.0 or MIT |
 | [bytemuck](https://github.com/Lokathor/bytemuck) | 1.14.0 | [Lokathor](mailto:zefria@gmail.com) | Apache-2.0, MIT, or Zlib |
-| [cairo-rs](https://github.com/gtk-rs/gtk-rs-core) | 0.18.0 | The gtk-rs Project Developers | MIT |
-| [cairo-sys-rs](https://github.com/gtk-rs/gtk-rs-core) | 0.18.0 | The gtk-rs Project Developers | MIT |
+| [cairo-rs](https://github.com/gtk-rs/gtk-rs-core) | 0.18.2 | The gtk-rs Project Developers | MIT |
+| [cairo-sys-rs](https://github.com/gtk-rs/gtk-rs-core) | 0.18.2 | The gtk-rs Project Developers | MIT |
 | [cfg-if](https://github.com/alexcrichton/cfg-if) | 1.0.0 | [Alex Crichton](mailto:alex@alexcrichton.com) | Apache-2.0 or MIT |
 | [crossbeam-channel](https://github.com/crossbeam-rs/crossbeam) | 0.5.8 |  | Apache-2.0 or MIT |
 | [crossbeam-deque](https://github.com/crossbeam-rs/crossbeam) | 0.8.3 |  | Apache-2.0 or MIT |
@@ -36,10 +36,10 @@
 | [gdk-pixbuf](https://github.com/gtk-rs/gtk-rs-core) | 0.18.0 | The gtk-rs Project Developers | MIT |
 | [gdk-pixbuf-sys](https://github.com/gtk-rs/gtk-rs-core) | 0.18.0 | The gtk-rs Project Developers | MIT |
 | [gdk-sys](https://github.com/gtk-rs/gtk3-rs) | 0.18.0 | The gtk-rs Project Developers | MIT |
-| [gio](https://github.com/gtk-rs/gtk-rs-core) | 0.18.1 | The gtk-rs Project Developers | MIT |
+| [gio](https://github.com/gtk-rs/gtk-rs-core) | 0.18.2 | The gtk-rs Project Developers | MIT |
 | [gio-sys](https://github.com/gtk-rs/gtk-rs-core) | 0.18.1 | The gtk-rs Project Developers | MIT |
-| [glib](https://github.com/gtk-rs/gtk-rs-core) | 0.18.1 | The gtk-rs Project Developers | MIT |
-| [glib-macros](https://github.com/gtk-rs/gtk-rs-core) | 0.18.0 | The gtk-rs Project Developers | MIT |
+| [glib](https://github.com/gtk-rs/gtk-rs-core) | 0.18.2 | The gtk-rs Project Developers | MIT |
+| [glib-macros](https://github.com/gtk-rs/gtk-rs-core) | 0.18.2 | The gtk-rs Project Developers | MIT |
 | [glib-sys](https://github.com/gtk-rs/gtk-rs-core) | 0.18.1 | The gtk-rs Project Developers | MIT |
 | [gobject-sys](https://github.com/gtk-rs/gtk-rs-core) | 0.18.0 | The gtk-rs Project Developers | MIT |
 | [gtk](https://github.com/gtk-rs/gtk3-rs) | 0.18.1 | The gtk-rs Project Developers | MIT |
@@ -53,7 +53,7 @@
 | [libaom-sys](https://github.com/njaard/libavif-rs) | 0.14.0 | [Charles Samuels](mailto:ks@ks.ax), [Paolo Barbolini](mailto:paolo@paolo565.org), and [Kornel](mailto:kornel@geekhood.net) | BSD-2-Clause |
 | [libavif-sys](https://github.com/njaard/libavif-rs) | 0.14.3 | [Charles Samuels](mailto:ks@ks.ax) and [Paolo Barbolini](mailto:paolo@paolo565.org) | BSD-2-Clause |
 | [libc](https://github.com/rust-lang/libc) | 0.2.148 | The Rust Project Developers | Apache-2.0 or MIT |
-| [libwebp-sys2](https://github.com/qnighy/libwebp-sys2-rs) | 0.1.8 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
+| [libwebp-sys2](https://github.com/qnighy/libwebp-sys2-rs) | 0.1.9 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
 | [libz-sys](https://github.com/rust-lang/libz-sys) | 1.1.12 | [Alex Crichton](mailto:alex@alexcrichton.com), [Josh Triplett](mailto:josh@joshtriplett.org), and [Sebastian Thiel](mailto:sebastian.thiel@icloud.com) | Apache-2.0 or MIT |
 | [link-cplusplus](https://github.com/dtolnay/link-cplusplus) | 1.0.9 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [memchr](https://github.com/BurntSushi/memchr) | 2.6.3 | [Andrew Gallant](mailto:jamslam@gmail.com) and bluss | MIT or Unlicense |
@@ -73,7 +73,7 @@
 | [quote](https://github.com/dtolnay/quote) | 1.0.33 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [rayon](https://github.com/rayon-rs/rayon) | 1.7.0 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
 | [rayon-core](https://github.com/rayon-rs/rayon) | 1.11.0 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
-| [refract_core](https://github.com/Blobfolio/refract) | 0.10.4 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [refract_core](https://github.com/Blobfolio/refract) | 0.10.5 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [rgb](https://github.com/kornelski/rust-rgb) | 0.8.36 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
 | [scopeguard](https://github.com/bluss/scopeguard) | 1.2.0 | bluss | Apache-2.0 or MIT |
 | [serde](https://github.com/serde-rs/serde) | 1.0.188 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
@@ -83,7 +83,7 @@
 | [spng](https://github.com/aloucks/spng-rs) | 0.1.0 | [Aaron Loucks](mailto:aloucks@cofront.net) | Apache-2.0 or MIT |
 | [spng-sys](https://github.com/aloucks/spng-rs) | 0.1.0 | [Aaron Loucks](mailto:aloucks@cofront.net) | Apache-2.0 or MIT |
 | [syn](https://github.com/dtolnay/syn) | 1.0.109 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [syn](https://github.com/dtolnay/syn) | 2.0.33 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [syn](https://github.com/dtolnay/syn) | 2.0.37 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [tempfile](https://github.com/Stebalien/tempfile) | 3.8.0 | [Steven Allen](mailto:steven@stebalien.com), The Rust Project Developers, [Ashley Mannix](mailto:ashleymannix@live.com.au), and [Jason White](mailto:me@jasonwhite.io) | Apache-2.0 or MIT |
 | [thiserror](https://github.com/dtolnay/thiserror) | 1.0.48 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [thiserror-impl](https://github.com/dtolnay/thiserror) | 1.0.48 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
