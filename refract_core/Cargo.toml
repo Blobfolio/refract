@@ -14,7 +14,6 @@ publish = false
 dactyl = "0.5.*"
 jpeg-decoder = "=0.3.0"
 link-cplusplus = "1.0.*"
-num_cpus = "=1.16.0"
 rgb = "0.8.*"
 spng = "=0.1.0"
 
