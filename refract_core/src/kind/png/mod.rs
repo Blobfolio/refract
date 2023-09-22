@@ -12,6 +12,10 @@ use crate::{
 		DecoderResult,
 	},
 };
+use lodepng::{
+	Bitmap,
+	RGBA,
+};
 
 
 
@@ -24,28 +28,22 @@ impl Decoder for ImagePng {
 		// Grab the RGBA pixels, width, and height.
 		let (mut raw, width, height): (Vec<u8>, usize, usize) = {
 			// Parse the file.
-			let decoder = spng::Decoder::new(raw)
-				.with_output_format(spng::Format::Rgba8)
-				.with_decode_flags(spng::DecodeFlags::TRANSPARENCY);
-			let (info, mut reader) = decoder.read_info()
+			let Bitmap::<RGBA> { buffer, width, height } = lodepng::decode32(raw)
 				.map_err(|_| RefractError::Decode)?;
-
-			// Grab the dimensions.
-			let width = usize::try_from(info.width)
-				.map_err(|_| RefractError::Overflow)?;
-			let height = usize::try_from(info.height)
-				.map_err(|_| RefractError::Overflow)?;
 
 			// The pixel buffer should match the dimensions..
 			let size = width.checked_mul(height).and_then(|x| x.checked_mul(4))
 				.ok_or(RefractError::Overflow)?;
-			if info.buffer_size != size {
-				return Err(RefractError::Decode);
-			}
 
 			// Throw the pixels into a buffer.
-			let mut out = vec![0; size];
-			reader.next_frame(&mut out).map_err(|_| RefractError::Decode)?;
+			let mut out = Vec::with_capacity(size);
+			for RGBA { r, g, b, a } in buffer {
+				out.push(r);
+				out.push(g);
+				out.push(b);
+				out.push(a);
+			}
+			if out.len() != size { return Err(RefractError::Decode); }
 
 			(out, width, height)
 		};
