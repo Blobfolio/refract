@@ -1,10 +1,10 @@
 [package]
 name = "refract"
-version = "0.10.5"
+version = "0.11.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.73"
 description = "Guided AVIF/JPEG XL/WebP conversion for JPEG and PNG sources."
 repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
@@ -100,7 +100,7 @@ dactyl = "0.5"
 dowser = "0.8.*"
 gtk = "=0.18.1"
 oxford_join = "0.2.*"
-write_atomic = "0.4.*"
+write_atomic = "0.5.*"
 
 [dependencies.refract_core]
 path = "../refract_core"

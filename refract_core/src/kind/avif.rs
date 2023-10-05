@@ -180,7 +180,8 @@ impl LibAvifDecoder {
 		}
 
 		// Set up the threads.
-		let threads = i32::try_from(num_cpus::get())
+		let threads = std::thread::available_parallelism().ok()
+			.and_then(|n| i32::try_from(n.get()).ok())
 			.unwrap_or(1)
 			.max(1);
 
@@ -218,7 +219,8 @@ impl TryFrom<NonZeroU8> for LibAvifEncoder {
 		let (q, aq) = quality_to_quantizers(quality);
 
 		// Total threads.
-		let threads = i32::try_from(num_cpus::get())
+		let threads = std::thread::available_parallelism().ok()
+			.and_then(|n| i32::try_from(n.get()).ok())
 			.unwrap_or(1)
 			.max(1);
 

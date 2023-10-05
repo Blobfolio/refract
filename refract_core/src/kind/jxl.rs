@@ -43,7 +43,10 @@ use jpegxl_sys::{
 use std::{
 	ffi::c_void,
 	mem::MaybeUninit,
-	num::NonZeroU8,
+	num::{
+		NonZeroU8,
+		NonZeroUsize,
+	},
 };
 
 #[cfg(feature = "decode_ng")]
@@ -398,7 +401,10 @@ impl LibJxlThreadParallelRunner {
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		let threads = unsafe {
-			JxlThreadParallelRunnerCreate(std::ptr::null(), num_cpus::get())
+			JxlThreadParallelRunnerCreate(
+				std::ptr::null(),
+				std::thread::available_parallelism().map_or(1, NonZeroUsize::get),
+			)
 		};
 		if threads.is_null() { Err(RefractError::Encode) }
 		else { Ok(Self(threads)) }

@@ -90,8 +90,8 @@ impl Share {
 	-> (SisterTx, MainTx, SisterRx) {
 		let (tx, rx) = crossbeam_channel::bounded(8);
 		let (tx2, rx2) = crossbeam_channel::bounded(8);
-		GLOBAL.with(|global| {
-			*global.borrow_mut() = Some((window, rx, tx2.clone()));
+		GLOBAL.with_borrow_mut(|global| {
+			*global = Some((window, rx, tx2.clone()));
 		});
 
 		(tx, tx2, rx2)
@@ -152,8 +152,7 @@ pub(super) enum ShareFeedback {
 /// This will panic if the global data is missing from the thread. This
 /// shouldn't actually happen, though.
 fn get_share() {
-	GLOBAL.with(|global| {
-		let ptr = global.borrow();
+	GLOBAL.with_borrow(|ptr| {
 		let (ui, rx, tx) = ptr.as_ref()
 			.expect("Missing main thread state.");
 

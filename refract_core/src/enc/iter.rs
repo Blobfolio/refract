@@ -339,7 +339,7 @@ impl EncodeIter<'_> {
 		if 0 == self.flags & FLAG_NO_LOSSY {
 			let quality = self.steps.next()?;
 			match self.lossy(quality, self.flags) {
-				Ok(_) => Some(()),
+				Ok(()) => Some(()),
 				Err(RefractError::TooBig) => {
 					// This was too big, so drop a step and see if the
 					// next-next quality works out.
