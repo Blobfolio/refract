@@ -23,7 +23,10 @@ use dactyl::{
 	NicePercent,
 	NiceU64,
 	NiceU8,
-	traits::NiceInflection,
+	traits::{
+		IntDivFloat,
+		NiceInflection,
+	},
 };
 use dowser::{
 	Dowser,
@@ -1056,7 +1059,7 @@ impl Window {
 
 		// Crunch some numbers.
 		let diff = old_size - new_size;
-		let per = dactyl::int_div_float(diff, old_size).unwrap_or(0.0);
+		let per = diff.div_float(old_size).unwrap_or(0.0);
 
 		let mut buf = self.status.borrow_mut();
 		buf.push_str(log_prefix!("\n    ", "#2ecc71", "Success:"));

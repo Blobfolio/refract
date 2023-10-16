@@ -11,7 +11,7 @@ readme = "README.md"
 publish = false
 
 [dependencies]
-dactyl = "0.5.*"
+dactyl = "0.6.*"
 jpeg-decoder = "=0.3.0"
 link-cplusplus = "1.0.*"
 rgb = "0.8.*"
