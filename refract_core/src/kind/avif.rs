@@ -88,8 +88,10 @@ impl Decoder for ImageAvif {
 			avifRGBImageSetDefaults(&mut rgb.0, image.0);
 			rgb.0.format = AVIF_RGB_FORMAT_RGBA;
 			rgb.0.depth = 8;
-			avifRGBImageAllocatePixels(&mut rgb.0);
-			if AVIF_RESULT_OK != avifImageYUVToRGB(image.0, &mut rgb.0) {
+			if
+				AVIF_RESULT_OK != avifRGBImageAllocatePixels(&mut rgb.0) ||
+				AVIF_RESULT_OK != avifImageYUVToRGB(image.0, &mut rgb.0)
+			{
 				return Err(RefractError::Decode);
 			}
 
@@ -292,6 +294,7 @@ impl LibAvifImage {
 			ignoreAlpha: i32::from(! src.has_alpha()),
 			alphaPremultiplied: 0,
 			isFloat: 0,
+			maxThreads: 1,
 			pixels: raw.as_ptr().cast_mut(),
 			rowBytes: width * 4,
 		};
