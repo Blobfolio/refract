@@ -12,7 +12,7 @@ publish = false
 
 [dependencies]
 dactyl = "0.6.*"
-jpeg-decoder = "=0.3.0"
+jpeg-decoder = "=0.3.1"
 link-cplusplus = "1.0.*"
 rgb = "0.8.*"
 
