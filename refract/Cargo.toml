@@ -23,7 +23,7 @@ extended-description = """\
 .\n\
 Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality."""
 assets = [
-    ["../target/x86_64-unknown-linux-gnu/release/refract", "usr/bin/", "755"],
+    ["../target/release/refract", "usr/bin/", "755"],
     ["./skel/deb/applications/refract.desktop", "/usr/share/applications/", "644"],
     ["./skel/deb/icons/hicolor/32x32/apps/refract.png", "/usr/share/icons/hicolor/32x32/apps/", "644"],
     ["./skel/deb/icons/hicolor/48x48/apps/refract.png", "/usr/share/icons/hicolor/48x48/apps/", "644"],

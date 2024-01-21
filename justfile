@@ -21,7 +21,7 @@ pkg_dir1    := justfile_directory() + "/refract"
 pkg_dir2    := justfile_directory() + "/refract_core"
 
 cargo_dir   := "/tmp/" + pkg_id + "-cargo"
-cargo_bin   := cargo_dir + "/x86_64-unknown-linux-gnu/release/" + pkg_id
+cargo_bin   := cargo_dir + "/release/" + pkg_id
 data_dir    := "/tmp/bench-data"
 doc_dir     := justfile_directory() + "/doc"
 release_dir := justfile_directory() + "/release"
@@ -34,7 +34,6 @@ release_dir := justfile_directory() + "/release"
 		--bin "{{ pkg_id }}" \
 		-p "{{ pkg_id }}" \
 		--release \
-		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
 
 
@@ -72,7 +71,6 @@ release_dir := justfile_directory() + "/release"
 		--release \
 		--workspace \
 		--all-features \
-		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
 
 
@@ -82,30 +80,11 @@ release_dir := justfile_directory() + "/release"
 	just _fix-chown "{{ justfile_directory() }}/CREDITS.md"
 
 
-# Build Docs.
-@doc:
-	# Make the docs.
-	cargo doc \
-		--release \
-		--workspace \
-		--no-deps \
-		--target x86_64-unknown-linux-gnu \
-		--target-dir "{{ cargo_dir }}"
-
-	# Move the docs and clean up ownership.
-	[ ! -d "{{ doc_dir }}" ] || rm -rf "{{ doc_dir }}"
-	mv "{{ cargo_dir }}/x86_64-unknown-linux-gnu/doc" "{{ justfile_directory() }}"
-	just _fix-chown "{{ doc_dir }}"
-
-	exit 0
-
-
 # Test Run.
 @run +ARGS:
 	cargo run \
 		--bin "{{ pkg_id }}" \
 		--release \
-		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}" \
 		-- {{ ARGS }}
 
@@ -115,12 +94,10 @@ release_dir := justfile_directory() + "/release"
 	clear
 	cargo test \
 		--workspace \
-		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
 	cargo test \
 		--release \
 		--workspace \
-		--target x86_64-unknown-linux-gnu \
 		--target-dir "{{ cargo_dir }}"
 
 
