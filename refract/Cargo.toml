@@ -81,7 +81,7 @@ description = "Print program version."
 short = "-l"
 long = "--list"
 label = "<FILE>"
-description = "Read (absolute) image and/or directory paths from this text file, one path per line. This is equivalent to specifying the same paths as trailing arguments, but can be cleaner if there are lots of them."
+description = "Read (absolute) image and/or directory paths from this text file — or STDIN if '-' — one path per line, instead of or in addition to those specified inline via <PATH(S)>."
 path = true
 
 [[package.metadata.bashman.arguments]]
@@ -94,7 +94,7 @@ toml = "0.8.*"
 version-compare = "0.1.*"
 
 [dependencies]
-argyle = "0.6.*"
+argyle = "0.7.*"
 crossbeam-channel = "0.5.*"
 dactyl = "0.6.*"
 dowser = "0.8.*"
