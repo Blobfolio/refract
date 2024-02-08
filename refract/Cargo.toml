@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.11.1"
+version = "0.11.2"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -12,7 +12,7 @@ publish = false
 
 [package.metadata.deb]
 maintainer = "Josh Stoik <hello@blobfolio.com>"
-copyright = "2022, Blobfolio, LLC <hello@blobfolio.com>"
+copyright = "2024, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
 revision = "1"
 depends = "$auto"
@@ -23,7 +23,7 @@ extended-description = """\
 .\n\
 Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality."""
 assets = [
-    ["../target/x86_64-unknown-linux-gnu/release/refract", "usr/bin/", "755"],
+    ["../target/release/refract", "usr/bin/", "755"],
     ["./skel/deb/applications/refract.desktop", "/usr/share/applications/", "644"],
     ["./skel/deb/icons/hicolor/32x32/apps/refract.png", "/usr/share/icons/hicolor/32x32/apps/", "644"],
     ["./skel/deb/icons/hicolor/48x48/apps/refract.png", "/usr/share/icons/hicolor/48x48/apps/", "644"],
@@ -81,7 +81,7 @@ description = "Print program version."
 short = "-l"
 long = "--list"
 label = "<FILE>"
-description = "Read (absolute) image and/or directory paths from this text file, one path per line. This is equivalent to specifying the same paths as trailing arguments, but can be cleaner if there are lots of them."
+description = "Read (absolute) image and/or directory paths from this text file — or STDIN if '-' — one path per line, instead of or in addition to those specified inline via <PATH(S)>."
 path = true
 
 [[package.metadata.bashman.arguments]]
@@ -91,12 +91,12 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 [build-dependencies]
 dowser = "0.8.*"
 toml = "0.8.*"
-version-compare = "=0.1.1"
+version-compare = "0.1.*"
 
 [dependencies]
-argyle = "0.6.*"
+argyle = "0.7.*"
 crossbeam-channel = "0.5.*"
-dactyl = "0.6.*"
+dactyl = "0.7.*"
 dowser = "0.8.*"
 gtk = "=0.18.1"
 oxford_join = "0.2.*"

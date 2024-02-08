@@ -9,31 +9,32 @@ use crate::{
 	traits::Encoder,
 };
 use jpegxl_sys::{
-	FrameSetting,
-	JxlBasicInfo,
-	JxlBool,
-	JxlColorEncoding,
-	JxlColorEncodingSetToSRGB,
-	JxlDataType,
-	JxlEncoder,
-	JxlEncoderAddImageFrame,
-	JxlEncoderCloseInput,
-	JxlEncoderCreate,
-	JxlEncoderDestroy,
-	JxlEncoderFrameSettings,
-	JxlEncoderFrameSettingsCreate,
-	JxlEncoderFrameSettingsSetOption,
-	JxlEncoderInitBasicInfo,
-	JxlEncoderProcessOutput,
-	JxlEncoderSetBasicInfo,
-	JxlEncoderSetColorEncoding,
-	JxlEncoderSetFrameDistance,
-	JxlEncoderSetFrameLossless,
-	JxlEncoderSetParallelRunner,
-	JxlEncoderStatus,
-	JxlEncoderUseContainer,
-	JxlEndianness,
-	JxlPixelFormat,
+	codestream_header::JxlBasicInfo,
+	encode::{
+		FrameSetting,
+		JxlEncoderFrameSettings,
+		JxlEncoder,
+		JxlEncoderAddImageFrame,
+		JxlEncoderCloseInput,
+		JxlEncoderCreate,
+		JxlEncoderDestroy,
+		JxlEncoderFrameSettingsCreate,
+		JxlEncoderFrameSettingsSetOption,
+		JxlEncoderInitBasicInfo,
+		JxlEncoderProcessOutput,
+		JxlEncoderSetBasicInfo,
+		JxlEncoderSetFrameDistance,
+		JxlEncoderSetFrameLossless,
+		JxlEncoderSetParallelRunner,
+		JxlEncoderStatus,
+		JxlEncoderUseContainer,
+	},
+	types::{
+		JxlBool,
+		JxlEndianness,
+		JxlDataType,
+		JxlPixelFormat,
+	},
 	thread_parallel_runner::{
 		JxlThreadParallelRunner,
 		JxlThreadParallelRunnerCreate,
@@ -59,7 +60,7 @@ use crate::{
 };
 
 #[cfg(feature = "decode_ng")]
-use jpegxl_sys::{
+use jpegxl_sys::decode::{
 	JxlColorProfileTarget,
 	JxlDecoder,
 	JxlDecoderCreate,
@@ -107,7 +108,6 @@ impl Decoder for ImageJxl {
 				},
 				JxlDecoderStatus::ColorEncoding => {
 					decoder.get_icc_profile(
-						pixel_format.as_ref().ok_or(RefractError::Decode)?,
 						&mut icc_profile
 					)?;
 				},
@@ -222,7 +222,7 @@ impl LibJxlDecoder {
 
 	#[allow(unsafe_code)]
 	/// # Load ICC Profile.
-	fn get_icc_profile(&self, format: &JxlPixelFormat, icc_profile: &mut Vec<u8>)
+	fn get_icc_profile(&self, icc_profile: &mut Vec<u8>)
 	-> Result<(), RefractError> {
 		let mut icc_size = 0;
 
@@ -230,7 +230,6 @@ impl LibJxlDecoder {
 			unsafe {
 				JxlDecoderGetICCProfileSize(
 					self.0,
-					format,
 					JxlColorProfileTarget::Data,
 					&mut icc_size,
 				)
@@ -243,7 +242,6 @@ impl LibJxlDecoder {
 			unsafe {
 				JxlDecoderGetColorAsICCProfile(
 					self.0,
-					format,
 					JxlColorProfileTarget::Data,
 					icc_profile.as_mut_ptr(),
 					icc_size,
@@ -469,16 +467,6 @@ fn encode(
 	// Set up JPEG XL's "basic info" struct.
 	let color = img.color();
 	enc.set_basic_info(img.width_u32(), img.height_u32(), color.has_alpha(), color.is_greyscale())?;
-
-	let color_encoding: JxlColorEncoding = unsafe {
-		let mut color_encoding = MaybeUninit::uninit();
-		JxlColorEncodingSetToSRGB(
-			color_encoding.as_mut_ptr(),
-			color.is_greyscale()
-		);
-		color_encoding.assume_init()
-	};
-	maybe_die(unsafe { JxlEncoderSetColorEncoding(enc.0, &color_encoding) })?;
 
 	// Set up a "frame".
 	let pixel_format = JxlPixelFormat {

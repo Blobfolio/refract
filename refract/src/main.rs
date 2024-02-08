@@ -321,7 +321,7 @@ fn helper() {
  ^/aPePN@@@@peWQ@Qez;
  =iKBDB@@@O^:.::\kQO=~
  =iKQ@QWOP: ~gBQw'|Qgz,
- =i6RwEQ#s' N@RQQl i@D:   ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r"
+ =i6RwEQ#s' N@RQQl i@D:   ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r#"
  =?|>a@@Nv'^Q@@@Qe ,aW|   Guided image conversion from
  ==;.\QQ@6,|Q@@@@p.;;+\,  JPEG/PNG to AVIF/JPEG-XL/WebP.
  '\tlFw9Wgs~W@@@@S   ,;'
@@ -350,13 +350,13 @@ MISC FLAGS:
 
 OPTIONS:
     -l, --list <FILE> Read (absolute) image and/or directory paths from this
-                      text file, one path per line. This is equivalent to
-                      specifying the same paths as trailing arguments, but can
-                      be cleaner if there are lots of them.
+                      text file — or STDIN if "-" — one path per line, instead
+                      of or in addition to those specified inline via
+                      <PATH(S)>.
 
 TRAILING ARGS:
     <PATH(S)>...      Image and/or directory paths to re-encode. Directories
                       will be crawled recursively.
-"
+"#
 	));
 }

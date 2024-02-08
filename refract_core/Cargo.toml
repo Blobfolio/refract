@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "0.11.1"
+version = "0.11.2"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -11,22 +11,22 @@ readme = "README.md"
 publish = false
 
 [dependencies]
-dactyl = "0.6.*"
-jpeg-decoder = "=0.3.0"
+dactyl = "0.7.*"
+jpeg-decoder = "=0.3.1"
 link-cplusplus = "1.0.*"
 rgb = "0.8.*"
 
 [dependencies.lodepng]
-version = "3.9.*"
+version = "3.10.*"
 default-features = false
 features = [ "rust_backend" ]
 
 [dependencies.argyle]
-version = "0.6.*"
+version = "0.7.*"
 optional = true
 
 [dependencies.jpegxl-sys]
-version = "=0.8.2"
+version = "=0.9.0"
 default-features = false
 features = [ "threads", "vendored" ]
 

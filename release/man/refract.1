@@ -1,6 +1,6 @@
-.TH "REFRACT" "1" "November 2023" "Refract v0.11.1" "User Commands"
+.TH "REFRACT" "1" "February 2024" "Refract v0.11.2" "User Commands"
 .SH NAME
-Refract \- Manual page for refract v0.11.1.
+Refract \- Manual page for refract v0.11.2.
 .SH DESCRIPTION
 Guided AVIF/JPEG XL/WebP conversion for JPEG and PNG sources.
 .SS USAGE:
@@ -34,7 +34,7 @@ Print program version.
 .SS OPTIONS:
 .TP
 \fB\-l\fR, \fB\-\-list\fR <FILE>
-Read (absolute) image and/or directory paths from this text file, one path per line. This is equivalent to specifying the same paths as trailing arguments, but can be cleaner if there are lots of them.
+Read (absolute) image and/or directory paths from this text file — or STDIN if '\-' — one path per line, instead of or in addition to those specified inline via <PATH(S)>.
 .SS <PATH(S)…>:
 .TP
 Image and/or directory paths to re\-encode. Directories will be crawled recursively.
