@@ -10,19 +10,23 @@ use crate::{
 };
 use jpegxl_sys::{
 	codestream_header::JxlBasicInfo,
+	color_encoding::JxlColorEncoding,
 	encode::{
 		FrameSetting,
-		JxlEncoderFrameSettings,
+		JxlColorEncodingSetToSRGB,
 		JxlEncoder,
 		JxlEncoderAddImageFrame,
 		JxlEncoderCloseInput,
 		JxlEncoderCreate,
 		JxlEncoderDestroy,
+		JxlEncoderFrameSettings,
 		JxlEncoderFrameSettingsCreate,
 		JxlEncoderFrameSettingsSetOption,
 		JxlEncoderInitBasicInfo,
 		JxlEncoderProcessOutput,
 		JxlEncoderSetBasicInfo,
+		JxlEncoderSetColorEncoding,
+		JxlEncoderSetExtraChannelDistance,
 		JxlEncoderSetFrameDistance,
 		JxlEncoderSetFrameLossless,
 		JxlEncoderSetParallelRunner,
@@ -335,7 +339,17 @@ impl LibJxlEncoder {
 		// default is three.)
 		if grey { basic_info.num_color_channels = 1; }
 
-		maybe_die(unsafe { JxlEncoderSetBasicInfo(self.0, &basic_info) })
+		let color_encoding: JxlColorEncoding = unsafe {
+			let mut color_encoding = MaybeUninit::uninit();
+			JxlColorEncodingSetToSRGB(
+				color_encoding.as_mut_ptr(),
+				grey
+			);
+			color_encoding.assume_init()
+		};
+
+		maybe_die(unsafe { JxlEncoderSetBasicInfo(self.0, &basic_info) })?;
+		maybe_die(unsafe { JxlEncoderSetColorEncoding(self.0, &color_encoding) })
 	}
 
 	#[allow(unsafe_code)]
@@ -475,6 +489,11 @@ fn encode(
 		endianness: JxlEndianness::Native,
 		align: 0,
 	};
+
+	// JXL really fucks up alpha at lower qualities.
+	if color.has_alpha() {
+		maybe_die(unsafe { JxlEncoderSetExtraChannelDistance(options, 0, 0.0) })?;
+	}
 
 	let data: &[u8] = img;
 	maybe_die(unsafe {
