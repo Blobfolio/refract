@@ -109,7 +109,7 @@ Note: The flags only affect the initial program state. All settings can still be
 
 | Option | Description |
 | ------ | ----------- |
-| `-l` / `--list` | Read (absolute) image and/or directory paths from this text file, one path per line. This is equivalent to specifying the same paths as trailing arguments, but can be cleaner if there are lots of them. |
+| `-l` / `--list` | Read (absolute) image and/or directory paths from this text file, one path per line. Set to "-" to read from STDIN. This is equivalent to specifying the same paths as trailing arguments, but can be cleaner if there are lots of them. |
 
 When image and/or directory paths are passed as trailing arguments (`<PATH(S)>...`), and/or the `-l`/`--list` option is used, Refract will start crunching all valid sources as soon as the program launches.
 
