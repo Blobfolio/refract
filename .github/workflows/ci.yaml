@@ -47,6 +47,7 @@ jobs:
     
     - name: Apt Dependencies
       run: |
+        sudo apt-get update
         sudo apt-get install -y cmake g++ gcc git librust-gdk-dev librust-gtk-dev make nasm ninja-build
 
     - name: Build
