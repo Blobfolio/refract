@@ -1,10 +1,9 @@
 [package]
 name = "refract"
-version = "0.11.2"
+version = "0.11.3"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
-rust-version = "1.73"
 description = "Guided AVIF/JPEG XL/WebP conversion for JPEG and PNG sources."
 repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
@@ -89,7 +88,7 @@ label = "<PATH(s)…>"
 description = "Image and/or directory paths to re-encode. Directories will be crawled recursively."
 
 [build-dependencies]
-dowser = "0.8.*"
+dowser = "0.9.*"
 toml = "0.8.*"
 version-compare = "0.1.*"
 
@@ -97,7 +96,7 @@ version-compare = "0.1.*"
 argyle = "0.7.*"
 crossbeam-channel = "0.5.*"
 dactyl = "0.7.*"
-dowser = "0.8.*"
+dowser = "0.9.*"
 gtk = "=0.18.1"
 oxford_join = "0.2.*"
 write_atomic = "0.5.*"
