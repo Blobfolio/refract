@@ -12,11 +12,11 @@ publish = false
 [dependencies]
 dactyl = "0.7.*"
 jpeg-decoder = "=0.3.1"
-link-cplusplus = "1.0.*"
-rgb = "0.8.*"
+link-cplusplus = "=1.0.9"
+rgb = "=0.8.37"
 
 [dependencies.lodepng]
-version = "3.10.*"
+version = "=3.10.1"
 default-features = false
 features = [ "rust_backend" ]
 
