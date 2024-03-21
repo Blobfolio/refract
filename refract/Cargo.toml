@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.11.3"
+version = "0.11.4"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -90,7 +90,7 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 [build-dependencies]
 dowser = "0.9.*"
 toml = "0.8.*"
-version-compare = "0.1.*"
+version-compare = "0.2.*"
 
 [dependencies]
 argyle = "0.7.*"
