@@ -133,7 +133,7 @@ pub enum QualityValue {
 
 	/// # Integer.
 	///
-	/// This is used by AVIF and WebP, and also serves as a default for kinds
+	/// This is used by AVIF and Webp, and also serves as a default for kinds
 	/// that don't actually support encoding.
 	Int(u8),
 
