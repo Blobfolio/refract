@@ -25,7 +25,7 @@ version = "0.7.*"
 optional = true
 
 [dependencies.jpegxl-sys]
-version = "=0.10.3"
+version = "=0.10.4"
 default-features = false
 features = [ "threads", "vendored" ]
 
