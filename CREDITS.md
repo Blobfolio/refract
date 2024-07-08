@@ -1,7 +1,7 @@
 # Project Dependencies
     Package:   refract
-    Version:   0.11.5
-    Generated: 2024-07-01 02:48:14 UTC
+    Version:   0.11.6
+    Generated: 2024-07-08 04:28:53 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
@@ -52,12 +52,12 @@
 | [indexmap](https://github.com/indexmap-rs/indexmap) | 2.2.6 |  | Apache-2.0 or MIT |
 | [jpeg-decoder](https://github.com/image-rs/jpeg-decoder) | 0.3.1 | The image-rs Developers | Apache-2.0 or MIT |
 | [jpegxl-sys](https://github.com/inflation/jpegxl-rs) | 0.10.4+libjxl-0.10.3 | [Inflation](mailto:me@shimotsuki.ink) | GPL-3.0-or-later |
-| [libaom-sys](https://github.com/njaard/libavif-rs) | 0.16.0+libaom.3.8.1 | [Charles Samuels](mailto:ks@ks.ax), [Paolo Barbolini](mailto:paolo@paolo565.org), and [Kornel](mailto:kornel@geekhood.net) | BSD-2-Clause |
-| [libavif-sys](https://github.com/njaard/libavif-rs) | 0.16.0+libavif.1.0.4 | [Charles Samuels](mailto:ks@ks.ax) and [Paolo Barbolini](mailto:paolo@paolo565.org) | BSD-2-Clause |
+| [libaom-sys](https://github.com/njaard/libavif-rs) | 0.17.0+libaom.3.9.1 | [Charles Samuels](mailto:ks@ks.ax), [Paolo Barbolini](mailto:paolo@paolo565.org), and [Kornel](mailto:kornel@geekhood.net) | BSD-2-Clause |
+| [libavif-sys](https://github.com/njaard/libavif-rs) | 0.17.0+libavif.1.0.4 | [Charles Samuels](mailto:ks@ks.ax) and [Paolo Barbolini](mailto:paolo@paolo565.org) | BSD-2-Clause |
 | [libc](https://github.com/rust-lang/libc) | 0.2.155 | The Rust Project Developers | Apache-2.0 or MIT |
 | [libwebp-sys2](https://github.com/qnighy/libwebp-sys2-rs) | 0.1.9 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
 | [link-cplusplus](https://github.com/dtolnay/link-cplusplus) | 1.0.9 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [lodepng](https://github.com/kornelski/lodepng-rust.git) | 3.10.1 | [Kornel](mailto:kornel@geekhood.net) and [Lode Vandevenne](mailto:lvandeve@gmail.com) | Zlib |
+| [lodepng](https://github.com/kornelski/lodepng-rust.git) | 3.10.2 | [Kornel](mailto:kornel@geekhood.net) and [Lode Vandevenne](mailto:lvandeve@gmail.com) | Zlib |
 | [memchr](https://github.com/BurntSushi/memchr) | 2.7.4 | [Andrew Gallant](mailto:jamslam@gmail.com) and bluss | MIT or Unlicense |
 | [memoffset](https://github.com/Gilnaa/memoffset) | 0.9.1 | [Gilad Naaman](mailto:gilad.naaman@gmail.com) | MIT |
 | [miniz_oxide](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide) | 0.7.4 | [Frommi](mailto:daniil.liferenko@gmail.com) and [oyvindln](mailto:oyvindln@users.noreply.github.com) | Apache-2.0, MIT, or Zlib |
@@ -68,28 +68,27 @@
 | [pin-project-lite](https://github.com/taiki-e/pin-project-lite) | 0.2.14 |  | Apache-2.0 or MIT |
 | [pin-utils](https://github.com/rust-lang-nursery/pin-utils) | 0.1.0 | [Josef Brandl](mailto:mail@josefbrandl.de) | Apache-2.0 or MIT |
 | [proc-macro-crate](https://github.com/bkchr/proc-macro-crate) | 1.3.1 | [Bastian Köcher](mailto:git@kchr.de) | Apache-2.0 or MIT |
-| [proc-macro-crate](https://github.com/bkchr/proc-macro-crate) | 2.0.2 | [Bastian Köcher](mailto:git@kchr.de) | Apache-2.0 or MIT |
+| [proc-macro-crate](https://github.com/bkchr/proc-macro-crate) | 2.0.0 | [Bastian Köcher](mailto:git@kchr.de) | Apache-2.0 or MIT |
 | [proc-macro-error](https://gitlab.com/CreepySkeleton/proc-macro-error) | 1.0.4 | [CreepySkeleton](mailto:creepy-skeleton@yandex.ru) | Apache-2.0 or MIT |
 | [proc-macro-error-attr](https://gitlab.com/CreepySkeleton/proc-macro-error) | 1.0.4 | [CreepySkeleton](mailto:creepy-skeleton@yandex.ru) | Apache-2.0 or MIT |
 | [proc-macro2](https://github.com/dtolnay/proc-macro2) | 1.0.86 | [David Tolnay](mailto:dtolnay@gmail.com) and [Alex Crichton](mailto:alex@alexcrichton.com) | Apache-2.0 or MIT |
 | [quote](https://github.com/dtolnay/quote) | 1.0.36 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [rayon](https://github.com/rayon-rs/rayon) | 1.10.0 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
 | [rayon-core](https://github.com/rayon-rs/rayon) | 1.12.1 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
-| [refract_core](https://github.com/Blobfolio/refract) | 0.11.5 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
-| [rgb](https://github.com/kornelski/rust-rgb) | 0.8.40 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
-| [serde](https://github.com/serde-rs/serde) | 1.0.203 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [serde_spanned](https://github.com/toml-rs/toml) | 0.6.6 |  | Apache-2.0 or MIT |
+| [refract_core](https://github.com/Blobfolio/refract) | 0.11.6 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [rgb](https://github.com/kornelski/rust-rgb) | 0.8.42 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
+| [serde](https://github.com/serde-rs/serde) | 1.0.204 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [slab](https://github.com/tokio-rs/slab) | 0.4.9 | [Carl Lerche](mailto:me@carllerche.com) | MIT |
 | [smallvec](https://github.com/servo/rust-smallvec) | 1.13.2 | The Servo Project Developers | Apache-2.0 or MIT |
 | [syn](https://github.com/dtolnay/syn) | 1.0.109 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [syn](https://github.com/dtolnay/syn) | 2.0.68 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [syn](https://github.com/dtolnay/syn) | 2.0.69 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [tempfile](https://github.com/Stebalien/tempfile) | 3.10.1 | [Steven Allen](mailto:steven@stebalien.com), The Rust Project Developers, [Ashley Mannix](mailto:ashleymannix@live.com.au), and [Jason White](mailto:me@jasonwhite.io) | Apache-2.0 or MIT |
 | [thiserror](https://github.com/dtolnay/thiserror) | 1.0.61 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [thiserror-impl](https://github.com/dtolnay/thiserror) | 1.0.61 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [toml_datetime](https://github.com/toml-rs/toml) | 0.6.3 | [Alex Crichton](mailto:alex@alexcrichton.com) | Apache-2.0 or MIT |
+| [toml_datetime](https://github.com/toml-rs/toml) | 0.6.6 | [Alex Crichton](mailto:alex@alexcrichton.com) | Apache-2.0 or MIT |
 | [toml_edit](https://github.com/toml-rs/toml) | 0.19.15 | [Andronik Ordian](mailto:write@reusable.software) and [Ed Page](mailto:eopage@gmail.com) | Apache-2.0 or MIT |
-| [toml_edit](https://github.com/toml-rs/toml) | 0.20.2 | [Andronik Ordian](mailto:write@reusable.software) and [Ed Page](mailto:eopage@gmail.com) | Apache-2.0 or MIT |
+| [toml_edit](https://github.com/toml-rs/toml) | 0.20.7 | [Andronik Ordian](mailto:write@reusable.software) and [Ed Page](mailto:eopage@gmail.com) | Apache-2.0 or MIT |
 | [unicode-ident](https://github.com/dtolnay/unicode-ident) | 1.0.12 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 AND Unicode-DFS-2016 or MIT |
 | [winnow](https://github.com/winnow-rs/winnow) | 0.5.40 |  | MIT |
 | [write_atomic](https://github.com/Blobfolio/write_atomic) | 0.5.0 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
-| [zerocopy](https://github.com/google/zerocopy) | 0.7.34 | [Joshua Liebow-Feeser](mailto:joshlf@google.com) | Apache-2.0, BSD-2-Clause, or MIT |
+| [zerocopy](https://github.com/google/zerocopy) | 0.7.35 | [Joshua Liebow-Feeser](mailto:joshlf@google.com) | Apache-2.0, BSD-2-Clause, or MIT |

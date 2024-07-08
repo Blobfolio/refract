@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "0.11.5"
+version = "0.11.6"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -13,10 +13,10 @@ publish = false
 dactyl = "0.7.*"
 jpeg-decoder = "=0.3.1"
 link-cplusplus = "=1.0.9"
-rgb = "=0.8.40"
+rgb = "=0.8.42"
 
 [dependencies.lodepng]
-version = "=3.10.1"
+version = "=3.10.2"
 default-features = false
 features = [ "rust_backend" ]
 
@@ -30,7 +30,7 @@ default-features = false
 features = [ "threads", "vendored" ]
 
 [dependencies.libavif-sys]
-version = "=0.16.0"
+version = "=0.17.0"
 default-features = false
 features = [ "codec-aom" ]
 
