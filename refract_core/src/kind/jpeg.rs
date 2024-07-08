@@ -49,7 +49,7 @@ impl Decoder for ImageJpeg {
 			// Upscale RGB to RGBA.
 			PixelFormat::RGB24 =>  pixels.as_rgb()
 				.iter()
-				.map(|px| px.alpha(255))
+				.map(|px| px.with_alpha(255))
 				.fold(
 					(Vec::with_capacity(size), false), |mut acc, px| {
 					acc.0.extend_from_slice(px.as_slice());
