@@ -1,7 +1,7 @@
 # Project Dependencies
     Package:   refract
-    Version:   0.11.6
-    Generated: 2024-07-08 04:28:53 UTC
+    Version:   0.11.7
+    Generated: 2024-07-09 20:04:54 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
@@ -75,13 +75,13 @@
 | [quote](https://github.com/dtolnay/quote) | 1.0.36 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [rayon](https://github.com/rayon-rs/rayon) | 1.10.0 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
 | [rayon-core](https://github.com/rayon-rs/rayon) | 1.12.1 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
-| [refract_core](https://github.com/Blobfolio/refract) | 0.11.6 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
-| [rgb](https://github.com/kornelski/rust-rgb) | 0.8.42 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
+| [refract_core](https://github.com/Blobfolio/refract) | 0.11.7 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [rgb](https://github.com/kornelski/rust-rgb) | 0.8.44 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
 | [serde](https://github.com/serde-rs/serde) | 1.0.204 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [slab](https://github.com/tokio-rs/slab) | 0.4.9 | [Carl Lerche](mailto:me@carllerche.com) | MIT |
 | [smallvec](https://github.com/servo/rust-smallvec) | 1.13.2 | The Servo Project Developers | Apache-2.0 or MIT |
 | [syn](https://github.com/dtolnay/syn) | 1.0.109 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [syn](https://github.com/dtolnay/syn) | 2.0.69 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [syn](https://github.com/dtolnay/syn) | 2.0.70 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [tempfile](https://github.com/Stebalien/tempfile) | 3.10.1 | [Steven Allen](mailto:steven@stebalien.com), The Rust Project Developers, [Ashley Mannix](mailto:ashleymannix@live.com.au), and [Jason White](mailto:me@jasonwhite.io) | Apache-2.0 or MIT |
 | [thiserror](https://github.com/dtolnay/thiserror) | 1.0.61 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [thiserror-impl](https://github.com/dtolnay/thiserror) | 1.0.61 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
