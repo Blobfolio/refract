@@ -1,7 +1,7 @@
 # Project Dependencies
     Package:   refract
-    Version:   0.11.7
-    Generated: 2024-07-09 20:04:54 UTC
+    Version:   0.11.8
+    Generated: 2024-07-25 18:21:30 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
@@ -20,8 +20,8 @@
 | [crossbeam-deque](https://github.com/crossbeam-rs/crossbeam) | 0.8.5 |  | Apache-2.0 or MIT |
 | [crossbeam-epoch](https://github.com/crossbeam-rs/crossbeam) | 0.9.18 |  | Apache-2.0 or MIT |
 | [crossbeam-utils](https://github.com/crossbeam-rs/crossbeam) | 0.8.20 |  | Apache-2.0 or MIT |
-| [dactyl](https://github.com/Blobfolio/dactyl) | 0.7.1 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
-| [dowser](https://github.com/Blobfolio/dowser) | 0.9.1 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
+| [dactyl](https://github.com/Blobfolio/dactyl) | 0.7.2 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
+| [dowser](https://github.com/Blobfolio/dowser) | 0.9.2 | [Blobfolio, LLC.](mailto:hello@blobfolio.com) | WTFPL |
 | [either](https://github.com/rayon-rs/either) | 1.13.0 | bluss | Apache-2.0 or MIT |
 | [equivalent](https://github.com/cuviper/equivalent) | 1.0.1 |  | Apache-2.0 or MIT |
 | [fastrand](https://github.com/smol-rs/fastrand) | 2.1.0 | [Stjepan Glavina](mailto:stjepang@gmail.com) | Apache-2.0 or MIT |
@@ -75,17 +75,17 @@
 | [quote](https://github.com/dtolnay/quote) | 1.0.36 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [rayon](https://github.com/rayon-rs/rayon) | 1.10.0 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
 | [rayon-core](https://github.com/rayon-rs/rayon) | 1.12.1 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 or MIT |
-| [refract_core](https://github.com/Blobfolio/refract) | 0.11.7 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
-| [rgb](https://github.com/kornelski/rust-rgb) | 0.8.44 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
+| [refract_core](https://github.com/Blobfolio/refract) | 0.11.8 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [rgb](https://github.com/kornelski/rust-rgb) | 0.8.45 | [Kornel Lesiński](mailto:kornel@geekhood.net) | MIT |
 | [serde](https://github.com/serde-rs/serde) | 1.0.204 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [slab](https://github.com/tokio-rs/slab) | 0.4.9 | [Carl Lerche](mailto:me@carllerche.com) | MIT |
 | [smallvec](https://github.com/servo/rust-smallvec) | 1.13.2 | The Servo Project Developers | Apache-2.0 or MIT |
 | [syn](https://github.com/dtolnay/syn) | 1.0.109 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [syn](https://github.com/dtolnay/syn) | 2.0.70 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [syn](https://github.com/dtolnay/syn) | 2.0.72 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
 | [tempfile](https://github.com/Stebalien/tempfile) | 3.10.1 | [Steven Allen](mailto:steven@stebalien.com), The Rust Project Developers, [Ashley Mannix](mailto:ashleymannix@live.com.au), and [Jason White](mailto:me@jasonwhite.io) | Apache-2.0 or MIT |
-| [thiserror](https://github.com/dtolnay/thiserror) | 1.0.61 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [thiserror-impl](https://github.com/dtolnay/thiserror) | 1.0.61 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
-| [toml_datetime](https://github.com/toml-rs/toml) | 0.6.6 | [Alex Crichton](mailto:alex@alexcrichton.com) | Apache-2.0 or MIT |
+| [thiserror](https://github.com/dtolnay/thiserror) | 1.0.63 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [thiserror-impl](https://github.com/dtolnay/thiserror) | 1.0.63 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 or MIT |
+| [toml_datetime](https://github.com/toml-rs/toml) | 0.6.7 | [Alex Crichton](mailto:alex@alexcrichton.com) | Apache-2.0 or MIT |
 | [toml_edit](https://github.com/toml-rs/toml) | 0.19.15 | [Andronik Ordian](mailto:write@reusable.software) and [Ed Page](mailto:eopage@gmail.com) | Apache-2.0 or MIT |
 | [toml_edit](https://github.com/toml-rs/toml) | 0.20.7 | [Andronik Ordian](mailto:write@reusable.software) and [Ed Page](mailto:eopage@gmail.com) | Apache-2.0 or MIT |
 | [unicode-ident](https://github.com/dtolnay/unicode-ident) | 1.0.12 | [David Tolnay](mailto:dtolnay@gmail.com) | Apache-2.0 AND Unicode-DFS-2016 or MIT |
