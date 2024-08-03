@@ -16,7 +16,7 @@ link-cplusplus = "=1.0.9"
 rgb = "=0.8.45"
 
 [dependencies.lodepng]
-version = "=3.10.2"
+version = "=3.10.3"
 default-features = false
 features = [ "rust_backend" ]
 
