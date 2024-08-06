@@ -13,7 +13,7 @@ publish = false
 dactyl = "0.7.*"
 jpeg-decoder = "=0.3.1"
 link-cplusplus = "=1.0.9"
-rgb = "=0.8.45"
+rgb = "=0.8.47"
 
 [dependencies.lodepng]
 version = "=3.10.3"
