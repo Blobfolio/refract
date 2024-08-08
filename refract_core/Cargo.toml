@@ -13,7 +13,6 @@ publish = false
 dactyl = "0.7.*"
 jpeg-decoder = "=0.3.1"
 link-cplusplus = "=1.0.9"
-rgb = "=0.8.47"
 
 [dependencies.lodepng]
 version = "=3.10.4"
@@ -37,6 +36,11 @@ features = [ "codec-aom" ]
 [dependencies.libwebp-sys2]
 version = "=0.1.9"
 features = [ "1_1", "static" ]
+
+[dependencies.rgb] # Match lodepng's dependency listing.
+version = "0.8.47"
+default-features = false
+features = ["bytemuck"]
 
 [features]
 default = []
