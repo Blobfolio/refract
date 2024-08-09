@@ -93,7 +93,7 @@ toml = "0.8.14"
 version-compare = "0.2.*"
 
 [dependencies]
-argyle = "0.7.*"
+argyle = "0.8.*"
 crossbeam-channel = "0.5.*"
 dactyl = "0.7.*"
 dowser = "0.9.*"
