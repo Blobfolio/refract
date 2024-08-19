@@ -15,7 +15,7 @@ jpeg-decoder = "=0.3.1"
 link-cplusplus = "=1.0.9"
 
 [dependencies.lodepng]
-version = "=3.10.4"
+version = "=3.10.5"
 default-features = false
 features = [ "rust_backend" ]
 
