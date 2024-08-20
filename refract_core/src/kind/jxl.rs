@@ -99,7 +99,7 @@ impl Decoder for ImageJxl {
 		// Get the buffer going.
 		let mut buffer: Vec<u8> = Vec::new();
 		let next_in = raw.as_ptr();
-		let avail_in: usize = std::mem::size_of_val(raw);
+		let avail_in: usize = size_of_val(raw);
 		maybe_die_dec(unsafe { JxlDecoderSetInput(decoder.0, next_in, avail_in) })?;
 
 		loop {
@@ -501,7 +501,7 @@ fn encode(
 			options,
 			&pixel_format,
 			data.as_ptr().cast(),
-			std::mem::size_of_val(data),
+			size_of_val(data),
 		)
 	})?;
 
