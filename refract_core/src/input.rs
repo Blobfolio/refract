@@ -56,12 +56,25 @@ use std::{
 /// let input = Input::try_from(raw.as_slice()).unwrap();
 /// ```
 pub struct Input<'a> {
+	/// # Image Pixels.
 	pixels: Cow<'a, [u8]>,
+
+	/// # Image Width.
 	width: NonZeroU32,
+
+	/// # Image Height.
 	height: NonZeroU32,
-	size: NonZeroUsize, // The original file size.
+
+	/// # Original File Size.
+	size: NonZeroUsize,
+
+	/// # Color Kind.
 	color: ColorKind,
+
+	/// Color Depth.
 	depth: ColorKind,
+
+	/// # Image Kind.
 	kind: ImageKind,
 }
 

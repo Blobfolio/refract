@@ -52,12 +52,22 @@ use std::{
 /// [`EncodeIter::time`] if you're interested, otherwise the instance can be
 /// consumed, returning the "best" [`Output`] by calling [`EncodeIter::take`].
 pub struct EncodeIter<'a> {
+	/// # Source.
 	src: Input<'a>,
+
+	/// # Best Output.
 	best: Output,
+
+	/// # Current Output.
 	candidate: Output,
 
+	/// # Quality Stepper.
 	steps: QualityRange,
+
+	/// # Processing Time.
 	time: Duration,
+
+	/// # Flags.
 	flags: u8,
 }
 

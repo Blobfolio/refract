@@ -28,8 +28,13 @@ use std::{
 /// Both `AsRef<[u8]>` and `Deref` traits are implemented to provide raw access
 /// to the data.
 pub struct Output {
+	/// # Image Data.
 	data: Vec<u8>,
+
+	/// # Quality.
 	quality: Quality,
+
+	/// # Flags.
 	flags: u8,
 }
 

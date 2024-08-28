@@ -267,6 +267,7 @@ impl LibAvifImage {
 	#[allow(clippy::as_ptr_cast_mut)] // Doesn't work.
 	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
 	#[allow(unsafe_code)]
+	/// # New Instance.
 	fn new(src: &Input, flags: u8) -> Result<Self, RefractError> {
 		// Make sure dimensions fit u32.
 		let width = src.width_u32();

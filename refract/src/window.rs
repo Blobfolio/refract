@@ -70,13 +70,23 @@ use std::{
 // by build.rs.
 include!(concat!(env!("OUT_DIR"), "/refract-extensions.rs"));
 
-// State flags.
-const FLAG_LOCK_ENCODING: u8 = 0b0000_0001; // We're in the middle of encoding.
-const FLAG_LOCK_FEEDBACK: u8 = 0b0000_0010; // Candidate feedback is required.
-const FLAG_LOCK_PAINT: u8 =    0b0000_0100; // Don't paint.
-const FLAG_TICK_IMAGE: u8 =    0b0000_1000; // We need to repaint the image.
-const FLAG_TICK_STATUS: u8 =   0b0001_0000; // We need to repaint the status.
-const FLAG_TICK_AB: u8 =       0b0010_0000; // We need to repaint format labels.
+/// # State Flag: We're in the middle of encoding.
+const FLAG_LOCK_ENCODING: u8 = 0b0000_0001;
+
+/// # State Flag: Candidate feedback is required.
+const FLAG_LOCK_FEEDBACK: u8 = 0b0000_0010;
+
+/// # State Flag: Don't paint.
+const FLAG_LOCK_PAINT: u8 =    0b0000_0100;
+
+/// # State Flag: We need to repaint the image.
+const FLAG_TICK_IMAGE: u8 =    0b0000_1000;
+
+/// # State Flag: We need to repaint the status.
+const FLAG_TICK_STATUS: u8 =   0b0001_0000;
+
+/// # State Flag: e need to repaint format labels.
+const FLAG_TICK_AB: u8 =       0b0010_0000;
 
 
 
@@ -135,9 +145,16 @@ macro_rules! gtk_src {
 ///
 /// If only we could share `Pixbuf` across threads...
 struct WindowSource {
+	/// # Pixel Buffer.
 	buf: Pixbuf,
+
+	/// # Quality.
 	quality: Quality,
+
+	/// # Iteration Count.
 	count: u8,
+
+	/// # Size.
 	size: usize,
 }
 
@@ -196,6 +213,7 @@ impl WindowSource {
 
 
 
+#[allow(clippy::missing_docs_in_private_items)]
 #[derive(Debug, Clone)]
 /// # Window.
 ///
@@ -1119,8 +1137,8 @@ impl Window {
 		let about = gtk::AboutDialog::builder()
 			.attached_to(&self.wnd_main)
 			.authors(vec![
-				env!("CARGO_PKG_AUTHORS").to_string(),
-				String::from("Blobfolio https://blobfolio.com")
+				env!("CARGO_PKG_AUTHORS").to_owned(),
+				"Blobfolio https://blobfolio.com".to_owned(),
 			])
 			.comments(concat!(
 				env!("CARGO_PKG_DESCRIPTION"),

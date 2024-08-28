@@ -257,6 +257,7 @@ impl LibJxlDecoder {
 	}
 
 	#[allow(unsafe_code)]
+	/// # Output.
 	fn output(
 		&self,
 		pixel_format: &JxlPixelFormat,
@@ -289,6 +290,7 @@ impl Drop for LibJxlDecoder {
 	#[inline]
 	fn drop(&mut self) { unsafe { JxlDecoderDestroy(self.0); } }
 }
+
 
 
 /// # Hold the Encoder.

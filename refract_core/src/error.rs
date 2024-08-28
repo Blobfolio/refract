@@ -10,7 +10,7 @@ use std::{
 
 
 
-#[allow(missing_docs)]
+#[allow(clippy::missing_docs_in_private_items)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # Errors.
 pub enum RefractError {

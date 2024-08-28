@@ -4,31 +4,44 @@
 This is the library powering [Refract](https://github.com/Blobfolio/refract), a guided CLI image encoding tool.
 */
 
-#![deny(unsafe_code)]
+#![deny(
+	clippy::allow_attributes_without_reason,
+	clippy::correctness,
+	unreachable_pub,
+	unsafe_code,
+)]
 
 #![warn(
-	clippy::filetype_is_file,
-	clippy::integer_division,
-	clippy::needless_borrow,
+	clippy::complexity,
 	clippy::nursery,
 	clippy::pedantic,
 	clippy::perf,
-	clippy::suboptimal_flops,
+	clippy::style,
+
+	clippy::allow_attributes,
+	clippy::clone_on_ref_ptr,
+	clippy::create_dir,
+	clippy::filetype_is_file,
+	clippy::get_unwrap,
+	clippy::missing_docs_in_private_items,
+	clippy::rest_pat_in_fully_bound_structs,
+	clippy::str_to_string,
+	clippy::string_to_string,
 	clippy::unneeded_field_pattern,
+	clippy::unwrap_in_result,
+
 	macro_use_extern_crate,
 	missing_copy_implementations,
-	missing_debug_implementations,
-	missing_docs,
 	non_ascii_idents,
 	trivial_casts,
 	trivial_numeric_casts,
-	unreachable_pub,
 	unused_crate_dependencies,
 	unused_extern_crates,
 	unused_import_braces,
 )]
 
 #![allow(
+	clippy::doc_markdown,
 	clippy::module_name_repetitions,
 	clippy::redundant_pub_crate,
 )]

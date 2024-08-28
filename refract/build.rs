@@ -104,11 +104,17 @@ fn build_credits() {
 fn build_exts() {
 	let out = format!(
 		r"
+/// # Extension: AVIF.
 const E_AVIF: Extension = {};
+/// # Extension: JPEG.
 const E_JPEG: Extension = {};
+/// # Extension: JPG.
 const E_JPG: Extension = {};
+/// # Extension: JXL.
 const E_JXL: Extension = {};
+/// # Extension: PNG.
 const E_PNG: Extension = {};
+/// # Extension: WEBP.
 const E_WEBP: Extension = {};
 ",
 		Extension::codegen(b"avif"),

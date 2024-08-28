@@ -9,8 +9,6 @@ This is a recreation of that module (and its `loop9` dependency), better
 tailored to this app's data design.
 */
 
-
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # A Square of Nine Pixels.
 ///

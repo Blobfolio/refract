@@ -49,6 +49,7 @@ pub(crate) struct ImageWebp;
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageWebp {
 	#[allow(unsafe_code)]
+	/// # Decode.
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		let d = LibWebPDecode::try_from(raw)?;
 
@@ -92,8 +93,13 @@ impl Encoder for ImageWebp {
 ///
 /// This exists solely to help with garbage cleanup.
 struct LibWebPDecode {
+	/// # Width.
 	width: i32,
+
+	/// # Height.
 	height: i32,
+
+	/// # Data Pointer.
 	ptr: *mut u8,
 }
 
@@ -201,7 +207,7 @@ struct LibWebpWriter(*mut WebPMemoryWriter);
 impl From<&mut WebPPicture> for LibWebpWriter {
 	#[allow(unsafe_code)]
 	fn from(picture: &mut WebPPicture) -> Self {
-		// A Writer wrapper function. (It has to be "safe".)
+		/// # A Writer Wrapper Function. (It has to be "safe".)
 		extern "C" fn on_write(
 			data: *const u8,
 			data_size: usize,

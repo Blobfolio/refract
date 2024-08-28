@@ -4,30 +4,43 @@
 
 #![forbid(unsafe_code)]
 
+#![deny(
+	clippy::allow_attributes_without_reason,
+	clippy::correctness,
+	unreachable_pub,
+)]
+
 #![warn(
-	clippy::filetype_is_file,
-	clippy::integer_division,
-	clippy::needless_borrow,
+	clippy::complexity,
 	clippy::nursery,
 	clippy::pedantic,
 	clippy::perf,
-	clippy::suboptimal_flops,
+	clippy::style,
+
+	clippy::allow_attributes,
+	clippy::clone_on_ref_ptr,
+	clippy::create_dir,
+	clippy::filetype_is_file,
+	clippy::get_unwrap,
+	clippy::missing_docs_in_private_items,
+	clippy::rest_pat_in_fully_bound_structs,
+	clippy::str_to_string,
+	clippy::string_to_string,
 	clippy::unneeded_field_pattern,
+	clippy::unwrap_in_result,
+
 	macro_use_extern_crate,
 	missing_copy_implementations,
-	missing_debug_implementations,
-	missing_docs,
 	non_ascii_idents,
 	trivial_casts,
 	trivial_numeric_casts,
-	unreachable_pub,
 	unused_crate_dependencies,
 	unused_extern_crates,
 	unused_import_braces,
 )]
 
 #![allow(
-	clippy::module_name_repetitions,
+	clippy::doc_markdown,
 	clippy::redundant_pub_crate,
 )]
 
@@ -67,14 +80,28 @@ use std::{
 
 
 
+/// # CLI Flag: Format Bits.
 pub(crate) const CLI_FORMATS: u8 =     0b0000_0111;
+
+/// # CLI Flag: No Avif.
 pub(crate) const CLI_NO_AVIF: u8 =     0b0000_0001;
+
+/// # CLI Flag: No JXL.
 pub(crate) const CLI_NO_JXL: u8 =      0b0000_0010;
+
+/// # CLI Flag: No WebP
 pub(crate) const CLI_NO_WEBP: u8 =     0b0000_0100;
 
+/// # CLI Flag: Mode Bits.
 pub(crate) const CLI_MODES: u8 =       0b0001_1000;
+
+/// # CLI Flag: No Lossless.
 pub(crate) const CLI_NO_LOSSLESS: u8 = 0b0000_1000;
+
+/// # CLI Flag: No Lossy.
 pub(crate) const CLI_NO_LOSSY: u8 =    0b0001_0000;
+
+/// # CLI Flag: No Ycbcr.
 pub(crate) const CLI_NO_YCBCR: u8 =    0b0010_0000;
 
 
@@ -265,6 +292,7 @@ fn setup_ui_window(window: &Rc<Window>) {
 	// flip the last (just clicked) value back on if none of its sisters are
 	// active.
 	{
+		/// # Helper Check Handling.
 		macro_rules! chk_cb {
 			($cb:ident, $($btn:ident),+) => ($(
 				let wnd2 = Rc::clone(window);
@@ -293,6 +321,7 @@ fn setup_ui_window(window: &Rc<Window>) {
 	// Sync preview field display to `lbl_quality` (so we only have to directly
 	// toggle the latter).
 	{
+		/// # Helper: Preview Handling.
 		macro_rules! preview_cb {
 			($event:ident, $view:ident, $opacity:literal) => (
 				let wnd2 = Rc::clone(window);
