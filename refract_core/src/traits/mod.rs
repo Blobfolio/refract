@@ -43,7 +43,10 @@ pub(super) trait Encoder {
 	const MIN_QUALITY: NonZeroU8 = NonZeroU8::MIN;
 
 	#[allow(unsafe_code)]
+	#[allow(clippy::undocumented_unsafe_blocks)] // Lint is broken.
 	/// # Maximum Quality.
+	///
+	/// Safety: one hundred is non-zero.
 	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
 
 	/// # Encode Lossy.

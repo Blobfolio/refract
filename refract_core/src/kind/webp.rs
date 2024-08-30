@@ -52,6 +52,7 @@ impl Decoder for ImageWebp {
 	/// # Decode.
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		let d = LibWebPDecode::try_from(raw)?;
+		if d.ptr.is_null() { return Err(RefractError::Decode); }
 
 		let width = usize::try_from(d.width).map_err(|_| RefractError::Overflow)?;
 		let height = usize::try_from(d.height).map_err(|_| RefractError::Overflow)?;
@@ -59,6 +60,8 @@ impl Decoder for ImageWebp {
 			.and_then(|x| x.checked_mul(4))
 			.ok_or(RefractError::Overflow)?;
 
+		// Safety: the pointer is non-null; we have to trust libwebp gave us
+		// the right dimensions.
 		let buf: Vec<u8> = unsafe { std::slice::from_raw_parts_mut(d.ptr, size) }
 			.to_vec();
 
@@ -113,6 +116,7 @@ impl TryFrom<&[u8]> for LibWebPDecode {
 
 		let mut width: c_int = 0;
 		let mut height: c_int = 0;
+		// Safety: this is an FFI call…
 		let result = unsafe {
 			WebPDecodeRGBA(src.as_ptr(), src.len(), &mut width, &mut height)
 		};
@@ -132,7 +136,10 @@ impl TryFrom<&[u8]> for LibWebPDecode {
 impl Drop for LibWebPDecode {
 	#[allow(unsafe_code)]
 	#[inline]
-	fn drop(&mut self) { unsafe { libwebp_sys::WebPFree(self.ptr.cast()); } }
+	fn drop(&mut self) {
+		// Safety: libwebp handles deallocation.
+		unsafe { libwebp_sys::WebPFree(self.ptr.cast()); }
+	}
 }
 
 
@@ -156,7 +163,9 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 		}
 
 		// Set up the picture struct.
+		// Safety: libwebp expects zeroed memory.
 		let mut out = Self(unsafe { std::mem::zeroed() });
+		// Safety: this is an FFI call…
 		maybe_die(unsafe { WebPPictureInit(&mut out.0) })?;
 
 		out.0.use_argb = 1;
@@ -165,6 +174,7 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 		out.0.argb_stride = width; // Stride always matches width for us.
 
 		// Fill the pixel buffers.
+		// Safety: this is an FFI call…
 		unsafe {
 			let raw: &[u8] = img;
 			maybe_die(WebPPictureImportRGBA(
@@ -193,7 +203,10 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 impl Drop for LibWebpPicture {
 	#[allow(unsafe_code)]
 	#[inline]
-	fn drop(&mut self) { unsafe { WebPPictureFree(&mut self.0); } }
+	fn drop(&mut self) {
+		// Safety: libwebp handles deallocation.
+		unsafe { WebPPictureFree(&mut self.0); }
+	}
 }
 
 
@@ -213,10 +226,12 @@ impl From<&mut WebPPicture> for LibWebpWriter {
 			data_size: usize,
 			picture: *const WebPPicture,
 		) -> c_int {
+			// Safety: this is an FFI call…
 			unsafe { WebPMemoryWrite(data, data_size, picture) }
 		}
 
 		// Hook in the writer.
+		// Safety: this is an FFI call…
 		let writer = Self(unsafe {
 			let mut writer: WebPMemoryWriter = std::mem::zeroed();
 			WebPMemoryWriterInit(&mut writer);
@@ -233,7 +248,10 @@ impl From<&mut WebPPicture> for LibWebpWriter {
 impl Drop for LibWebpWriter {
 	#[allow(unsafe_code)]
 	#[inline]
-	fn drop(&mut self) { unsafe { WebPMemoryWriterClear(self.0); } }
+	fn drop(&mut self) {
+		// Safety: libwebp handles deallocation.
+		unsafe { WebPMemoryWriterClear(self.0); }
+	}
 }
 
 
@@ -259,10 +277,14 @@ fn encode(
 	let writer = LibWebpWriter::from(&mut picture.0);
 
 	// Encode!
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { WebPEncode(&config, &mut picture.0) })?;
 
 	// Copy output.
+	// Safety: we need to box the data to access it.
 	let data = unsafe { Box::from_raw(writer.0) };
+	// Safety: candidate makes a copy of the data so it's short lifetime is no
+	// problem.
 	candidate.set_slice(unsafe {
 		std::slice::from_raw_parts_mut(data.mem, data.size)
 	});
@@ -292,8 +314,11 @@ fn encode(
 /// cwebp -lossless -z 9 -q 100
 /// ```
 fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
+	// Safety: the subsequent call expects zeroed memory.
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { WebPConfigInit(&mut config) })?;
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { WebPValidateConfig(&config) })?;
 
 	// Lossy bits.
@@ -304,6 +329,7 @@ fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
 	}
 	// Lossless bits.
 	else {
+		// Safety: this is an FFI call…
 		maybe_die(unsafe { WebPConfigLosslessPreset(&mut config, 9) })?;
 		config.lossless = 1;
 		config.quality = 100.0;

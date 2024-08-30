@@ -189,6 +189,7 @@ impl ImageKind {
 		match self {
 			Self::Avif => ImageAvif::MAX_QUALITY,
 			Self::Jxl => ImageJxl::MAX_QUALITY,
+			// Safety: one hundred is non-zero.
 			_ => unsafe { NonZeroU8::new_unchecked(100) },
 		}
 	}

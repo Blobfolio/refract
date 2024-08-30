@@ -316,7 +316,7 @@ impl<'a> Input<'a> {
 	/// but there is an assertion to make sure.
 	pub fn as_native(&'a self) -> Self {
 		if self.color == self.depth { return self.borrow(); }
-		assert_eq!(self.depth, ColorKind::Rgba);
+		assert!(self.depth == ColorKind::Rgba, "BUG: expected RGBA color.");
 
 		let (buf, depth): (Cow<[u8]>, ColorKind) = match self.color {
 			ColorKind::Grey => (
@@ -350,7 +350,10 @@ impl<'a> Input<'a> {
 			ColorKind::Rgba => (Cow::Borrowed(self.pixels.borrow()), ColorKind::Rgba),
 		};
 
-		assert_eq!(buf.len(), self.width() * self.height() * depth.channels() as usize);
+		assert!(
+			buf.len() == self.width() * self.height() * (depth.channels() as usize),
+			"BUG: buffer does not match expected pixel count!",
+		);
 
 		Self {
 			pixels: buf,
@@ -408,7 +411,7 @@ impl<'a> Input<'a> {
 		};
 
 		// Make sure we actually filled the buffer appropriately.
-		assert_eq!(buf.len(), size);
+		assert!(buf.len() == size, "BUG: buffer length does not match size.");
 
 		Self {
 			pixels: buf,
