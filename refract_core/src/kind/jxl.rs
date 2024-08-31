@@ -4,6 +4,7 @@
 
 use crate::{
 	Input,
+	NZ_150,
 	Output,
 	RefractError,
 	traits::Encoder,
@@ -151,12 +152,8 @@ impl Decoder for ImageJxl {
 }
 
 impl Encoder for ImageJxl {
-	#[expect(unsafe_code, reason = "One hundred fifty is non-zero.")]
-	#[expect(clippy::undocumented_unsafe_blocks, reason = "False positive.")]
 	/// # Maximum Quality.
-	///
-	/// Safety: 150 is non-zero.
-	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(150) };
+	const MAX_QUALITY: NonZeroU8 = NZ_150;
 
 	#[inline]
 	/// # Encode Lossy.

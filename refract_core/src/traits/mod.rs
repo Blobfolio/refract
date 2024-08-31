@@ -5,6 +5,7 @@
 use crate::{
 	ColorKind,
 	Input,
+	NZ_100,
 	Output,
 	RefractError,
 };
@@ -41,12 +42,8 @@ pub(super) trait Encoder {
 	/// # Minimum Quality.
 	const MIN_QUALITY: NonZeroU8 = NonZeroU8::MIN;
 
-	#[expect(unsafe_code, reason = "One hundred is non-zero.")]
-	#[expect(clippy::undocumented_unsafe_blocks, reason = "This lint is broken.")]
 	/// # Maximum Quality.
-	///
-	/// Safety: one hundred is non-zero.
-	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
+	const MAX_QUALITY: NonZeroU8 = NZ_100;
 
 	/// # Encode Lossy.
 	///

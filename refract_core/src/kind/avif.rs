@@ -5,6 +5,7 @@
 use crate::{
 	FLAG_AVIF_RGB,
 	Input,
+	NZ_063,
 	Output,
 	RefractError,
 	traits::Encoder,
@@ -130,12 +131,8 @@ impl Decoder for ImageAvif {
 }
 
 impl Encoder for ImageAvif {
-	#[expect(unsafe_code, reason = "Sixty-three is non-zero.")]
-	#[expect(clippy::undocumented_unsafe_blocks, reason = "False positive.")]
 	/// # Maximum Quality.
-	///
-	/// Safety: sixty-three is non-zero.
-	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(63) };
+	const MAX_QUALITY: NonZeroU8 = NZ_063;
 
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Encode Lossy.

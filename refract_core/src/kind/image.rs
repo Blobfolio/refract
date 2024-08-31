@@ -9,6 +9,7 @@ use crate::{
 	ImagePng,
 	ImageWebp,
 	Input,
+	NZ_100,
 	Output,
 	RefractError,
 	traits::DecoderResult,
@@ -175,7 +176,6 @@ impl ImageKind {
 	/// At the moment, this always returns `1`.
 	pub(crate) const fn min_encoder_quality(self) -> NonZeroU8 { NonZeroU8::MIN }
 
-	#[expect(unsafe_code, reason = "One hundred is non-zero.")]
 	#[must_use]
 	/// # Encoding Minimum Quality.
 	///
@@ -187,8 +187,7 @@ impl ImageKind {
 		match self {
 			Self::Avif => ImageAvif::MAX_QUALITY,
 			Self::Jxl => ImageJxl::MAX_QUALITY,
-			// Safety: one hundred is non-zero.
-			_ => unsafe { NonZeroU8::new_unchecked(100) },
+			_ => NZ_100,
 		}
 	}
 }
