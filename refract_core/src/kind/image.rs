@@ -20,7 +20,6 @@ use std::{
 
 
 
-#[allow(clippy::missing_docs_in_private_items)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 /// # Image Kind.
 pub enum ImageKind {
@@ -112,7 +111,6 @@ impl ImageKind {
 	pub const fn can_decode(self) -> bool { matches!(self, Self::Jpeg | Self::Png) }
 
 	#[cfg(feature = "decode_ng")]
-	#[allow(clippy::unused_self)]
 	#[inline]
 	#[must_use]
 	/// # Can Decode?
@@ -170,14 +168,14 @@ impl ImageKind {
 		}
 	}
 
-	#[allow(clippy::unused_self)] // We may need to reference `self` in the future.
+	#[expect(clippy::unused_self, reason = "We may need `self` in the future.")]
 	#[must_use]
 	/// # Encoding Minimum Quality.
 	///
 	/// At the moment, this always returns `1`.
 	pub(crate) const fn min_encoder_quality(self) -> NonZeroU8 { NonZeroU8::MIN }
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "One hundred is non-zero.")]
 	#[must_use]
 	/// # Encoding Minimum Quality.
 	///

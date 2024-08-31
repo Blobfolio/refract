@@ -123,7 +123,7 @@ impl Share {
 
 
 
-#[allow(clippy::missing_docs_in_private_items)]
+#[expect(clippy::missing_docs_in_private_items, reason = "Self-explanatory.")]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # Feedback.
 ///

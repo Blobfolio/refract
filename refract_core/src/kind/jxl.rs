@@ -89,7 +89,7 @@ pub(crate) struct ImageJxl;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageJxl {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		let decoder = LibJxlDecoder::new()?;
 		let mut basic_info: Option<JxlBasicInfo> = None;
@@ -151,8 +151,8 @@ impl Decoder for ImageJxl {
 }
 
 impl Encoder for ImageJxl {
-	#[allow(unsafe_code)]
-	#[allow(clippy::undocumented_unsafe_blocks)] // Lint is broken.
+	#[expect(unsafe_code, reason = "One hundred fifty is non-zero.")]
+	#[expect(clippy::undocumented_unsafe_blocks, reason = "False positive.")]
 	/// # Maximum Quality.
 	///
 	/// Safety: 150 is non-zero.
@@ -183,7 +183,7 @@ struct LibJxlDecoder(*mut JxlDecoder);
 
 #[cfg(feature = "decode_ng")]
 impl LibJxlDecoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New Decoder.
 	fn new() -> Result<Self, RefractError> {
 		// Safety: this is an FFI call…
@@ -210,7 +210,7 @@ impl LibJxlDecoder {
 		Ok(Self(dec))
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Load Basic Info.
 	fn get_basic_info(
 		&self,
@@ -234,7 +234,7 @@ impl LibJxlDecoder {
 		Ok(())
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Load ICC Profile.
 	fn get_icc_profile(&self, icc_profile: &mut Vec<u8>)
 	-> Result<(), RefractError> {
@@ -268,7 +268,7 @@ impl LibJxlDecoder {
 		Ok(())
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Output.
 	fn output(
 		&self,
@@ -300,7 +300,7 @@ impl LibJxlDecoder {
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibJxlDecoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libjxl handles deallocation.
@@ -316,7 +316,7 @@ impl Drop for LibJxlDecoder {
 struct LibJxlEncoder(*mut JxlEncoder);
 
 impl LibJxlEncoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		// Safety: this is an FFI call…
@@ -325,7 +325,7 @@ impl LibJxlEncoder {
 		else { Ok(Self(enc)) }
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Set Basic Info.
 	fn set_basic_info(&self, width: u32, height: u32, alpha: bool, grey: bool) -> Result<(), RefractError> {
 		// Set up JPEG XL's "basic info" struct.
@@ -376,7 +376,7 @@ impl LibJxlEncoder {
 		maybe_die(unsafe { JxlEncoderSetColorEncoding(self.0, &color_encoding) })
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Write.
 	fn write(&self, candidate: &mut Output) -> Result<(), RefractError> {
 		// Grab the buffer.
@@ -424,7 +424,7 @@ impl LibJxlEncoder {
 }
 
 impl Drop for LibJxlEncoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libjxl handles deallocation.
@@ -440,7 +440,7 @@ impl Drop for LibJxlEncoder {
 struct LibJxlThreadParallelRunner(*mut c_void);
 
 impl LibJxlThreadParallelRunner {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
 		// Safety: this is an FFI call…
@@ -456,7 +456,7 @@ impl LibJxlThreadParallelRunner {
 }
 
 impl Drop for LibJxlThreadParallelRunner {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libjxl handles deallocation.
@@ -466,7 +466,7 @@ impl Drop for LibJxlThreadParallelRunner {
 
 
 
-#[allow(unsafe_code, clippy::option_if_let_else)]
+#[expect(unsafe_code, reason = "Needed for FFI.")]
 /// # Encode.
 ///
 /// This stitches all the pieces together. Who would have thought a

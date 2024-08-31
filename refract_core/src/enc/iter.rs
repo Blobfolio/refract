@@ -157,7 +157,6 @@ impl EncodeIter<'_> {
 	/// This returns the size of the current best output image, if any.
 	pub fn output_size(&self) -> Option<NonZeroUsize> { self.best.size() }
 
-	#[allow(clippy::missing_const_for_fn)] // Doesn't work.
 	/// # Take the Best!
 	///
 	/// Consume the iterator and return the best candidate found, if any.

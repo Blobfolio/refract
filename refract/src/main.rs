@@ -50,10 +50,7 @@
 	unused_import_braces,
 )]
 
-#![allow(
-	clippy::doc_markdown,
-	clippy::redundant_pub_crate,
-)]
+#![expect(clippy::redundant_pub_crate, reason = "Unresolvable.")]
 
 
 
@@ -195,7 +192,7 @@ fn init_resources() -> Result<(), RefractError> {
 	Ok(())
 }
 
-#[allow(clippy::similar_names)] // We're being consistent.
+#[expect(clippy::similar_names, reason = "Consistency wins here.")]
 /// # Setup UI.
 ///
 /// This finishes the UI setup, hooking up communication channels, event

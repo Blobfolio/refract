@@ -68,7 +68,7 @@ pub(crate) struct ImageAvif;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageAvif {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		// Safety: these are FFI calls…
 		let rgb = unsafe {
@@ -130,14 +130,14 @@ impl Decoder for ImageAvif {
 }
 
 impl Encoder for ImageAvif {
-	#[allow(unsafe_code)]
-	#[allow(clippy::undocumented_unsafe_blocks)] // Lint broken.
+	#[expect(unsafe_code, reason = "Sixty-three is non-zero.")]
+	#[expect(clippy::undocumented_unsafe_blocks, reason = "False positive.")]
 	/// # Maximum Quality.
 	///
 	/// Safety: sixty-three is non-zero.
 	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(63) };
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Encode Lossy.
 	fn encode_lossy(img: &Input, candidate: &mut Output, quality: NonZeroU8, flags: u8)
 	-> Result<(), RefractError> {
@@ -187,7 +187,7 @@ struct LibAvifDecoder(*mut avifDecoder);
 
 #[cfg(feature = "decode_ng")]
 impl LibAvifDecoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New.
 	fn new() -> Result<Self, RefractError> {
 		// Safety: this is an FFI call…
@@ -215,7 +215,7 @@ impl LibAvifDecoder {
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibAvifDecoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libavif handles deallocation.
@@ -234,7 +234,7 @@ struct LibAvifEncoder(*mut avifEncoder);
 impl TryFrom<NonZeroU8> for LibAvifEncoder {
 	type Error = RefractError;
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New Instance.
 	fn try_from(quality: NonZeroU8) -> Result<Self, RefractError> {
 		// Convert quality to quantizers. AVIF is so convoluted...
@@ -273,7 +273,7 @@ impl TryFrom<NonZeroU8> for LibAvifEncoder {
 }
 
 impl Drop for LibAvifEncoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libavif handles deallocation.
@@ -290,9 +290,8 @@ impl Drop for LibAvifEncoder {
 struct LibAvifImage(*mut avifImage);
 
 impl LibAvifImage {
-	#[allow(clippy::as_ptr_cast_mut)] // Doesn't work.
-	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
-	#[allow(unsafe_code)]
+	#[expect(clippy::cast_possible_truncation, reason = "False positive.")]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New Instance.
 	fn new(src: &Input, flags: u8) -> Result<Self, RefractError> {
 		// Make sure dimensions fit u32.
@@ -360,7 +359,7 @@ impl LibAvifImage {
 	}
 
 	#[cfg(feature = "decode_ng")]
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Empty.
 	fn empty() -> Result<Self, RefractError> {
 		// Safety: this is an FFI call…
@@ -371,7 +370,7 @@ impl LibAvifImage {
 }
 
 impl Drop for LibAvifImage {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libavif handles deallocation.
@@ -391,7 +390,7 @@ struct LibAvifRGBImage(avifRGBImage);
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibAvifRGBImage {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn drop(&mut self) {
 		// Safety: libavif handles deallocation.
 		unsafe { avifRGBImageFreePixels(&mut self.0); }
@@ -406,7 +405,7 @@ impl Drop for LibAvifRGBImage {
 struct LibAvifRwData(avifRWData);
 
 impl Drop for LibAvifRwData {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libavif handles deallocation.
@@ -456,8 +455,8 @@ fn quality_to_quantizers(quality: NonZeroU8) -> (u8, u8) {
 	(q, aq)
 }
 
-#[allow(clippy::cast_sign_loss)] // Unsigned in, unsigned out.
-#[allow(clippy::cast_possible_truncation)] // u8 in, u8 out.
+#[expect(clippy::cast_sign_loss, reason = "In and out are both unsigned.")]
+#[expect(clippy::cast_possible_truncation, reason = "In and out are both `u8`.")]
 #[inline]
 /// # Ratio Of.
 ///

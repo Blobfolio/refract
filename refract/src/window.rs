@@ -213,7 +213,7 @@ impl WindowSource {
 
 
 
-#[allow(clippy::missing_docs_in_private_items)]
+#[expect(clippy::missing_docs_in_private_items, reason = "The list is long and unimportant.")]
 #[derive(Debug, Clone)]
 /// # Window.
 ///
@@ -642,7 +642,7 @@ impl Window {
 		}
 	}
 
-	#[allow(clippy::unnecessary_wraps)] // This is needed for branch consistency.
+	#[expect(clippy::unnecessary_wraps, reason = "Needed for branch consistency.")]
 	/// # Set Source.
 	fn set_source(&self, src: Candidate) -> Result<ShareFeedback, RefractError> {
 		self.remove_candidate();

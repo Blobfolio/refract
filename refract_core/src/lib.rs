@@ -51,13 +51,10 @@ This is the library powering [Refract](https://github.com/Blobfolio/refract), a 
 	unused_import_braces,
 )]
 
-#![allow(
-	clippy::doc_markdown,
-	clippy::module_name_repetitions,
-	clippy::redundant_pub_crate,
-)]
+#![expect(clippy::module_name_repetitions, reason = "Repetition is preferred.")]
+#![expect(clippy::redundant_pub_crate, reason = "Unresolvable.")]
 
-#[allow(unused_extern_crates)] // Needed for JXL.
+#[expect(unused_extern_crates, reason = "This is needed for JXL.")]
 extern crate link_cplusplus;
 
 mod enc;

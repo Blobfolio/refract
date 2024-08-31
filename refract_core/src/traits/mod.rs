@@ -38,12 +38,11 @@ pub(super) trait Decoder {
 /// This is implemented for image formats capable of encoding from RGBA pixels
 /// into a raw image.
 pub(super) trait Encoder {
-	#[allow(dead_code)]
 	/// # Minimum Quality.
 	const MIN_QUALITY: NonZeroU8 = NonZeroU8::MIN;
 
-	#[allow(unsafe_code)]
-	#[allow(clippy::undocumented_unsafe_blocks)] // Lint is broken.
+	#[expect(unsafe_code, reason = "One hundred is non-zero.")]
+	#[expect(clippy::undocumented_unsafe_blocks, reason = "This lint is broken.")]
 	/// # Maximum Quality.
 	///
 	/// Safety: one hundred is non-zero.
