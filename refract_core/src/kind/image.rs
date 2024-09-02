@@ -21,6 +21,7 @@ use std::{
 
 
 
+#[expect(missing_docs, reason = "Self-explanatory.")]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 /// # Image Kind.
 pub enum ImageKind {

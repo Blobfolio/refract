@@ -43,6 +43,7 @@ This is the library powering [Refract](https://github.com/Blobfolio/refract), a 
 
 	macro_use_extern_crate,
 	missing_copy_implementations,
+	missing_docs,
 	non_ascii_idents,
 	trivial_casts,
 	trivial_numeric_casts,

@@ -10,6 +10,7 @@ use std::{
 
 
 
+#[expect(missing_docs, reason = "Self-explanatory.")]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # Errors.
 pub enum RefractError {
