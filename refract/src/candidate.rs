@@ -24,12 +24,25 @@ use refract_core::{
 /// a buffer of RGBA pixels, the image dimensions, the encoding quality and
 /// iteration number — if applicable — and the byte size of the raw image.
 pub(super) struct Candidate {
+	/// # Image Data.
 	buf: Box<[u8]>,
+
+	/// # Image Width.
 	width: i32,
+
+	/// # Image Height.
 	height: i32,
+
+	/// # Row Size.
 	row_size: i32,
+
+	/// # Quality.
 	pub(super) quality: Quality,
+
+	/// # Iteration Count.
 	pub(super) count: u8,
+
+	/// # Size.
 	pub(super) size: usize,
 }
 

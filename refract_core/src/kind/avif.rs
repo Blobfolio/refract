@@ -5,6 +5,7 @@
 use crate::{
 	FLAG_AVIF_RGB,
 	Input,
+	NZ_063,
 	Output,
 	RefractError,
 	traits::Encoder,
@@ -68,8 +69,9 @@ pub(crate) struct ImageAvif;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageAvif {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
+		// Safety: these are FFI calls…
 		let rgb = unsafe {
 			// Decode the raw image to an avifImage.
 			let image = LibAvifImage::empty()?;
@@ -99,6 +101,9 @@ impl Decoder for ImageAvif {
 			rgb
 		};
 
+		// Sanity check: the pixel buffer should exist?
+		if rgb.0.pixels.is_null() { return Err(RefractError::Decode); }
+
 		// Make sure the dimensions fit `usize`.
 		let width = usize::try_from(rgb.0.width)
 			.map_err(|_| RefractError::Overflow)?;
@@ -111,6 +116,7 @@ impl Decoder for ImageAvif {
 			.ok_or(RefractError::Overflow)?;
 
 		// Steal the buffer.
+		// Safety: pixels are non-null, and each AVIF pixel is RGBA.
 		let buf: Vec<u8> = unsafe {
 			std::slice::from_raw_parts_mut(rgb.0.pixels, size)
 		}.to_vec();
@@ -125,11 +131,10 @@ impl Decoder for ImageAvif {
 }
 
 impl Encoder for ImageAvif {
-	#[allow(unsafe_code)]
 	/// # Maximum Quality.
-	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(63) };
+	const MAX_QUALITY: NonZeroU8 = NZ_063;
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Encode Lossy.
 	fn encode_lossy(img: &Input, candidate: &mut Output, quality: NonZeroU8, flags: u8)
 	-> Result<(), RefractError> {
@@ -138,9 +143,15 @@ impl Encoder for ImageAvif {
 
 		// Encode!
 		let mut data = LibAvifRwData(avifRWData::default());
+		// Safety: this is an FFI call…
 		maybe_die(unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) })?;
 
+		// But make sure it gave us something.
+		if data.0.data.is_null() { return Err(RefractError::Encode); }
+
 		// Grab the output.
+		// Safety: the pointer is non-null; we have to trust libavif gave us
+		// the correct size.
 		candidate.set_slice(unsafe {
 			std::slice::from_raw_parts(data.0.data, data.0.size)
 		});
@@ -173,9 +184,10 @@ struct LibAvifDecoder(*mut avifDecoder);
 
 #[cfg(feature = "decode_ng")]
 impl LibAvifDecoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New.
 	fn new() -> Result<Self, RefractError> {
+		// Safety: this is an FFI call…
 		let decoder = unsafe { avifDecoderCreate() };
 		if decoder.is_null() {
 			return Err(RefractError::Decode);
@@ -187,6 +199,8 @@ impl LibAvifDecoder {
 			.unwrap_or(1)
 			.max(1);
 
+		// Safety: We're only holding a pointer; we need to dereference it to
+		// update the values.
 		unsafe {
 			(*decoder).codecChoice = AVIF_CODEC_CHOICE_AOM;
 			(*decoder).maxThreads = threads;
@@ -198,9 +212,12 @@ impl LibAvifDecoder {
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibAvifDecoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { avifDecoderDestroy(self.0); } }
+	fn drop(&mut self) {
+		// Safety: libavif handles deallocation.
+		unsafe { avifDecoderDestroy(self.0); }
+	}
 }
 
 
@@ -214,7 +231,7 @@ struct LibAvifEncoder(*mut avifEncoder);
 impl TryFrom<NonZeroU8> for LibAvifEncoder {
 	type Error = RefractError;
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New Instance.
 	fn try_from(quality: NonZeroU8) -> Result<Self, RefractError> {
 		// Convert quality to quantizers. AVIF is so convoluted...
@@ -227,9 +244,12 @@ impl TryFrom<NonZeroU8> for LibAvifEncoder {
 			.max(1);
 
 		// Start up the encoder!
+		// Safety: this is an FFI call…
 		let encoder = unsafe { avifEncoderCreate() };
 		if encoder.is_null() { return Err(RefractError::Encode); }
 
+		// Safety: we're only holding a pointer; we need to dereference it to
+		// update the member values.
 		unsafe {
 			(*encoder).codecChoice = AVIF_CODEC_CHOICE_AOM;
 			(*encoder).maxThreads = threads;
@@ -250,9 +270,12 @@ impl TryFrom<NonZeroU8> for LibAvifEncoder {
 }
 
 impl Drop for LibAvifEncoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { avifEncoderDestroy(self.0); } }
+	fn drop(&mut self) {
+		// Safety: libavif handles deallocation.
+		unsafe { avifEncoderDestroy(self.0); }
+	}
 }
 
 
@@ -264,9 +287,9 @@ impl Drop for LibAvifEncoder {
 struct LibAvifImage(*mut avifImage);
 
 impl LibAvifImage {
-	#[allow(clippy::as_ptr_cast_mut)] // Doesn't work.
-	#[allow(clippy::cast_possible_truncation)] // The values are purpose-made.
-	#[allow(unsafe_code)]
+	#[expect(clippy::cast_possible_truncation, reason = "False positive.")]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
+	/// # New Instance.
 	fn new(src: &Input, flags: u8) -> Result<Self, RefractError> {
 		// Make sure dimensions fit u32.
 		let width = src.width_u32();
@@ -300,6 +323,7 @@ impl LibAvifImage {
 		};
 
 		// And convert it to YUV.
+		// Safety: these are FFI calls…
 		let yuv = unsafe {
 			let tmp = avifImageCreate(
 				width,
@@ -332,9 +356,10 @@ impl LibAvifImage {
 	}
 
 	#[cfg(feature = "decode_ng")]
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Empty.
 	fn empty() -> Result<Self, RefractError> {
+		// Safety: this is an FFI call…
 		let image = unsafe { avifImageCreateEmpty() };
 		if image.is_null() { Err(RefractError::Decode) }
 		else { Ok(Self(image)) }
@@ -342,9 +367,12 @@ impl LibAvifImage {
 }
 
 impl Drop for LibAvifImage {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { avifImageDestroy(self.0); } }
+	fn drop(&mut self) {
+		// Safety: libavif handles deallocation.
+		unsafe { avifImageDestroy(self.0); }
+	}
 }
 
 
@@ -359,8 +387,11 @@ struct LibAvifRGBImage(avifRGBImage);
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibAvifRGBImage {
-	#[allow(unsafe_code)]
-	fn drop(&mut self) { unsafe { avifRGBImageFreePixels(&mut self.0); } }
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
+	fn drop(&mut self) {
+		// Safety: libavif handles deallocation.
+		unsafe { avifRGBImageFreePixels(&mut self.0); }
+	}
 }
 
 
@@ -371,9 +402,12 @@ impl Drop for LibAvifRGBImage {
 struct LibAvifRwData(avifRWData);
 
 impl Drop for LibAvifRwData {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { avifRWDataFree(&mut self.0); } }
+	fn drop(&mut self) {
+		// Safety: libavif handles deallocation.
+		unsafe { avifRWDataFree(&mut self.0); }
+	}
 }
 
 
@@ -418,8 +452,8 @@ fn quality_to_quantizers(quality: NonZeroU8) -> (u8, u8) {
 	(q, aq)
 }
 
-#[allow(clippy::cast_sign_loss)] // Unsigned in, unsigned out.
-#[allow(clippy::cast_possible_truncation)] // u8 in, u8 out.
+#[expect(clippy::cast_sign_loss, reason = "In and out are both unsigned.")]
+#[expect(clippy::cast_possible_truncation, reason = "In and out are both `u8`.")]
 #[inline]
 /// # Ratio Of.
 ///

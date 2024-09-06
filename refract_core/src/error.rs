@@ -10,40 +10,65 @@ use std::{
 
 
 
-#[allow(missing_docs)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # Errors.
 pub enum RefractError {
+	/// # Unsupported color.
 	Color,
+
+	/// # Decoding failed.
 	Decode,
+
+	/// # Encoding failed.
 	Encode,
+
+	/// # Invalid image.
 	Image,
+
+	/// # Decoding not supported.
 	ImageDecode(ImageKind),
+
+	/// # Encoding not supported.
 	ImageEncode(ImageKind),
+
+	/// # No candiates were found.
 	NoBest(ImageKind),
+
+	/// # Done!
 	NothingDoing,
+
+	/// # Image dimensions are too big.
 	Overflow,
+
+	/// # Image is too big.
 	TooBig,
 
 	#[cfg(feature = "bin")]
+	/// # CLI passthrough error.
 	Argue(argyle::ArgyleError),
 
 	#[cfg(feature = "bin")]
+	/// # GTK failed.
 	GtkInit,
 
 	#[cfg(feature = "bin")]
+	/// # No source image set.
 	MissingSource,
 
 	#[cfg(feature = "bin")]
+	/// # No encoders enabled.
 	NoEncoders,
 
 	#[cfg(feature = "bin")]
+	/// # Result was ont saved.
 	NoSave,
 
 	#[cfg(feature = "bin")]
+	/// # I/O read error.
 	Read,
 
 	#[cfg(feature = "bin")]
+	/// # I/O write error.
 	Write,
 }
 

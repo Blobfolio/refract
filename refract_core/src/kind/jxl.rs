@@ -4,6 +4,7 @@
 
 use crate::{
 	Input,
+	NZ_150,
 	Output,
 	RefractError,
 	traits::Encoder,
@@ -89,7 +90,7 @@ pub(crate) struct ImageJxl;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageJxl {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		let decoder = LibJxlDecoder::new()?;
 		let mut basic_info: Option<JxlBasicInfo> = None;
@@ -99,10 +100,12 @@ impl Decoder for ImageJxl {
 		// Get the buffer going.
 		let mut buffer: Vec<u8> = Vec::new();
 		let next_in = raw.as_ptr();
-		let avail_in: usize = std::mem::size_of_val(raw);
+		let avail_in: usize = size_of_val(raw);
+		// Safety: this is an FFI call…
 		maybe_die_dec(unsafe { JxlDecoderSetInput(decoder.0, next_in, avail_in) })?;
 
 		loop {
+			// Safety: this is an FFI call…
 			match unsafe { JxlDecoderProcessInput(decoder.0) } {
 				JxlDecoderStatus::BasicInfo => {
 					decoder.get_basic_info(
@@ -123,6 +126,7 @@ impl Decoder for ImageJxl {
 				},
 				JxlDecoderStatus::FullImage => continue,
 				JxlDecoderStatus::Success => {
+					// Safety: this is an FFI call…
 					unsafe { JxlDecoderReset(decoder.0); }
 
 					let info = basic_info.ok_or(RefractError::Decode)?;
@@ -148,9 +152,8 @@ impl Decoder for ImageJxl {
 }
 
 impl Encoder for ImageJxl {
-	#[allow(unsafe_code)]
 	/// # Maximum Quality.
-	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(150) };
+	const MAX_QUALITY: NonZeroU8 = NZ_150;
 
 	#[inline]
 	/// # Encode Lossy.
@@ -177,15 +180,17 @@ struct LibJxlDecoder(*mut JxlDecoder);
 
 #[cfg(feature = "decode_ng")]
 impl LibJxlDecoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New Decoder.
 	fn new() -> Result<Self, RefractError> {
+		// Safety: this is an FFI call…
 		let dec = unsafe { JxlDecoderCreate(std::ptr::null()) };
 		if dec.is_null() {
 			return Err(RefractError::Decode);
 		}
 
 		maybe_die_dec(
+			// Safety: this is an FFI call…
 			unsafe {
 				JxlDecoderSubscribeEvents(
 					dec,
@@ -196,18 +201,20 @@ impl LibJxlDecoder {
 			}
 		)?;
 
+		// Safety: this is an FFI call…
 		maybe_die_dec(unsafe { JxlDecoderSetKeepOrientation(dec, JxlBool::True) })?;
 
 		Ok(Self(dec))
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Load Basic Info.
 	fn get_basic_info(
 		&self,
 		basic_info: &mut Option<JxlBasicInfo>,
 		pixel_format: &mut Option<JxlPixelFormat>,
 	) -> Result<(), RefractError> {
+		// Safety: these are FFI calls…
 		*basic_info = Some(unsafe {
 			let mut info = MaybeUninit::uninit();
 			maybe_die_dec(JxlDecoderGetBasicInfo(self.0, info.as_mut_ptr()))?;
@@ -224,13 +231,14 @@ impl LibJxlDecoder {
 		Ok(())
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Load ICC Profile.
 	fn get_icc_profile(&self, icc_profile: &mut Vec<u8>)
 	-> Result<(), RefractError> {
 		let mut icc_size = 0;
 
 		maybe_die_dec(
+			// Safety: this is an FFI call…
 			unsafe {
 				JxlDecoderGetICCProfileSize(
 					self.0,
@@ -243,6 +251,7 @@ impl LibJxlDecoder {
 		icc_profile.resize(icc_size, 0);
 
 		maybe_die_dec(
+			// Safety: this is an FFI call…
 			unsafe {
 				JxlDecoderGetColorAsICCProfile(
 					self.0,
@@ -256,19 +265,22 @@ impl LibJxlDecoder {
 		Ok(())
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
+	/// # Output.
 	fn output(
 		&self,
 		pixel_format: &JxlPixelFormat,
 		buffer: &mut Vec<u8>,
 	) -> Result<(), RefractError> {
 		let mut size = 0;
+		// Safety: this is an FFI call…
 		maybe_die_dec(unsafe {
 			JxlDecoderImageOutBufferSize(self.0, pixel_format, &mut size)
 		})?;
 
 		buffer.resize(size, 0);
 		maybe_die_dec(
+			// Safety: this is an FFI call…
 			unsafe {
 				JxlDecoderSetImageOutBuffer(
 					self.0,
@@ -285,10 +297,14 @@ impl LibJxlDecoder {
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibJxlDecoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { JxlDecoderDestroy(self.0); } }
+	fn drop(&mut self) {
+		// Safety: libjxl handles deallocation.
+		unsafe { JxlDecoderDestroy(self.0); }
+	}
 }
+
 
 
 /// # Hold the Encoder.
@@ -297,18 +313,20 @@ impl Drop for LibJxlDecoder {
 struct LibJxlEncoder(*mut JxlEncoder);
 
 impl LibJxlEncoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
+		// Safety: this is an FFI call…
 		let enc = unsafe { JxlEncoderCreate(std::ptr::null()) };
 		if enc.is_null() { Err(RefractError::Encode) }
 		else { Ok(Self(enc)) }
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Set Basic Info.
 	fn set_basic_info(&self, width: u32, height: u32, alpha: bool, grey: bool) -> Result<(), RefractError> {
 		// Set up JPEG XL's "basic info" struct.
+		// Safety: this is an FFI call…
 		let mut basic_info = unsafe {
 			let mut info = MaybeUninit::uninit();
 			JxlEncoderInitBasicInfo(info.as_mut_ptr());
@@ -339,6 +357,7 @@ impl LibJxlEncoder {
 		// default is three.)
 		if grey { basic_info.num_color_channels = 1; }
 
+		// Safety: this is an FFI call…
 		let color_encoding: JxlColorEncoding = unsafe {
 			let mut color_encoding = MaybeUninit::uninit();
 			JxlColorEncodingSetToSRGB(
@@ -348,11 +367,13 @@ impl LibJxlEncoder {
 			color_encoding.assume_init()
 		};
 
+		// Safety: this is an FFI call…
 		maybe_die(unsafe { JxlEncoderSetBasicInfo(self.0, &basic_info) })?;
+		// Safety: this is an FFI call…
 		maybe_die(unsafe { JxlEncoderSetColorEncoding(self.0, &color_encoding) })
 	}
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Write.
 	fn write(&self, candidate: &mut Output) -> Result<(), RefractError> {
 		// Grab the buffer.
@@ -370,7 +391,9 @@ impl LibJxlEncoder {
 			}
 
 			// Let JPEG XL do its thing.
+			// Safety: this is an FFI call…
 			let mut next_out = unsafe { buf.as_mut_ptr().add(len).cast() };
+			// Safety: this is an FFI call…
 			let res = unsafe {
 				JxlEncoderProcessOutput(self.0, &mut next_out, &mut avail_out)
 			};
@@ -381,10 +404,12 @@ impl LibJxlEncoder {
 			}
 
 			// The new next offset is how far from the beginning?
+			// Safety: this is an FFI call…
 			len = usize::try_from(unsafe { next_out.offset_from(buf.as_ptr()) })
 				.map_err(|_| RefractError::Overflow)?;
 
 			// Adjust the buffer length to match.
+			// Safety: this is an FFI call…
 			unsafe { buf.set_len(len); }
 
 			// We're done!
@@ -396,9 +421,12 @@ impl LibJxlEncoder {
 }
 
 impl Drop for LibJxlEncoder {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { JxlEncoderDestroy(self.0); } }
+	fn drop(&mut self) {
+		// Safety: libjxl handles deallocation.
+		unsafe { JxlEncoderDestroy(self.0); }
+	}
 }
 
 
@@ -409,9 +437,10 @@ impl Drop for LibJxlEncoder {
 struct LibJxlThreadParallelRunner(*mut c_void);
 
 impl LibJxlThreadParallelRunner {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New instance!
 	fn new() -> Result<Self, RefractError> {
+		// Safety: this is an FFI call…
 		let threads = unsafe {
 			JxlThreadParallelRunnerCreate(
 				std::ptr::null(),
@@ -424,16 +453,17 @@ impl LibJxlThreadParallelRunner {
 }
 
 impl Drop for LibJxlThreadParallelRunner {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
 	fn drop(&mut self) {
+		// Safety: libjxl handles deallocation.
 		unsafe { JxlThreadParallelRunnerDestroy(self.0); }
 	}
 }
 
 
 
-#[allow(unsafe_code, clippy::option_if_let_else)]
+#[expect(unsafe_code, reason = "Needed for FFI.")]
 /// # Encode.
 ///
 /// This stitches all the pieces together. Who would have thought a
@@ -448,6 +478,7 @@ fn encode(
 
 	// Hook in parallelism.
 	let runner = LibJxlThreadParallelRunner::new()?;
+	// Safety: this is an FFI call…
 	maybe_die(unsafe {
 		JxlEncoderSetParallelRunner(
 			enc.0,
@@ -457,11 +488,13 @@ fn encode(
 	})?;
 
 	// Initialize the options wrapper.
+	// Safety: this is an FFI call…
 	let options: *mut JxlEncoderFrameSettings = unsafe {
 		JxlEncoderFrameSettingsCreate(enc.0, std::ptr::null())
 	};
 
 	// No containers.
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderUseContainer(enc.0, false) })?;
 
 	// Set distance and losslessness.
@@ -469,13 +502,17 @@ fn encode(
 		Some(q) if q < 150 => f32::from(150_u8 - q) / 10.0,
 		_ => 0.0,
 	};
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderSetFrameLossless(options, 0.0 == q) })?;
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderSetFrameDistance(options, q) })?;
 
 	// Effort. 9 == Tortoise.
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, FrameSetting::Effort, 9) })?;
 
 	// Decoding speed. 0 == Highest quality.
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, FrameSetting::DecodingSpeed, 0) })?;
 
 	// Set up JPEG XL's "basic info" struct.
@@ -492,20 +529,23 @@ fn encode(
 
 	// JXL really fucks up alpha at lower qualities.
 	if color.has_alpha() {
+		// Safety: this is an FFI call…
 		maybe_die(unsafe { JxlEncoderSetExtraChannelDistance(options, 0, 0.0) })?;
 	}
 
 	let data: &[u8] = img;
+	// Safety: this is an FFI call…
 	maybe_die(unsafe {
 		JxlEncoderAddImageFrame(
 			options,
 			&pixel_format,
 			data.as_ptr().cast(),
-			std::mem::size_of_val(data),
+			size_of_val(data),
 		)
 	})?;
 
 	// Finalize the encoder.
+	// Safety: this is an FFI call…
 	unsafe { JxlEncoderCloseInput(enc.0); }
 	enc.write(candidate)
 }

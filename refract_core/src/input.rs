@@ -56,12 +56,25 @@ use std::{
 /// let input = Input::try_from(raw.as_slice()).unwrap();
 /// ```
 pub struct Input<'a> {
+	/// # Image Pixels.
 	pixels: Cow<'a, [u8]>,
+
+	/// # Image Width.
 	width: NonZeroU32,
+
+	/// # Image Height.
 	height: NonZeroU32,
-	size: NonZeroUsize, // The original file size.
+
+	/// # Original File Size.
+	size: NonZeroUsize,
+
+	/// # Color Kind.
 	color: ColorKind,
+
+	/// Color Depth.
 	depth: ColorKind,
+
+	/// # Image Kind.
 	kind: ImageKind,
 }
 
@@ -303,7 +316,7 @@ impl<'a> Input<'a> {
 	/// but there is an assertion to make sure.
 	pub fn as_native(&'a self) -> Self {
 		if self.color == self.depth { return self.borrow(); }
-		assert_eq!(self.depth, ColorKind::Rgba);
+		assert!(self.depth == ColorKind::Rgba, "BUG: expected RGBA color.");
 
 		let (buf, depth): (Cow<[u8]>, ColorKind) = match self.color {
 			ColorKind::Grey => (
@@ -337,7 +350,10 @@ impl<'a> Input<'a> {
 			ColorKind::Rgba => (Cow::Borrowed(self.pixels.borrow()), ColorKind::Rgba),
 		};
 
-		assert_eq!(buf.len(), self.width() * self.height() * depth.channels() as usize);
+		assert!(
+			buf.len() == self.width() * self.height() * (depth.channels() as usize),
+			"BUG: buffer does not match expected pixel count!",
+		);
 
 		Self {
 			pixels: buf,
@@ -395,7 +411,7 @@ impl<'a> Input<'a> {
 		};
 
 		// Make sure we actually filled the buffer appropriately.
-		assert_eq!(buf.len(), size);
+		assert!(buf.len() == size, "BUG: buffer length does not match size.");
 
 		Self {
 			pixels: buf,

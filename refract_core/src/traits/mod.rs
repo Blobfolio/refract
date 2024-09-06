@@ -5,6 +5,7 @@
 use crate::{
 	ColorKind,
 	Input,
+	NZ_100,
 	Output,
 	RefractError,
 };
@@ -38,13 +39,11 @@ pub(super) trait Decoder {
 /// This is implemented for image formats capable of encoding from RGBA pixels
 /// into a raw image.
 pub(super) trait Encoder {
-	#[allow(dead_code)]
 	/// # Minimum Quality.
 	const MIN_QUALITY: NonZeroU8 = NonZeroU8::MIN;
 
-	#[allow(unsafe_code)]
 	/// # Maximum Quality.
-	const MAX_QUALITY: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
+	const MAX_QUALITY: NonZeroU8 = NZ_100;
 
 	/// # Encode Lossy.
 	///

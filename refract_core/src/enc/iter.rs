@@ -52,12 +52,22 @@ use std::{
 /// [`EncodeIter::time`] if you're interested, otherwise the instance can be
 /// consumed, returning the "best" [`Output`] by calling [`EncodeIter::take`].
 pub struct EncodeIter<'a> {
+	/// # Source.
 	src: Input<'a>,
+
+	/// # Best Output.
 	best: Output,
+
+	/// # Current Output.
 	candidate: Output,
 
+	/// # Quality Stepper.
 	steps: QualityRange,
+
+	/// # Processing Time.
 	time: Duration,
+
+	/// # Flags.
 	flags: u8,
 }
 
@@ -147,7 +157,6 @@ impl EncodeIter<'_> {
 	/// This returns the size of the current best output image, if any.
 	pub fn output_size(&self) -> Option<NonZeroUsize> { self.best.size() }
 
-	#[allow(clippy::missing_const_for_fn)] // Doesn't work.
 	/// # Take the Best!
 	///
 	/// Consume the iterator and return the best candidate found, if any.

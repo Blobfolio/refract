@@ -14,8 +14,13 @@ use std::{
 #[derive(Debug)]
 /// # Quality Range.
 pub struct QualityRange {
+	/// # Low End.
 	bottom: NonZeroU8,
+
+	/// # High End.
 	top: NonZeroU8,
+
+	/// # Already Tried.
 	tried: HashSet<NonZeroU8, NoHash>,
 }
 

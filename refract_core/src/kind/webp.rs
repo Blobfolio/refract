@@ -48,9 +48,11 @@ pub(crate) struct ImageWebp;
 
 #[cfg(feature = "decode_ng")]
 impl Decoder for ImageWebp {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
+	/// # Decode.
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
 		let d = LibWebPDecode::try_from(raw)?;
+		if d.ptr.is_null() { return Err(RefractError::Decode); }
 
 		let width = usize::try_from(d.width).map_err(|_| RefractError::Overflow)?;
 		let height = usize::try_from(d.height).map_err(|_| RefractError::Overflow)?;
@@ -58,6 +60,8 @@ impl Decoder for ImageWebp {
 			.and_then(|x| x.checked_mul(4))
 			.ok_or(RefractError::Overflow)?;
 
+		// Safety: the pointer is non-null; we have to trust libwebp gave us
+		// the right dimensions.
 		let buf: Vec<u8> = unsafe { std::slice::from_raw_parts_mut(d.ptr, size) }
 			.to_vec();
 
@@ -92,8 +96,13 @@ impl Encoder for ImageWebp {
 ///
 /// This exists solely to help with garbage cleanup.
 struct LibWebPDecode {
+	/// # Width.
 	width: i32,
+
+	/// # Height.
 	height: i32,
+
+	/// # Data Pointer.
 	ptr: *mut u8,
 }
 
@@ -101,12 +110,13 @@ struct LibWebPDecode {
 impl TryFrom<&[u8]> for LibWebPDecode {
 	type Error = RefractError;
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
 		use libwebp_sys::WebPDecodeRGBA;
 
 		let mut width: c_int = 0;
 		let mut height: c_int = 0;
+		// Safety: this is an FFI call…
 		let result = unsafe {
 			WebPDecodeRGBA(src.as_ptr(), src.len(), &mut width, &mut height)
 		};
@@ -124,9 +134,12 @@ impl TryFrom<&[u8]> for LibWebPDecode {
 
 #[cfg(feature = "decode_ng")]
 impl Drop for LibWebPDecode {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { libwebp_sys::WebPFree(self.ptr.cast()); } }
+	fn drop(&mut self) {
+		// Safety: libwebp handles deallocation.
+		unsafe { libwebp_sys::WebPFree(self.ptr.cast()); }
+	}
 }
 
 
@@ -140,7 +153,7 @@ struct LibWebpPicture(WebPPicture);
 impl TryFrom<&Input<'_>> for LibWebpPicture {
 	type Error = RefractError;
 
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn try_from(img: &Input) -> Result<Self, Self::Error> {
 		// Check the source dimensions.
 		let width = img.width_i32()?;
@@ -150,7 +163,9 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 		}
 
 		// Set up the picture struct.
+		// Safety: libwebp expects zeroed memory.
 		let mut out = Self(unsafe { std::mem::zeroed() });
+		// Safety: this is an FFI call…
 		maybe_die(unsafe { WebPPictureInit(&mut out.0) })?;
 
 		out.0.use_argb = 1;
@@ -159,6 +174,7 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 		out.0.argb_stride = width; // Stride always matches width for us.
 
 		// Fill the pixel buffers.
+		// Safety: this is an FFI call…
 		unsafe {
 			let raw: &[u8] = img;
 			maybe_die(WebPPictureImportRGBA(
@@ -185,9 +201,12 @@ impl TryFrom<&Input<'_>> for LibWebpPicture {
 }
 
 impl Drop for LibWebpPicture {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { WebPPictureFree(&mut self.0); } }
+	fn drop(&mut self) {
+		// Safety: libwebp handles deallocation.
+		unsafe { WebPPictureFree(&mut self.0); }
+	}
 }
 
 
@@ -199,18 +218,20 @@ impl Drop for LibWebpPicture {
 struct LibWebpWriter(*mut WebPMemoryWriter);
 
 impl From<&mut WebPPicture> for LibWebpWriter {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn from(picture: &mut WebPPicture) -> Self {
-		// A Writer wrapper function. (It has to be "safe".)
+		/// # A Writer Wrapper Function. (It has to be "safe".)
 		extern "C" fn on_write(
 			data: *const u8,
 			data_size: usize,
 			picture: *const WebPPicture,
 		) -> c_int {
+			// Safety: this is an FFI call…
 			unsafe { WebPMemoryWrite(data, data_size, picture) }
 		}
 
 		// Hook in the writer.
+		// Safety: this is an FFI call…
 		let writer = Self(unsafe {
 			let mut writer: WebPMemoryWriter = std::mem::zeroed();
 			WebPMemoryWriterInit(&mut writer);
@@ -225,14 +246,17 @@ impl From<&mut WebPPicture> for LibWebpWriter {
 }
 
 impl Drop for LibWebpWriter {
-	#[allow(unsafe_code)]
+	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
-	fn drop(&mut self) { unsafe { WebPMemoryWriterClear(self.0); } }
+	fn drop(&mut self) {
+		// Safety: libwebp handles deallocation.
+		unsafe { WebPMemoryWriterClear(self.0); }
+	}
 }
 
 
 
-#[allow(unsafe_code)]
+#[expect(unsafe_code, reason = "Needed for FFI.")]
 /// # Encode `WebP`.
 ///
 /// This encodes a raw image source as a `WebP` using the provided
@@ -253,10 +277,14 @@ fn encode(
 	let writer = LibWebpWriter::from(&mut picture.0);
 
 	// Encode!
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { WebPEncode(&config, &mut picture.0) })?;
 
 	// Copy output.
+	// Safety: we need to box the data to access it.
 	let data = unsafe { Box::from_raw(writer.0) };
+	// Safety: candidate makes a copy of the data so it's short lifetime is no
+	// problem.
 	candidate.set_slice(unsafe {
 		std::slice::from_raw_parts_mut(data.mem, data.size)
 	});
@@ -269,7 +297,7 @@ fn encode(
 	Ok(())
 }
 
-#[allow(unsafe_code)]
+#[expect(unsafe_code, reason = "Needed for FFI.")]
 /// # Make Config.
 ///
 /// This generates an encoder configuration profile.
@@ -286,8 +314,11 @@ fn encode(
 /// cwebp -lossless -z 9 -q 100
 /// ```
 fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
+	// Safety: the subsequent call expects zeroed memory.
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { WebPConfigInit(&mut config) })?;
+	// Safety: this is an FFI call…
 	maybe_die(unsafe { WebPValidateConfig(&config) })?;
 
 	// Lossy bits.
@@ -298,6 +329,7 @@ fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
 	}
 	// Lossless bits.
 	else {
+		// Safety: this is an FFI call…
 		maybe_die(unsafe { WebPConfigLosslessPreset(&mut config, 9) })?;
 		config.lossless = 1;
 		config.quality = 100.0;

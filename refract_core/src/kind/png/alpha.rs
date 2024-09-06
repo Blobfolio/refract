@@ -9,8 +9,6 @@ This is a recreation of that module (and its `loop9` dependency), better
 tailored to this app's data design.
 */
 
-
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # A Square of Nine Pixels.
 ///
@@ -68,7 +66,7 @@ impl Nine {
 
 /// ## Calculations.
 impl Nine {
-	#[allow(clippy::cast_possible_truncation)] // Values will be in range.
+	#[expect(clippy::cast_possible_truncation, reason = "False positive.")]
 	/// # Average.
 	///
 	/// This is a straight average of all of the pixels in a given set.
@@ -115,7 +113,7 @@ impl Nine {
 		else { Some(avg) }
 	}
 
-	#[allow(clippy::cast_possible_truncation)] // Values will be in range.
+	#[expect(clippy::cast_possible_truncation, reason = "False positive.")]
 	/// # Weighted Average.
 	///
 	/// This calculates a weighted average of pixels (with alpha data) in the
@@ -178,7 +176,6 @@ pub(super) fn clean_alpha(img: &mut [u8], width: usize, height: usize) {
 	}
 }
 
-#[allow(clippy::iter_with_drain)] // Doesn't work.
 /// # Blur Alpha.
 ///
 /// This optimization pass adjusts the colors of transparent pixels (visible or
@@ -198,10 +195,11 @@ fn blur_alpha(img: &mut [u8], width: usize, height: usize) {
 		idx += 4;
 	});
 
+	#[expect(clippy::iter_with_drain, reason = "We don't want to deallocate diff.")]
 	// Apply the changes.
-	diff.drain(..).for_each(|(idx, px)| {
+	for (idx, px) in diff.drain(..) {
 		img[idx..idx + 4].copy_from_slice(&px);
-	});
+	}
 
 	// Now compute a straight average.
 	idx = 0;
@@ -220,7 +218,7 @@ fn blur_alpha(img: &mut [u8], width: usize, height: usize) {
 	}
 }
 
-#[allow(clippy::cast_possible_truncation)] // Values will be in range.
+#[expect(clippy::cast_possible_truncation, reason = "False positive.")]
 #[inline]
 /// # Clamp Pixel.
 ///
@@ -236,8 +234,7 @@ fn clamp(px_new: u8, px_old: u8, alpha: u8) -> u8 {
 	px_new.clamp(low, high)
 }
 
-#[allow(clippy::cast_possible_truncation)] // Values will be in range.
-#[allow(clippy::similar_names)] // Weight and Height are quite different!
+#[expect(clippy::cast_possible_truncation, reason = "False positive.")]
 /// # Neutral Pixel.
 fn neutral_pixel(img: &[u8], width: usize, height: usize) -> Option<[u8; 4]> {
 	// First up, let's look for semi-transparent pixels appearing next to fully
