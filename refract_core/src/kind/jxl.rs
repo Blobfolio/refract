@@ -10,16 +10,16 @@ use crate::{
 	traits::Encoder,
 };
 use jpegxl_sys::{
-	codestream_header::JxlBasicInfo,
-	color_encoding::JxlColorEncoding,
-	encode::{
-		FrameSetting,
+	metadata::codestream_header::JxlBasicInfo,
+	color::color_encoding::JxlColorEncoding,
+	encoder::encode::{
 		JxlColorEncodingSetToSRGB,
 		JxlEncoder,
 		JxlEncoderAddImageFrame,
 		JxlEncoderCloseInput,
 		JxlEncoderCreate,
 		JxlEncoderDestroy,
+		JxlEncoderFrameSettingId,
 		JxlEncoderFrameSettings,
 		JxlEncoderFrameSettingsCreate,
 		JxlEncoderFrameSettingsSetOption,
@@ -34,13 +34,13 @@ use jpegxl_sys::{
 		JxlEncoderStatus,
 		JxlEncoderUseContainer,
 	},
-	types::{
+	common::types::{
 		JxlBool,
 		JxlEndianness,
 		JxlDataType,
 		JxlPixelFormat,
 	},
-	thread_parallel_runner::{
+	threads::thread_parallel_runner::{
 		JxlThreadParallelRunner,
 		JxlThreadParallelRunnerCreate,
 		JxlThreadParallelRunnerDestroy,
@@ -509,11 +509,11 @@ fn encode(
 
 	// Effort. 9 == Tortoise.
 	// Safety: this is an FFI call…
-	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, FrameSetting::Effort, 9) })?;
+	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, JxlEncoderFrameSettingId::Effort, 9) })?;
 
 	// Decoding speed. 0 == Highest quality.
 	// Safety: this is an FFI call…
-	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, FrameSetting::DecodingSpeed, 0) })?;
+	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, JxlEncoderFrameSettingId::DecodingSpeed, 0) })?;
 
 	// Set up JPEG XL's "basic info" struct.
 	let color = img.color();
