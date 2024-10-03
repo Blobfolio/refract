@@ -6,11 +6,15 @@ be pulled into GTK.
 */
 
 use dowser::Extension;
+use oxford_join::JoinFmt;
 use std::{
 	collections::HashMap,
 	ffi::OsStr,
 	fs::File,
-	io::Write,
+	io::{
+		BufWriter,
+		Write,
+	},
 	path::PathBuf,
 	process::{
 		Command,
@@ -88,11 +92,13 @@ fn build_credits() {
 	list.dedup();
 
 	// Save them as a slice value!
-	let mut file = _out_path("about-credits.txt")
+	let mut file = BufWriter::new(
+		_out_path("about-credits.txt")
 		.and_then(|p| File::create(p).ok())
-		.expect("Missing OUT_DIR.");
+		.expect("Missing OUT_DIR.")
+	);
 
-	file.write_fmt(format_args!("&[{}]", list.join(",")))
+	write!(&mut file, "&[{}]", JoinFmt::new(list.iter(), ","))
 		.and_then(|_| file.flush())
 		.expect("Unable to save credits.");
 }
