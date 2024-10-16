@@ -5,6 +5,7 @@ This is used to compile a resource bundle of the various assets that need to
 be pulled into GTK.
 */
 
+use argyle::KeyWordsBuilder;
 use dowser::Extension;
 use oxford_join::JoinFmt;
 use std::{
@@ -35,9 +36,27 @@ pub fn main() {
 	println!("cargo:rerun-if-changed=Cargo.toml");
 	println!("cargo:rerun-if-changed=skel");
 
+	build_cli();
 	build_credits();
 	build_exts();
 	build_resources();
+}
+
+/// # Build CLI Keys.
+fn build_cli() {
+	let mut builder = KeyWordsBuilder::default();
+	builder.push_keys([
+		"-h", "--help",
+		"--no-avif",
+		"--no-jxl",
+		"--no-webp",
+		"--no-lossless",
+		"--no-lossy",
+		"--no-ycbcr",
+		"-V", "--version",
+	]);
+	builder.push_keys_with_values(["-l", "--list"]);
+	builder.save(_out_path("argyle.rs").expect("Missing OUT_DIR."));
 }
 
 /// # Build Credits.

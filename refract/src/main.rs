@@ -70,12 +70,7 @@ use share::{
 };
 use window::Window;
 
-use argyle::{
-	Argue,
-	ArgyleError,
-	FLAG_HELP,
-	FLAG_VERSION,
-};
+use argyle::Argument;
 use dowser::Dowser;
 use gtk::{
 	glib::Bytes,
@@ -121,11 +116,8 @@ pub(crate) const CLI_NO_YCBCR: u8 =    0b0010_0000;
 fn main() {
 	match _main() {
 		Ok(()) => {},
-		Err(RefractError::Argue(ArgyleError::WantsVersion)) => {
-			println!(concat!("Refract v", env!("CARGO_PKG_VERSION")));
-		},
-		Err(RefractError::Argue(ArgyleError::WantsHelp)) => {
-			helper();
+		Err(e @ (RefractError::PrintHelp | RefractError::PrintVersion)) => {
+			println!("{e}");
 		},
 		Err(e) => {
 			eprintln!("Error: {e}");
@@ -155,23 +147,46 @@ fn _main() -> Result<(), RefractError> {
 	);
 
 	// Load CLI arguments, if any.
-	let args = Argue::new(FLAG_HELP | FLAG_VERSION)?.with_list();
+	let args = argyle::args()
+		.with_keywords(include!(concat!(env!("OUT_DIR"), "/argyle.rs")));
+
+	let mut paths = Dowser::default();
+	let mut flags = 0_u8;
+	for arg in args {
+		match arg {
+			Argument::Key("-h" | "--help") => return Err(RefractError::PrintHelp),
+			Argument::Key("--no-avif") => { flags |= CLI_NO_AVIF; },
+			Argument::Key("--no-jxl") => { flags |= CLI_NO_JXL; },
+			Argument::Key("--no-webp") => { flags |= CLI_NO_WEBP; },
+			Argument::Key("--no-lossless") => { flags |= CLI_NO_LOSSLESS; },
+			Argument::Key("--no-lossy") => { flags |= CLI_NO_LOSSY; },
+			Argument::Key("--no-ycbcr") => { flags |= CLI_NO_YCBCR; },
+			Argument::Key("-V" | "--version") => return Err(RefractError::PrintVersion),
+
+			Argument::KeyWithValue("-l" | "--list", s) => if let Ok(s) = std::fs::read_to_string(s) {
+				paths = paths.with_paths(s.lines().filter_map(|line| {
+					let line = line.trim();
+					if line.is_empty() { None }
+					else { Some(line) }
+				}));
+			},
+
+			// Assume paths.
+			Argument::Other(s) => { paths = paths.with_path(s); },
+			Argument::InvalidUtf8(s) => { paths = paths.with_path(s); },
+
+			// Nothing else is relevant.
+			_ => {},
+		}
+	}
 
 	application.connect_activate(move |app| {
-		// Parse CLI setting overrides.
-		let flags = args.bitflags([
-			(&b"--no-avif"[..], CLI_NO_AVIF),
-			(&b"--no-jxl"[..], CLI_NO_JXL),
-			(&b"--no-webp"[..], CLI_NO_WEBP),
-			(&b"--no-lossless"[..], CLI_NO_LOSSLESS),
-			(&b"--no-lossy"[..], CLI_NO_LOSSY),
-			(&b"--no-ycbcr"[..], CLI_NO_YCBCR),
-		]);
+		let window = Rc::new(Window::new(app, flags)
+				.expect("Unable to build GTK window."));
 
-		let window = Rc::new(Window::new(app, flags).expect("Unable to build GTK window."));
-		let paths = Dowser::default()
-			.with_paths(args.args_os())
-			.into_vec_filtered(window::is_jpeg_png);
+		// We have to clone this because GTK doesn't do Rust properly. Haha.
+		let paths = paths.clone().into_vec_filtered(window::is_jpeg_png);
+
 		setup_ui(&window, paths);
 		window.paint();
 	});
@@ -346,55 +361,4 @@ fn setup_ui_window(window: &Rc<Window>) {
 		preview_cb!(connect_show, show, 1.0);
 		preview_cb!(connect_hide, hide, 0.0);
 	}
-}
-
-#[cold]
-/// # Print Help.
-fn helper() {
-	println!(concat!(
-		r"
-       ..oFaa7l;'
-   =>r??\O@@@@QNk;
-  :|Fjjug@@@@@@@@N}}:
- ^/aPePN@@@@peWQ@Qez;
- =iKBDB@@@O^:.::\kQO=~
- =iKQ@QWOP: ~gBQw'|Qgz,
- =i6RwEQ#s' N@RQQl i@D:   ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r#"
- =?|>a@@Nv'^Q@@@Qe ,aW|   Guided image conversion from
- ==;.\QQ@6,|Q@@@@p.;;+\,  JPEG/PNG to AVIF/JPEG-XL/WebP.
- '\tlFw9Wgs~W@@@@S   ,;'
- .^|QQp6D6t^iDRo;
-   ~b@BEwDEu|:::
-    rR@Q6t7|=='
-     'i6Ko\=;
-       `''''`
-
-USAGE:
-    refract [FLAGS] [OPTIONS] <PATH(S)>...
-
-FORMAT FLAGS:
-        --no-avif     Skip AVIF encoding.
-        --no-jxl      Skip JPEG-XL encoding.
-        --no-webp     Skip WebP encoding.
-
-MODE FLAGS:
-        --no-lossless Skip lossless encoding passes.
-        --no-lossy    Skip lossy encoding passes.
-        --no-ycbcr    Skip AVIF YCbCr encoding passes.
-
-MISC FLAGS:
-    -h, --help        Print help information and exit.
-    -V, --version     Print version information and exit.
-
-OPTIONS:
-    -l, --list <FILE> Read (absolute) image and/or directory paths from this
-                      text file — or STDIN if "-" — one path per line, instead
-                      of or in addition to those specified inline via
-                      <PATH(S)>.
-
-TRAILING ARGS:
-    <PATH(S)>...      Image and/or directory paths to re-encode. Directories
-                      will be crawled recursively.
-"#
-	));
 }

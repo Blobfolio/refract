@@ -19,10 +19,6 @@ version = "=3.10.7"
 default-features = false
 features = [ "rust_backend" ]
 
-[dependencies.argyle]
-version = "0.8.*"
-optional = true
-
 [dependencies.jpegxl-sys]
 version = "=0.11.1"
 default-features = false
@@ -47,7 +43,7 @@ default = []
 
 # This feature adds a few generic RefractError types for the binary. It is not
 # something external crates implementing this library would really need to use.
-bin = [ "argyle" ]
+bin = []
 
 # This feature enables decoding support for the next-gen image formats, i.e.
 # WebP, AVIF, and JPEG XL.
