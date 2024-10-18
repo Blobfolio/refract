@@ -5,12 +5,17 @@ This is used to compile a resource bundle of the various assets that need to
 be pulled into GTK.
 */
 
+use argyle::KeyWordsBuilder;
 use dowser::Extension;
+use oxford_join::JoinFmt;
 use std::{
 	collections::HashMap,
 	ffi::OsStr,
 	fs::File,
-	io::Write,
+	io::{
+		BufWriter,
+		Write,
+	},
 	path::PathBuf,
 	process::{
 		Command,
@@ -31,9 +36,27 @@ pub fn main() {
 	println!("cargo:rerun-if-changed=Cargo.toml");
 	println!("cargo:rerun-if-changed=skel");
 
+	build_cli();
 	build_credits();
 	build_exts();
 	build_resources();
+}
+
+/// # Build CLI Keys.
+fn build_cli() {
+	let mut builder = KeyWordsBuilder::default();
+	builder.push_keys([
+		"-h", "--help",
+		"--no-avif",
+		"--no-jxl",
+		"--no-webp",
+		"--no-lossless",
+		"--no-lossy",
+		"--no-ycbcr",
+		"-V", "--version",
+	]);
+	builder.push_keys_with_values(["-l", "--list"]);
+	builder.save(_out_path("argyle.rs").expect("Missing OUT_DIR."));
 }
 
 /// # Build Credits.
@@ -88,11 +111,13 @@ fn build_credits() {
 	list.dedup();
 
 	// Save them as a slice value!
-	let mut file = _out_path("about-credits.txt")
+	let mut file = BufWriter::new(
+		_out_path("about-credits.txt")
 		.and_then(|p| File::create(p).ok())
-		.expect("Missing OUT_DIR.");
+		.expect("Missing OUT_DIR.")
+	);
 
-	file.write_fmt(format_args!("&[{}]", list.join(",")))
+	write!(&mut file, "&[{}]", JoinFmt::new(list.iter(), ","))
 		.and_then(|_| file.flush())
 		.expect("Unable to save credits.");
 }

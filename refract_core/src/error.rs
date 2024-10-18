@@ -10,6 +10,55 @@ use std::{
 
 
 
+#[cfg(feature = "bin")]
+/// # Help Text.
+const HELP: &str = concat!(r"
+       ..oFaa7l;'
+   =>r??\O@@@@QNk;
+  :|Fjjug@@@@@@@@N}}:
+ ^/aPePN@@@@peWQ@Qez;
+ =iKBDB@@@O^:.::\kQO=~
+ =iKQ@QWOP: ~gBQw'|Qgz,
+ =i6RwEQ#s' N@RQQl i@D:   ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r#"
+ =?|>a@@Nv'^Q@@@Qe ,aW|   Guided image conversion from
+ ==;.\QQ@6,|Q@@@@p.;;+\,  JPEG/PNG to AVIF/JPEG-XL/WebP.
+ '\tlFw9Wgs~W@@@@S   ,;'
+ .^|QQp6D6t^iDRo;
+   ~b@BEwDEu|:::
+    rR@Q6t7|=='
+     'i6Ko\=;
+       `''''`
+
+USAGE:
+    refract [FLAGS] [OPTIONS] <PATH(S)>...
+
+FORMAT FLAGS:
+        --no-avif     Skip AVIF encoding.
+        --no-jxl      Skip JPEG-XL encoding.
+        --no-webp     Skip WebP encoding.
+
+MODE FLAGS:
+        --no-lossless Skip lossless encoding passes.
+        --no-lossy    Skip lossy encoding passes.
+        --no-ycbcr    Skip AVIF YCbCr encoding passes.
+
+MISC FLAGS:
+    -h, --help        Print help information and exit.
+    -V, --version     Print version information and exit.
+
+OPTIONS:
+    -l, --list <FILE> Read (absolute) image and/or directory paths from this
+                      text file — or STDIN if "-" — one path per line, instead
+                      of or in addition to those specified inline via
+                      <PATH(S)>.
+
+TRAILING ARGS:
+    <PATH(S)>...      Image and/or directory paths to re-encode. Directories
+                      will be crawled recursively.
+"#);
+
+
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// # Errors.
 pub enum RefractError {
@@ -44,10 +93,6 @@ pub enum RefractError {
 	TooBig,
 
 	#[cfg(feature = "bin")]
-	/// # CLI passthrough error.
-	Argue(argyle::ArgyleError),
-
-	#[cfg(feature = "bin")]
 	/// # GTK failed.
 	GtkInit,
 
@@ -70,6 +115,14 @@ pub enum RefractError {
 	#[cfg(feature = "bin")]
 	/// # I/O write error.
 	Write,
+
+	#[cfg(feature = "bin")]
+	/// # Print Help (Not an Error).
+	PrintHelp,
+
+	#[cfg(feature = "bin")]
+	/// # Print Version (Not an Error).
+	PrintVersion,
 }
 
 impl Error for RefractError {}
@@ -77,12 +130,6 @@ impl Error for RefractError {}
 impl AsRef<str> for RefractError {
 	#[inline]
 	fn as_ref(&self) -> &str { self.as_str() }
-}
-
-#[cfg(feature = "bin")]
-impl From<argyle::ArgyleError> for RefractError {
-	#[inline]
-	fn from(err: argyle::ArgyleError) -> Self { Self::Argue(err) }
 }
 
 impl fmt::Display for RefractError {
@@ -125,9 +172,6 @@ impl RefractError {
 			Self::TooBig => "The encoded image was too big.",
 
 			#[cfg(feature = "bin")]
-			Self::Argue(a) => a.as_str(),
-
-			#[cfg(feature = "bin")]
 			Self::GtkInit => "Failed to initialize GTK.",
 
 			#[cfg(feature = "bin")]
@@ -144,6 +188,12 @@ impl RefractError {
 
 			#[cfg(feature = "bin")]
 			Self::Write => "Unable to save the file.",
+
+			#[cfg(feature = "bin")]
+			Self::PrintHelp => HELP,
+
+			#[cfg(feature = "bin")]
+			Self::PrintVersion => concat!("Refract v", env!("CARGO_PKG_VERSION")),
 		}
 	}
 }

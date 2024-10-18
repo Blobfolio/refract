@@ -39,6 +39,7 @@ use gtk::{
 	prelude::*,
 	ResponseType,
 };
+use oxford_join::OxfordJoinFmt;
 use refract_core::{
 	EncodeIter,
 	FLAG_NO_AVIF_YCBCR,
@@ -1109,7 +1110,6 @@ impl Window {
 	///
 	/// This triggers when an encoding session starts.
 	fn log_start(&self, count: usize, encoders: &[ImageKind]) {
-		use oxford_join::OxfordJoin;
 		use std::fmt::Write;
 
 		if encoders.is_empty() || count == 0 { return; }
@@ -1124,7 +1124,7 @@ impl Window {
 			),
 			count.nice_inflect("image", "images"),
 			encoders.len().nice_inflect("encoder", "encoders"),
-			encoders.oxford_and(),
+			OxfordJoinFmt::and(encoders),
 		);
 		self.add_flag(FLAG_TICK_STATUS);
 	}
