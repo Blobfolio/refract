@@ -163,12 +163,8 @@ fn _main() -> Result<(), RefractError> {
 			Argument::Key("--no-ycbcr") => { flags |= CLI_NO_YCBCR; },
 			Argument::Key("-V" | "--version") => return Err(RefractError::PrintVersion),
 
-			Argument::KeyWithValue("-l" | "--list", s) => if let Ok(s) = std::fs::read_to_string(s) {
-				paths = paths.with_paths(s.lines().filter_map(|line| {
-					let line = line.trim();
-					if line.is_empty() { None }
-					else { Some(line) }
-				}));
+			Argument::KeyWithValue("-l" | "--list", s) => {
+				let _res = paths.read_paths_from_file(s);
 			},
 
 			// Assume paths.
