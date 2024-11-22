@@ -135,7 +135,7 @@ impl TryFrom<&[u8]> for Input<'_> {
 }
 
 /// ## Getters.
-impl<'a> Input<'a> {
+impl Input<'_> {
 	#[inline]
 	#[must_use]
 	/// # Color Kind.

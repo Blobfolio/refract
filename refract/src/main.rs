@@ -114,7 +114,7 @@ pub(crate) const CLI_NO_YCBCR: u8 =    0b0010_0000;
 ///
 /// This lets us bubble up startup errors so they can be pretty-printed.
 fn main() {
-	match _main() {
+	match main__() {
 		Ok(()) => {},
 		Err(e @ (RefractError::PrintHelp | RefractError::PrintVersion)) => {
 			println!("{e}");
@@ -139,7 +139,7 @@ fn main() {
 ///
 /// Any other kind of issue encountered will cause the application to fail, but
 /// with a pretty CLI error reason.
-fn _main() -> Result<(), RefractError> {
+fn main__() -> Result<(), RefractError> {
 	init_resources()?;
 	let application = gtk::Application::new(
 		Some("com.refract.gtk"),

@@ -183,7 +183,7 @@ fn build_resources() {
 		.stdout(Stdio::null())
 		.stderr(Stdio::null())
 		.status()
-		.map_or(false, |s| s.success()) {
+		.is_ok_and(|s| s.success()) {
 			panic!("Unable to bundle resources with glib-compile-resources; is GLIB installed?");
 		}
 
