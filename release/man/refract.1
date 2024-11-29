@@ -1,6 +1,6 @@
-.TH "REFRACT" "1" "October 2024" "refract v0.11.11" "User Commands"
+.TH "REFRACT" "1" "November 2024" "refract v0.11.12" "User Commands"
 .SH NAME
-REFRACT \- Manual page for refract v0.11.11.
+REFRACT \- Manual page for refract v0.11.12.
 .SH DESCRIPTION
 Guided AVIF/JPEG XL/WebP conversion for JPEG and PNG sources.
 .SS USAGE:
@@ -17,14 +17,14 @@ Skip AVIF encoding.
 \fB\-\-no\-jxl\fR
 Skip JPEG\-XL encoding.
 .TP
-\fB\-\-no\-webp\fR
-Skip WebP encoding.
-.TP
 \fB\-\-no\-lossless\fR
 Skip lossless encoding passes.
 .TP
 \fB\-\-no\-lossy\fR
 Skip lossy encoding passes.
+.TP
+\fB\-\-no\-webp\fR
+Skip WebP encoding.
 .TP
 \fB\-\-no\-ycbcr\fR
 Skip AVIF YCbCr encoding passes.
@@ -35,6 +35,7 @@ Print program version.
 .TP
 \fB\-l\fR, \fB\-\-list\fR <FILE>
 Read (absolute) image and/or directory paths from this text file — or STDIN if '\-' — one path per line, instead of or in addition to those specified inline via <PATH(S)>.
-.SS <PATH(S)…>:
+.SS TRAILING:
 .TP
+\fB<PATH(s)…>\fR
 Image and/or directory paths to re\-encode. Directories will be crawled recursively.
