@@ -97,7 +97,7 @@ version-compare = "0.2.*"
 [dependencies]
 argyle = "0.10.*"
 crossbeam-channel = "0.5.*"
-dactyl = "0.7.*"
+dactyl = "0.8.*"
 dowser = "0.10.*"
 gtk = "=0.18.1"
 oxford_join = "0.4.*"
