@@ -10,9 +10,9 @@ _basher___refract() {
 	fi
 	[[ " ${COMP_LINE} " =~ " --no-avif " ]] || opts+=("--no-avif")
 	[[ " ${COMP_LINE} " =~ " --no-jxl " ]] || opts+=("--no-jxl")
-	[[ " ${COMP_LINE} " =~ " --no-webp " ]] || opts+=("--no-webp")
 	[[ " ${COMP_LINE} " =~ " --no-lossless " ]] || opts+=("--no-lossless")
 	[[ " ${COMP_LINE} " =~ " --no-lossy " ]] || opts+=("--no-lossy")
+	[[ " ${COMP_LINE} " =~ " --no-webp " ]] || opts+=("--no-webp")
 	[[ " ${COMP_LINE} " =~ " --no-ycbcr " ]] || opts+=("--no-ycbcr")
 	if [[ ! " ${COMP_LINE} " =~ " -V " ]] && [[ ! " ${COMP_LINE} " =~ " --version " ]]; then
 		opts+=("-V")

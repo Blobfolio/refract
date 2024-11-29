@@ -151,27 +151,3 @@ GTK3 is a whole other monster, requiring the `-dev` packages for (at least) ATK,
 [This post](https://github.com/Blobfolio/refract/issues/3#issuecomment-1086924244) provides a good breakdown of how to set up a minimal Docker build environment for Refract.
 
 If you end up building Refract on a non-Debian system — Red Hat, MacOS, etc. — please let us know what that setup looked like so we can update the docs. Users of those systems will no doubt appreciate it. :)
-
-
-
-## License
-
-See also: [CREDITS.md](CREDITS.md)
-
-Copyright © 2024 [Blobfolio, LLC](https://blobfolio.com) &lt;hello@blobfolio.com&gt;
-
-This work is free. You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2.
-
-    DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-    Version 2, December 2004
-    
-    Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
-    
-    Everyone is permitted to copy and distribute verbatim or modified
-    copies of this license document, and changing it is allowed as long
-    as the name is changed.
-    
-    DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-    TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
-    
-    0. You just DO WHAT THE FUCK YOU WANT TO.

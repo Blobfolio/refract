@@ -114,7 +114,7 @@ pub(crate) const CLI_NO_YCBCR: u8 =    0b0010_0000;
 ///
 /// This lets us bubble up startup errors so they can be pretty-printed.
 fn main() {
-	match _main() {
+	match main__() {
 		Ok(()) => {},
 		Err(e @ (RefractError::PrintHelp | RefractError::PrintVersion)) => {
 			println!("{e}");
@@ -139,7 +139,7 @@ fn main() {
 ///
 /// Any other kind of issue encountered will cause the application to fail, but
 /// with a pretty CLI error reason.
-fn _main() -> Result<(), RefractError> {
+fn main__() -> Result<(), RefractError> {
 	init_resources()?;
 	let application = gtk::Application::new(
 		Some("com.refract.gtk"),
@@ -163,12 +163,8 @@ fn _main() -> Result<(), RefractError> {
 			Argument::Key("--no-ycbcr") => { flags |= CLI_NO_YCBCR; },
 			Argument::Key("-V" | "--version") => return Err(RefractError::PrintVersion),
 
-			Argument::KeyWithValue("-l" | "--list", s) => if let Ok(s) = std::fs::read_to_string(s) {
-				paths = paths.with_paths(s.lines().filter_map(|line| {
-					let line = line.trim();
-					if line.is_empty() { None }
-					else { Some(line) }
-				}));
+			Argument::KeyWithValue("-l" | "--list", s) => {
+				let _res = paths.read_paths_from_file(s);
 			},
 
 			// Assume paths.

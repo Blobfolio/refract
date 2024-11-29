@@ -61,7 +61,7 @@ impl TryFrom<&Input<'_>> for Candidate {
 		let row_size = src.row_size_i32()?;
 
 		Ok(Self {
-			buf: src.as_ref().to_vec().into_boxed_slice(),
+			buf: Box::from(src.as_ref()),
 			width,
 			height,
 			row_size,

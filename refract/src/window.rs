@@ -484,7 +484,7 @@ impl Window {
 		let tx2 = tx.clone();
 		let rx2 = rx.clone();
 		std::thread::spawn(move || {
-			_encode_outer(paths, &encoders, flags, &tx2, &rx2);
+			encode_outer__(paths, &encoders, flags, &tx2, &rx2);
 		});
 
 		true
@@ -1085,10 +1085,10 @@ impl Window {
 		let _res = write!(
 			buf,
 			concat!("Created <b>{}</b> with {}.", log_colored!("#999", "(Saved {} bytes, {}.)")),
-			path.as_ref().to_string_lossy(),
+			path.as_ref().display(),
 			quality,
-			NiceU64::from(diff).as_str(),
-			NicePercent::from(per).as_str(),
+			NiceU64::from(diff),
+			NicePercent::from(per),
 		);
 		self.add_flag(FLAG_TICK_STATUS);
 	}
@@ -1172,7 +1172,7 @@ impl Window {
 ///
 /// This is an outer wrapper over the individual file path(s). After all paths
 /// have finished, it asks for the encoding lock to be removed.
-fn _encode_outer(
+fn encode_outer__(
 	paths: Vec<PathBuf>,
 	encoders: &[ImageKind],
 	flags: u8,
@@ -1180,7 +1180,7 @@ fn _encode_outer(
 	rx: &SisterRx,
 ) {
 	for path in paths {
-		if let Err(e) = _encode(&path, encoders, flags, tx, rx) {
+		if let Err(e) = encode__(&path, encoders, flags, tx, rx) {
 			Share::sync(tx, rx, Err(e));
 		}
 	}
@@ -1194,7 +1194,7 @@ fn _encode_outer(
 /// image. It will abort early if there are problems with the path, otherwise
 /// it will guide the user through various qualities and save any "best"
 /// candidates found.
-fn _encode(
+fn encode__(
 	path: &Path,
 	encoders: &[ImageKind],
 	flags: u8,
@@ -1208,7 +1208,7 @@ fn _encode(
 
 	// First, let's read the main input.
 	Share::sync(tx, rx, Ok(Share::Path(path.to_path_buf())));
-	let (src, can) = _encode_source(path)?;
+	let (src, can) = encode_source__(path)?;
 	if ShareFeedback::Abort == Share::sync(tx, rx, Ok(Share::Source(can))) {
 		// The status isn't actually OK, but errors are already known, so this
 		// prevents resubmitting the same error later.
@@ -1242,7 +1242,7 @@ fn _encode(
 ///
 /// This generates an [`Input`] and [`Candidate`] object from a given file
 /// path, or dies trying.
-fn _encode_source(path: &Path) -> Result<(Input, Candidate), RefractError> {
+fn encode_source__(path: &Path) -> Result<(Input, Candidate), RefractError> {
 	let raw: &[u8] = &std::fs::read(path).map_err(|_| RefractError::Read)?;
 	let out = Input::try_from(raw)?;
 	let can = Candidate::try_from(&out)?;
@@ -1261,7 +1261,7 @@ where W: WidgetExt {
 /// # Is JPEG/PNG File.
 pub(super) fn is_jpeg_png(path: &Path) -> bool {
 	Extension::try_from3(path).map_or_else(
-		|| Extension::try_from4(path).map_or(false, |e| e == E_JPEG),
+		|| Extension::try_from4(path) == Some(E_JPEG),
 		|e| e == E_JPG || e == E_PNG
 	)
 }

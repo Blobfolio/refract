@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.11.11"
+version = "0.11.12"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -10,7 +10,7 @@ readme = "README.md"
 publish = false
 
 [package.metadata.deb]
-maintainer = "Josh Stoik <hello@blobfolio.com>"
+maintainer = "Josh Stoik <josh@blobfolio.com>"
 copyright = "2024, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
 revision = "1"
@@ -89,7 +89,7 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 
 [build-dependencies]
 argyle = "0.10.*"
-dowser = "0.9.*"
+dowser = "0.10.*"
 oxford_join = "0.4.*"
 toml = "0.8.14"
 version-compare = "0.2.*"
@@ -97,8 +97,8 @@ version-compare = "0.2.*"
 [dependencies]
 argyle = "0.10.*"
 crossbeam-channel = "0.5.*"
-dactyl = "0.7.*"
-dowser = "0.9.*"
+dactyl = "0.8.*"
+dowser = "0.10.*"
 gtk = "=0.18.1"
 oxford_join = "0.4.*"
 write_atomic = "0.5.*"
