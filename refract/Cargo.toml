@@ -89,7 +89,7 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 
 [build-dependencies]
 argyle = "0.10.*"
-dowser = "0.10.*"
+dowser = "0.11.*"
 oxford_join = "0.4.*"
 toml = "0.8.14"
 version-compare = "0.2.*"
@@ -98,7 +98,7 @@ version-compare = "0.2.*"
 argyle = "0.10.*"
 crossbeam-channel = "0.5.*"
 dactyl = "0.9.*"
-dowser = "0.10.*"
+dowser = "0.11.*"
 gtk = "=0.18.1"
 oxford_join = "0.4.*"
 write_atomic = "0.5.*"
