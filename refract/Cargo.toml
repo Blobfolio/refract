@@ -99,7 +99,7 @@ argyle = "0.10.*"
 crossbeam-channel = "0.5.*"
 dactyl = "0.9.*"
 dowser = "0.11.*"
-gtk = "=0.18.1"
+gtk = "=0.18.2"
 oxford_join = "0.4.*"
 write_atomic = "0.5.*"
 
