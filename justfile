@@ -46,6 +46,7 @@ release_dir := justfile_directory() + "/release"
 	# Build the deb.
 	cargo-deb \
 		--no-build \
+		--quiet \
 		-p {{ pkg_id }} \
 		-o "{{ release_dir }}"
 
