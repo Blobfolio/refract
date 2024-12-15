@@ -140,20 +140,11 @@ pub(crate) const FLAG_VALID:        u8 = 0b0010_0000;
 /// encoding needs to be completed during iteration.
 pub(crate) const FLAG_DID_LOSSLESS: u8 = 0b0100_0000;
 
-#[expect(unsafe_code, reason = "One hundred is non-zero.")]
-/// # 63.
-///
-/// Safety: sixty-three is non-zero.
-pub(crate) const NZ_063: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(63) };
+/// # 63 is Non-Zero.
+pub(crate) const NZ_063: NonZeroU8 = NonZeroU8::new(63).unwrap();
 
-#[expect(unsafe_code, reason = "One hundred is non-zero.")]
-/// # 100.
-///
-/// Safety: one hundred is non-zero.
-pub(crate) const NZ_100: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(100) };
+/// # 100 is Non-Zero.
+pub(crate) const NZ_100: NonZeroU8 = NonZeroU8::new(100).unwrap();
 
-#[expect(unsafe_code, reason = "One hundred is non-zero.")]
-/// # 150.
-///
-/// Safety: one hundred fifty is non-zero.
-pub(crate) const NZ_150: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(150) };
+/// # 150 is Non-Zero.
+pub(crate) const NZ_150: NonZeroU8 = NonZeroU8::new(150).unwrap();
