@@ -30,7 +30,7 @@ default-features = false
 features = [ "codec-aom" ]
 
 [dependencies.libwebp-sys2]
-version = "=0.1.9"
+version = "=0.1.10"
 features = [ "1_1", "static" ]
 
 [dependencies.rgb] # Match lodepng's dependency listing.
