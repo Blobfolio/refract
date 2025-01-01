@@ -11,7 +11,7 @@ publish = false
 
 [package.metadata.deb]
 maintainer = "Josh Stoik <josh@blobfolio.com>"
-copyright = "2024, Blobfolio, LLC <hello@blobfolio.com>"
+copyright = "2025, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
 revision = "1"
 depends = "$auto"
