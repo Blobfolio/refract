@@ -52,7 +52,6 @@ This is the library powering [Refract](https://github.com/Blobfolio/refract), a 
 	unused_import_braces,
 )]
 
-#![expect(clippy::module_name_repetitions, reason = "Repetition is preferred.")]
 #![expect(clippy::redundant_pub_crate, reason = "Unresolvable.")]
 
 #[expect(unused_extern_crates, reason = "This is needed for JXL.")]
