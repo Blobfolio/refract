@@ -124,30 +124,22 @@ Arch Linux users can install Refract via [AUR](https://aur.archlinux.org/package
 While specifically written for use on x86-64 Linux systems, both Rust and GTK3 are cross-platform, so you may well be able to build it from source on other 64-bit Unix systems using `Cargo`:
 
 ```bash
-# Clone the repository.
-git clone https://github.com/Blobfolio/refract.git
-
-# Move into the directory.
-cd refract
-
-# Build with Cargo. Feel free to add other build flags as desired.
-cargo build --release
+# See "cargo install --help" for more options.
+cargo install \
+    --git https://github.com/Blobfolio/refract.git \
+    --bin refract
 ```
 
-Cargo _will_ handle the entire build process for you, however many of Refract's dependencies have heavy `build.rs` scripts requiring additional system libraries. (Who'd have thought image decoders and encoders were complicated?!)
+Note that when building from source, there are _a lot_ of additional system dependencies you'll need to have installed beforehand or Cargo will pop an error. (If that happens, just install the missing thing and try again.)
 
-At a minimum, you'll need up-to-date versions of:
-
+The specifics will vary by environment, but at a minimum you'll need:
 * Cmake
-* `gcc`/`g++`
+* GCC and/or Clang
 * Git
 * Make
 * NASM
 * Ninja
-* Rust/Cargo
 
-GTK3 is a whole other monster, requiring the `-dev` packages for (at least) ATK, Cairo, GDK, GLIB, GTK, Pango, and Pixbuf. Thankfully, many distributions offer meta packages to make GTK dependency resolution easier. On Debian Bullseye, for example, installing `librust-gtk-dev` and `librust-gdk-dev` should just about cover everything.
+GTK3 is its own special kind of terrible, requiring the `-dev` packages for (at least) ATK, Cairo, GDK, GLIB, GTK, Pango, and Pixbuf.
 
-[This post](https://github.com/Blobfolio/refract/issues/3#issuecomment-1086924244) provides a good breakdown of how to set up a minimal Docker build environment for Refract.
-
-If you end up building Refract on a non-Debian system — Red Hat, MacOS, etc. — please let us know what that setup looked like so we can update the docs. Users of those systems will no doubt appreciate it. :)
+[This post](https://github.com/Blobfolio/refract/issues/3#issuecomment-1086924244) provides a good breakdown of how to set up a minimal Docker build environment for Refract, which can be useful if you want to keep all that shit off your main system.
