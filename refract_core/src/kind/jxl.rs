@@ -10,7 +10,6 @@ use crate::{
 	traits::Encoder,
 };
 use jpegxl_sys::{
-	metadata::codestream_header::JxlBasicInfo,
 	color::color_encoding::JxlColorEncoding,
 	encoder::encode::{
 		JxlColorEncodingSetToSRGB,
@@ -65,22 +64,25 @@ use crate::{
 };
 
 #[cfg(feature = "decode_ng")]
-use jpegxl_sys::decode::{
-	JxlColorProfileTarget,
-	JxlDecoder,
-	JxlDecoderCreate,
-	JxlDecoderDestroy,
-	JxlDecoderGetBasicInfo,
-	JxlDecoderGetColorAsICCProfile,
-	JxlDecoderGetICCProfileSize,
-	JxlDecoderImageOutBufferSize,
-	JxlDecoderProcessInput,
-	JxlDecoderReset,
-	JxlDecoderSetImageOutBuffer,
-	JxlDecoderSetInput,
-	JxlDecoderSetKeepOrientation,
-	JxlDecoderStatus,
-	JxlDecoderSubscribeEvents,
+use jpegxl_sys::{
+	decode::{
+		JxlColorProfileTarget,
+		JxlDecoder,
+		JxlDecoderCreate,
+		JxlDecoderDestroy,
+		JxlDecoderGetBasicInfo,
+		JxlDecoderGetColorAsICCProfile,
+		JxlDecoderGetICCProfileSize,
+		JxlDecoderImageOutBufferSize,
+		JxlDecoderProcessInput,
+		JxlDecoderReset,
+		JxlDecoderSetImageOutBuffer,
+		JxlDecoderSetInput,
+		JxlDecoderSetKeepOrientation,
+		JxlDecoderStatus,
+		JxlDecoderSubscribeEvents,
+	},
+	metadata::codestream_header::JxlBasicInfo,
 };
 
 
