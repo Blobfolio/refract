@@ -150,7 +150,7 @@ impl Drop for LibWebPDecode {
 /// we're here, may as well provide initialization code too.
 struct LibWebpPicture(WebPPicture);
 
-impl TryFrom<&Input<'_>> for LibWebpPicture {
+impl TryFrom<&Input> for LibWebpPicture {
 	type Error = RefractError;
 
 	#[expect(unsafe_code, reason = "Needed for FFI.")]

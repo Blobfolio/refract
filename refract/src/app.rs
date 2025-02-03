@@ -77,41 +77,41 @@ use std::{
 
 
 /// # Format: AVIF.
-pub(super) const FMT_AVIF: u8 =         0b0000_0001;
+const FMT_AVIF: u8 =         0b0000_0001;
 
 /// # Format: JPEG XL.
-pub(super) const FMT_JXL: u8 =          0b0000_0010;
+const FMT_JXL: u8 =          0b0000_0010;
 
 /// # Format: WebP.
-pub(super) const FMT_WEBP: u8 =         0b0000_0100;
+const FMT_WEBP: u8 =         0b0000_0100;
 
 /// # Mode: Lossless.
-pub(super) const MODE_LOSSLESS: u8 =    0b0000_1000;
+const MODE_LOSSLESS: u8 =    0b0000_1000;
 
 /// # Mode: Lossy.
-pub(super) const MODE_LOSSY: u8 =       0b0001_0000;
+const MODE_LOSSY: u8 =       0b0001_0000;
 
 /// # Mode: Lossy + YCBCR.
 ///
 /// This only applies for AVIF conversions.
-pub(super) const MODE_LOSSY_YCBCR: u8 = 0b0010_0000;
+const MODE_LOSSY_YCBCR: u8 = 0b0010_0000;
 
 /// # Show B (Candidate) Image.
-pub(super) const OTHER_BSIDE: u8 =      0b0100_0000;
+const OTHER_BSIDE: u8 =      0b0100_0000;
 
 /// # Night Mode.
-pub(super) const OTHER_NIGHT: u8 =      0b1000_0000;
+const OTHER_NIGHT: u8 =      0b1000_0000;
 
 /// # All Formats.
-pub(super) const FMT_FLAGS: u8 =
+const FMT_FLAGS: u8 =
 	FMT_AVIF | FMT_JXL | FMT_WEBP;
 
 /// # All Modes.
-pub(super) const MODE_FLAGS: u8 =
+const MODE_FLAGS: u8 =
 	MODE_LOSSLESS | MODE_LOSSY;
 
 /// # Default Flags.
-pub(super) const DEFAULT_FLAGS: u8 =
+const DEFAULT_FLAGS: u8 =
 	FMT_FLAGS | MODE_FLAGS | MODE_LOSSY_YCBCR;
 
 /// # Hot Pink (#ff3596).
@@ -142,17 +142,6 @@ const BTN_PADDING: Padding = Padding {
 	bottom: 8.0,
 	left: 20.0,
 };
-
-
-
-/// # Settings Header.
-macro_rules! settings_header {
-	($lbl:literal) => (
-		text($lbl)
-			.color(COLOR_PINK)
-			.font(BOLD)
-	);
-}
 
 
 
@@ -471,7 +460,7 @@ impl App {
 	/// # Format Checkboxes.
 	fn view_formats(&self) -> Column<Message> {
 		column!(
-			settings_header!("Formats"),
+			text("Formats").color(COLOR_PINK).font(BOLD),
 			checkbox("AVIF", self.has_flag(FMT_AVIF))
 				.on_toggle(|_| Message::ToggleFlag(FMT_AVIF))
 				.size(CHK_SIZE),
@@ -668,7 +657,7 @@ impl App {
 	/// # View Checkboxes.
 	fn view_modes(&self) -> Column<Message> {
 		column!(
-			settings_header!("Compression"),
+			text("Compression").color(COLOR_PINK).font(BOLD),
 			checkbox("Lossless", self.has_flag(MODE_LOSSLESS))
 				.on_toggle(|_| Message::ToggleFlag(MODE_LOSSLESS))
 				.size(CHK_SIZE),
@@ -684,7 +673,7 @@ impl App {
 	/// # View Checkboxes.
 	fn view_other(&self) -> Column<Message> {
 		column!(
-			settings_header!("Other"),
+			text("Other").color(COLOR_PINK).font(BOLD),
 			checkbox("Night Mode", self.has_flag(OTHER_NIGHT))
 				.on_toggle(|_| Message::ToggleFlag(OTHER_NIGHT))
 				.size(CHK_SIZE),
@@ -996,7 +985,7 @@ struct CurrentImage {
 	src: PathBuf,
 
 	/// # Decoded Source.
-	input: Input<'static>,
+	input: Input,
 
 	/// # Refract Flags.
 	flags: u8,

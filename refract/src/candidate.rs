@@ -39,14 +39,23 @@ pub(super) struct Candidate {
 	pub(super) count: u8,
 }
 
-impl TryFrom<&Input<'_>> for Candidate {
+impl TryFrom<Input> for Candidate {
+	type Error = RefractError;
+
+	/// # Source Image.
+	fn try_from(src: Input) -> Result<Self, Self::Error> {
+		Self::try_from(&src)
+	}
+}
+
+impl TryFrom<&Input> for Candidate {
 	type Error = RefractError;
 
 	/// # Source Image.
 	fn try_from(src: &Input) -> Result<Self, Self::Error> {
 		// Upscale.
 		if src.depth() != ColorKind::Rgba {
-			return Self::try_from(&src.as_rgba());
+			return Self::try_from(src.clone().into_rgba());
 		}
 
 		let width = u32::try_from(src.width()).ok()

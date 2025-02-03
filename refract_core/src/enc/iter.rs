@@ -53,7 +53,7 @@ use std::{
 /// consumed, returning the "best" [`Output`] by calling [`EncodeIter::take`].
 pub struct EncodeIter {
 	/// # Source.
-	src: Input<'static>,
+	src: Input,
 
 	/// # Best Output.
 	best: Output,
@@ -82,7 +82,7 @@ impl EncodeIter {
 	/// This will return an error if the output format does not support
 	/// encoding.
 	pub fn new(
-		src: Input<'static>,
+		src: Input,
 		kind: ImageKind,
 		mut flags: u8,
 	) -> Result<Self, RefractError> {
