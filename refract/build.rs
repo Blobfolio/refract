@@ -7,26 +7,11 @@ be pulled into GTK.
 
 use argyle::KeyWordsBuilder;
 use dowser::Extension;
-use oxford_join::JoinFmt;
 use std::{
-	collections::HashMap,
-	ffi::OsStr,
 	fs::File,
-	io::{
-		BufWriter,
-		Write,
-	},
+	io::Write,
 	path::PathBuf,
-	process::{
-		Command,
-		Stdio,
-	},
 };
-use toml::{
-	Table,
-	Value,
-};
-use version_compare::Version;
 
 
 
@@ -37,9 +22,8 @@ pub fn main() {
 	println!("cargo:rerun-if-changed=skel");
 
 	build_cli();
-	build_credits();
 	build_exts();
-	build_resources();
+	build_imgs();
 }
 
 /// # Build CLI Keys.
@@ -57,69 +41,6 @@ fn build_cli() {
 	]);
 	builder.push_keys_with_values(["-l", "--list"]);
 	builder.save(_out_path("argyle.rs").expect("Missing OUT_DIR."));
-}
-
-/// # Build Credits.
-///
-/// This compiles a list of crates used as direct dependencies (to both GTK and
-/// core, since both are ours).
-///
-/// This data gets used inside the Help > About dialogue.
-fn build_credits() {
-	// Parse the lock file.
-	let lock_toml = _man_path("Cargo.lock")
-		.or_else(|| _man_path("../Cargo.lock"))
-		.and_then(|p| std::fs::read_to_string(p).ok())
-		.and_then(|p| p.parse::<Table>().ok())
-		.expect("Unable to parse Cargo.lock.");
-
-	// Build a list of all package dependencies by crate.
-	let mut raw: HashMap<String, (String, Vec<String>)> = HashMap::new();
-	lock_toml.get("package").and_then(Value::as_array).expect("Unable to parse Cargo.lock")
-		.iter()
-		.for_each(|entry| {
-			let package = entry.as_table().expect("Malformed package entry.");
-			let name = package.get("name")
-				.and_then(Value::as_str)
-				.map(String::from)
-				.expect("Missing package name.");
-			let version = package.get("version")
-				.and_then(Value::as_str)
-				.map(String::from)
-				.expect("Missing package version.");
-			let deps = _credits_deps(package.get("dependencies"));
-
-			// It is already listed. Keep the more recent of the two.
-			if let Some(existing) = raw.get(&name) {
-				if Version::from(&existing.0) < Version::from(&version) {
-					raw.remove(&name);
-					raw.insert(name, (version, deps));
-				}
-			}
-			else {
-				raw.insert(name, (version, deps));
-			}
-		});
-
-	// Make sure we have *this* entry.
-	assert!(raw.contains_key("refract") && raw.contains_key("refract_core"), "Unable to parse Cargo.lock.");
-
-	// Build a list of direct package dependencies for *this* crate.
-	let mut list: Vec<String> = _credits_deps_formatted("refract", &raw);
-	list.extend(_credits_deps_formatted("refract_core", &raw));
-	list.sort();
-	list.dedup();
-
-	// Save them as a slice value!
-	let mut file = BufWriter::new(
-		_out_path("about-credits.txt")
-		.and_then(|p| File::create(p).ok())
-		.expect("Missing OUT_DIR.")
-	);
-
-	write!(&mut file, "&[{}]", JoinFmt::new(list.iter(), ","))
-		.and_then(|_| file.flush())
-		.expect("Unable to save credits.");
 }
 
 /// # Build Extensions.
@@ -158,88 +79,38 @@ const E_WEBP: Extension = {};
 	file.write_all(out.as_bytes())
 		.and_then(|_| file.flush())
 		.expect("Unable to save extensions.");
-
 }
 
-/// # Build Resource Bundle.
-fn build_resources() {
-	// The directory with all the files.
-	let skel_dir = _man_path("skel").expect("Missing /skel directory.");
-
-	// The input resource manifest.
-	let in_file = _man_path("skel/resources.xml").expect("Missing resources.xml");
-
-	// The output location for the resource manifest.
-	let out_file = _out_path("resources.gresource").expect("Missing OUT_DIR.");
-
-	// Build it!
-	if ! Command::new("glib-compile-resources")
-		.current_dir(&skel_dir)
-		.args([
-			OsStr::new("--target"),
-			out_file.as_os_str(),
-			in_file.as_os_str(),
-		])
-		.stdout(Stdio::null())
-		.stderr(Stdio::null())
-		.status()
-		.is_ok_and(|s| s.success()) {
-			panic!("Unable to bundle resources with glib-compile-resources; is GLIB installed?");
-		}
-
-	// Make sure that created the file.
-	assert!(out_file.is_file(), "Missing the resource bundle.");
-}
-
-/// # Credit Dependency Array.
+/// # Build Images.
 ///
-/// This parses the dependencies for a given crate. There may not be any, in
-/// which case an empty vector is returned.
-fn _credits_deps(val: Option<&Value>) -> Vec<String> {
-	if let Some(arr) = val.and_then(Value::as_array) {
-		let mut arr: Vec<String> = arr.iter()
-			.filter_map(Value::as_str)
-			.map(String::from)
-			.collect();
+/// Generate checkered background images suitable for use with the light/dark
+/// themes.
+///
+/// This shouldn't be necessary, but SVG rendering is a little wonky so it's
+/// best to hardcode the background and foreground colors.
+fn build_imgs() {
+	use iced_core::theme::Palette;
 
-		arr.sort();
-		arr.dedup();
-		arr
+	for (slug, palette) in [
+		("Light", Palette::LIGHT),
+		("Dark", Palette::DARK),
+	] {
+		let [br, bg, bb, _] = palette.background.into_rgba8();
+		let [fr, fg, fb, _] = palette.text.into_rgba8();
+
+		let out = format!(
+			r##"<svg xmlns="http://www.w3.org/2000/svg" width="7680" height="4320" viewBox="0 0 7680 4320"><pattern id="a" width="60" height="60" x="0" y="0" patternUnits="userSpaceOnUse"><path fill="#{fr:02x}{fg:02x}{fb:02x}" fill-rule="evenodd" d="M30 30h30v30H30zM0 0h30v30H0z" opacity=".15" paint-order="fill markers"/></pattern><path fill="#{br:02x}{bg:02x}{bb:02x}" d="M0 0h7680v4320H0z"/><path fill="url(#a)" d="M0 0h7680v4320H0z"/></svg>"##,
+		);
+
+		// Save them as a slice value!
+		let mut file = _out_path(&format!("refract-bg{slug}.svg"))
+			.and_then(|p| File::create(p).ok())
+			.expect("Missing OUT_DIR.");
+
+		file.write_all(out.as_bytes())
+			.and_then(|_| file.flush())
+			.expect("Unable to save SVG.");
 	}
-	else { Vec::new() }
-}
-
-/// # Credit Dependency Formatted.
-///
-/// This formats direct dependencies as a "Name Version URL" string. Because of
-/// the limited scope, we can assume all entries exist on `crates.io`.
-fn _credits_deps_formatted(key: &str, map: &HashMap<String, (String, Vec<String>)>)
--> Vec<String> {
-	if let Some(deps) = map.get(key) {
-		deps.1.iter()
-			// Ignore our build dependencies, etc.
-			.filter(|x| ! matches!(
-				x.as_str(),
-				"refract_core" | "toml" | "version-compare"
-			))
-			.filter_map(|name| map.get(name).map(|entry| format!(
-				"\"{} v{} https://crates.io/crates/{}\"",
-				name,
-				entry.0,
-				name,
-			)))
-			.collect()
-	}
-	else { Vec::new() }
-}
-
-/// # Manifest Path.
-///
-/// Return a path relative to the manifest directory.
-fn _man_path(file: &str) -> Option<PathBuf> {
-	let mut dir = std::fs::canonicalize(env!("CARGO_MANIFEST_DIR")).ok()?;
-	dir.push(file);
-	Some(dir).filter(|x| x.exists())
 }
 
 /// # Output Path.

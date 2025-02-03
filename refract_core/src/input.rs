@@ -103,7 +103,7 @@ impl Deref for Input<'_> {
 	fn deref(&self) -> &Self::Target { self.pixels.as_ref() }
 }
 
-impl TryFrom<&[u8]> for Input<'_> {
+impl TryFrom<&[u8]> for Input<'static> {
 	type Error = RefractError;
 
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
@@ -415,6 +415,126 @@ impl<'a> Input<'a> {
 
 		Self {
 			pixels: buf,
+			width: self.width,
+			height: self.height,
+			size: self.size,
+			color: self.color,
+			depth: ColorKind::Rgba,
+			kind: self.kind,
+		}
+	}
+
+	#[must_use]
+	/// ## To Native Channels.
+	///
+	/// Return a copy of the instance holding a buffer reduced to only those
+	/// channels actually used by the source. The result may be 1, 2, 3 or 4
+	/// bytes.
+	///
+	/// If the instance is already native, this is equivalent to [`Input::borrow`]
+	/// and avoids reallocating the buffer. Otherwise a new owned instance is
+	/// returned.
+	///
+	/// ## Panics
+	///
+	/// This will panic if called on a non-RGBA source that is also somehow not
+	/// the proper native format or if we don't end up with a buffer of the
+	/// correct size. Neither of these should be able to happen in practice,
+	/// but there is an assertion to make sure.
+	pub fn into_native(self) -> Self {
+		if self.color == self.depth {
+			return Self {
+				pixels: Cow::Owned(self.pixels.into_owned()),
+				..self
+			};
+		}
+		assert!(self.depth == ColorKind::Rgba, "BUG: expected RGBA color.");
+
+		let (buf, depth): (Vec<u8>, ColorKind) = match self.color {
+			ColorKind::Grey => (
+				self.pixels.chunks_exact(4).map(|px| px[0]).collect(),
+				ColorKind::Grey,
+			),
+			ColorKind::GreyAlpha => (
+				self.pixels.chunks_exact(4)
+					.fold(Vec::with_capacity(self.width() * self.height() * 2), |mut acc, px| {
+						acc.push(px[0]); // Keep one color.
+						acc.push(px[3]); // Keep alpha.
+						acc
+					}),
+				ColorKind::GreyAlpha,
+			),
+			ColorKind::Rgb => (
+				self.pixels.chunks_exact(4)
+					.fold(Vec::with_capacity(self.width() * self.height() * 3), |mut acc, px| {
+						acc.extend_from_slice(&px[..3]); // Keep RGB.
+						acc
+					}),
+				ColorKind::Rgb,
+			),
+			// We already handled color == depth.
+			ColorKind::Rgba => unreachable!(),
+		};
+
+		assert!(
+			buf.len() == self.width() * self.height() * (depth.channels() as usize),
+			"BUG: buffer does not match expected pixel count!",
+		);
+
+		Self {
+			pixels: Cow::Owned(buf),
+			width: self.width,
+			height: self.height,
+			size: self.size,
+			color: self.color,
+			depth,
+			kind: self.kind,
+		}
+	}
+
+	#[must_use]
+	/// ## To RGBA.
+	///
+	/// Return a copy of the instance holding a 4-byte RGBA pixel buffer.
+	///
+	/// If the instance already has an RGBA buffer, this is equivalent to
+	/// [`Input::borrow`] and avoids reallocating the buffer. Otherwise a new
+	/// owned instance is returned.
+	///
+	/// ## Panics
+	///
+	/// This will panic if a 4-byte RGBA slice cannot be created. This
+	/// shouldn't happen in practice, but there is an assertion to make sure.
+	pub fn into_rgba(self) -> Self {
+		// The expected size.
+		let size = self.width() * self.height() * 4;
+
+		let buf: Vec<u8> = match self.depth {
+			ColorKind::Rgba => self.pixels.into_owned(),
+			ColorKind::Rgb => self.pixels.chunks_exact(3)
+				.fold(Vec::with_capacity(size), |mut acc, px| {
+					acc.extend_from_slice(px); // Push RGB.
+					acc.push(255); // Push Alpha.
+					acc
+				}),
+			ColorKind::GreyAlpha => self.pixels.chunks_exact(2)
+				.fold(Vec::with_capacity(size), |mut acc, px| {
+					acc.extend_from_slice(&[px[0], px[0], px[0], px[1]]);
+					acc
+				}),
+			ColorKind::Grey => self.pixels.iter()
+				.copied()
+				.fold(Vec::with_capacity(size), |mut acc, px| {
+					acc.extend_from_slice(&[px, px, px, 255]);
+					acc
+				}),
+		};
+
+		// Make sure we actually filled the buffer appropriately.
+		assert!(buf.len() == size, "BUG: buffer length does not match size.");
+
+		Self {
+			pixels: Cow::Owned(buf),
 			width: self.width,
 			height: self.height,
 			size: self.size,

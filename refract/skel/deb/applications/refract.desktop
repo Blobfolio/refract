@@ -1,6 +1,6 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=Refract GTK
+Name=Refract
 Comment=Guided AVIF/JPEG XL/WebP image conversion.
 Exec=refract
 Terminal=false
@@ -8,4 +8,4 @@ Type=Application
 Icon=refract.png
 Categories=GNOME;Application;Utility;
 X-AppStream-Ignore=true
-Name[en_US]=Refract GTK
+Name[en_US]=Refract

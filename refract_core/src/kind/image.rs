@@ -155,6 +155,22 @@ impl ImageKind {
 	}
 
 	#[must_use]
+	/// # Is Empty?
+	///
+	/// Added only for consistency; image kinds are never empty.
+	pub const fn is_empty(self) -> bool { false }
+
+	#[must_use]
+	/// # Length.
+	pub const fn len(self) -> usize {
+		match self {
+			Self::Avif | Self::Jpeg | Self::Webp => 4,
+			Self::Jxl => 7,
+			Self::Png => 3,
+		}
+	}
+
+	#[must_use]
 	/// # File Extension.
 	pub const fn extension(self) -> &'static str {
 		match self {

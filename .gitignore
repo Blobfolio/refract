@@ -9,3 +9,4 @@
 **/target/
 /Cargo.lock
 /doc/
+/ref-bin*

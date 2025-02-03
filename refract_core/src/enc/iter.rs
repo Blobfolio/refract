@@ -51,9 +51,9 @@ use std::{
 /// Once iteration has finished, the computation time can be collected via
 /// [`EncodeIter::time`] if you're interested, otherwise the instance can be
 /// consumed, returning the "best" [`Output`] by calling [`EncodeIter::take`].
-pub struct EncodeIter<'a> {
+pub struct EncodeIter {
 	/// # Source.
-	src: Input<'a>,
+	src: Input<'static>,
 
 	/// # Best Output.
 	best: Output,
@@ -72,7 +72,7 @@ pub struct EncodeIter<'a> {
 }
 
 /// ## Instantiation.
-impl<'a> EncodeIter<'a> {
+impl EncodeIter {
 	/// # New.
 	///
 	/// Start a new iterator given a source and output format.
@@ -82,7 +82,7 @@ impl<'a> EncodeIter<'a> {
 	/// This will return an error if the output format does not support
 	/// encoding.
 	pub fn new(
-		src: &'a Input<'a>,
+		src: Input<'static>,
 		kind: ImageKind,
 		mut flags: u8,
 	) -> Result<Self, RefractError> {
@@ -101,9 +101,9 @@ impl<'a> EncodeIter<'a> {
 		Ok(Self {
 			src: match kind {
 				// JPEG XL takes a compacted buffer.
-				ImageKind::Jxl => src.as_native(),
+				ImageKind::Jxl => src.into_native(),
 				// Everybody else works from full RGBA.
-				_ => src.as_rgba(),
+				_ => src.into_rgba(),
 			},
 			best: Output::new(kind),
 			candidate: Output::new(kind),
@@ -116,7 +116,7 @@ impl<'a> EncodeIter<'a> {
 }
 
 /// ## Getters.
-impl EncodeIter<'_> {
+impl EncodeIter {
 	#[inline]
 	#[must_use]
 	/// # Candidate.
@@ -191,7 +191,7 @@ impl EncodeIter<'_> {
 }
 
 /// ## Encoding.
-impl EncodeIter<'_> {
+impl EncodeIter {
 	/// # Lossless Encoding.
 	///
 	/// Attempt to losslessly encode the image.
@@ -229,7 +229,7 @@ impl EncodeIter<'_> {
 }
 
 /// ## Iteration Helpers.
-impl EncodeIter<'_> {
+impl EncodeIter {
 	/// # Crunch the Next Quality!
 	///
 	/// This is the tick method for the "iterator". Each call to it will

@@ -14,13 +14,13 @@ maintainer = "Josh Stoik <josh@blobfolio.com>"
 copyright = "2025, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
 revision = "1"
-depends = "$auto"
+depends = "$auto, xdg-desktop-portal-gtk | xdg-desktop-portal-gnome | xdg-desktop-portal-kde"
 replaces = "refract-gtk"
 conflicts = "refract-gtk"
 section = "graphics"
 extended-description = """\
 .\n\
-Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality."""
+Refract is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality."""
 assets = [
     ["../target/release/refract", "usr/bin/", "755"],
     ["./skel/deb/applications/refract.desktop", "/usr/share/applications/", "644"],
@@ -90,18 +90,22 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 [build-dependencies]
 argyle = "0.10.*"
 dowser = "0.11.*"
-oxford_join = "0.4.*"
-toml = "0.8.14"
-version-compare = "0.2.*"
+
+[build-dependencies.iced_core]
+version = "0.13.2"
+default-features = false
 
 [dependencies]
 argyle = "0.10.*"
-crossbeam-channel = "0.5.*"
 dactyl = "0.9.*"
 dowser = "0.11.*"
-gtk = "=0.18.2"
-oxford_join = "0.4.*"
+rfd = "=0.15.2"
+utc2k = "0.11.*"
 write_atomic = "0.5.*"
+
+[dependencies.iced]
+version = "=0.13.1"
+features = [ "advanced", "image-without-codecs", "svg" ]
 
 [dependencies.refract_core]
 path = "../refract_core"

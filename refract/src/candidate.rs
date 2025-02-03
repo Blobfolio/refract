@@ -2,48 +2,41 @@
 # `Refract GTK` - Candidate
 */
 
-use gtk::gdk_pixbuf::{
-	Colorspace,
-	Pixbuf,
-};
 use refract_core::{
 	ColorKind,
+	ImageKind,
 	Input,
 	Output,
 	Quality,
 	RefractError,
 };
+use std::num::NonZeroU32;
 
 
 
 #[derive(Debug)]
 /// # Candidate.
 ///
-/// This is an image "middleware" that can be shared across threads. (Neither
-/// `Pixbuf` nor `Input` are willing to make that journey directly.) It holds
-/// a buffer of RGBA pixels, the image dimensions, the encoding quality and
-/// iteration number — if applicable — and the byte size of the raw image.
+/// This holds the decoded pixels and basic details for a newly-converted image
+/// for display purposes.
 pub(super) struct Candidate {
 	/// # Image Data.
-	buf: Box<[u8]>,
+	pub(super) buf: Box<[u8]>,
 
 	/// # Image Width.
-	width: i32,
+	pub(super) width: NonZeroU32,
 
 	/// # Image Height.
-	height: i32,
+	pub(super) height: NonZeroU32,
 
-	/// # Row Size.
-	row_size: i32,
+	/// # Kind.
+	pub(super) kind: ImageKind,
 
 	/// # Quality.
 	pub(super) quality: Quality,
 
 	/// # Iteration Count.
 	pub(super) count: u8,
-
-	/// # Size.
-	pub(super) size: usize,
 }
 
 impl TryFrom<&Input<'_>> for Candidate {
@@ -56,18 +49,21 @@ impl TryFrom<&Input<'_>> for Candidate {
 			return Self::try_from(&src.as_rgba());
 		}
 
-		let width = src.width_i32()?;
-		let height = src.height_i32()?;
-		let row_size = src.row_size_i32()?;
+		let width = u32::try_from(src.width()).ok()
+			.and_then(NonZeroU32::new)
+			.ok_or(RefractError::Overflow)?;
+		let height = u32::try_from(src.height()).ok()
+			.and_then(NonZeroU32::new)
+			.ok_or(RefractError::Overflow)?;
+		let kind = src.kind();
 
 		Ok(Self {
 			buf: Box::from(src.as_ref()),
 			width,
 			height,
-			row_size,
+			kind,
 			quality: Quality::Lossless(src.kind()),
 			count: 0,
-			size: src.size(),
 		})
 	}
 }
@@ -75,37 +71,13 @@ impl TryFrom<&Input<'_>> for Candidate {
 impl TryFrom<&Output> for Candidate {
 	type Error = RefractError;
 
+	#[inline]
 	/// # Candidate Image.
 	fn try_from(src: &Output) -> Result<Self, Self::Error> {
-		let input = Input::try_from(src.as_ref())?;
-		let width = input.width_i32()?;
-		let height = input.height_i32()?;
-		let row_size = input.row_size_i32()?;
-		let size = input.size();
-
-		Ok(Self {
-			buf: input.take_pixels().into_boxed_slice(),
-			width,
-			height,
-			row_size,
-			quality: src.quality(),
-			count: 1,
-			size,
-		})
-	}
-}
-
-impl From<Candidate> for Pixbuf {
-	fn from(src: Candidate) -> Self {
-		Self::from_mut_slice(
-			src.buf,
-			Colorspace::Rgb,
-			true,
-			8,
-			src.width,
-			src.height,
-			src.row_size,
-		)
+		let quality = src.quality();
+		let mut out = Input::try_from(src.as_ref()).and_then(|i| Self::try_from(&i))?;
+		out.quality = quality;
+		Ok(out)
 	}
 }
 
