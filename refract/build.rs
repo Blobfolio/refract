@@ -83,30 +83,8 @@ const E_WEBP: Extension = {};
 }
 
 /// # Build Images.
-///
-/// Generate checkered background images suitable for use with the light/dark
-/// themes.
-///
-/// This shouldn't be necessary, but SVG rendering is a little wonky so it's
-/// best to hardcode the background and foreground colors.
 fn build_imgs() {
-	for (slug, bg, fg) in [
-		("Light", "ffffff", "333333"),
-		("Dark",  "333333", "ffffff"),
-	] {
-		let out = format!(
-			r##"<svg xmlns="http://www.w3.org/2000/svg" width="7680" height="4320" viewBox="0 0 7680 4320"><pattern id="a" width="60" height="60" x="0" y="0" patternUnits="userSpaceOnUse"><path fill="#{fg}" fill-rule="evenodd" d="M30 30h30v30H30zM0 0h30v30H0z" opacity=".15" paint-order="fill markers"/></pattern><path fill="#{bg}" d="M0 0h7680v4320H0z"/><path fill="url(#a)" d="M0 0h7680v4320H0z"/></svg>"##,
-		);
-
-		// Save them as a slice value!
-		let mut file = _out_path(&format!("refract-bg{slug}.svg"))
-			.and_then(|p| File::create(p).ok())
-			.expect("Missing OUT_DIR.");
-
-		file.write_all(out.as_bytes())
-			.and_then(|_| file.flush())
-			.expect("Unable to save SVG.");
-	}
+	// Not currently used.
 }
 
 /// # Output Path.

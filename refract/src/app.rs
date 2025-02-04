@@ -6,6 +6,7 @@ use argyle::Argument;
 use crate::{
 	button_style,
 	Candidate,
+	CHECKERS,
 	DARK_PALETTE,
 	DARK_THEME,
 	LIGHT_PALETTE,
@@ -225,14 +226,6 @@ impl App {
 impl App {
 	/// # Has Flag.
 	const fn has_flag(&self, flag: u16) -> bool { flag == self.flags & flag }
-
-	/// # Background.
-	///
-	/// Returns A or B depending on what's going on.
-	const fn bg(&self) -> &'static [u8] {
-		if self.has_flag(OTHER_NIGHT) { crate::BG_DARK }
-		else { crate::BG_LIGHT }
-	}
 
 	/// # State.
 	pub(super) fn state(&self) -> State {
@@ -946,11 +939,13 @@ impl App {
 			.height(Fill)
 	}
 
+	#[expect(clippy::unused_self, reason = "Required by API.")]
 	/// # Pixel Background Layer.
 	fn view_image_layer0(&self) -> Container<Message> {
 		use iced::widget::svg::Handle;
 		container(
-			svg(Handle::from_memory(self.bg()))
+			svg(Handle::from_memory(CHECKERS))
+				.opacity(0.2)
 				.content_fit(ContentFit::None)
 				.width(Fill)
 				.height(Fill)

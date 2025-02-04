@@ -63,8 +63,7 @@ mod styles;
 use app::App;
 use candidate::Candidate;
 use img::{
-	BG_DARK,
-	BG_LIGHT,
+	CHECKERS,
 	is_jpeg_png,
 	with_ng_extension,
 };
