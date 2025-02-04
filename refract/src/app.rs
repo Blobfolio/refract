@@ -66,6 +66,7 @@ use refract_core::{
 use rfd::FileDialog;
 use std::{
 	borrow::Cow,
+	collections::BTreeSet,
 	ffi::OsStr,
 	num::NonZeroUsize,
 	path::{
@@ -151,10 +152,13 @@ pub(super) struct App {
 	flags: u8,
 
 	/// # Paths (Queue).
-	paths: Vec<PathBuf>,
+	paths: BTreeSet<PathBuf>,
 
 	/// # Current Job.
 	current: Option<CurrentImage>,
+
+	/// # Last Directory.
+	last_dir: Option<PathBuf>,
 
 	/// # Results.
 	done: Vec<ImageResults>,
@@ -201,15 +205,20 @@ impl App {
 		if 0 == flags & FMT_FLAGS { flags |= FMT_FLAGS; }
 		if 0 == flags & MODE_FLAGS { flags |= MODE_FLAGS; }
 
-		// Digest the paths.
-		let paths = paths.into_vec_filtered(crate::is_jpeg_png);
-
-		Ok(Self {
+		// We're almost done.
+		let mut out = Self {
 			flags,
-			paths,
+			paths: BTreeSet::new(),
 			current: None,
+			last_dir: None,
 			done: Vec::new(),
-		})
+		};
+
+		// Digest the paths, if any.
+		out.add_paths(paths);
+
+		// Done!
+		Ok(out)
 	}
 }
 
@@ -251,6 +260,24 @@ impl App {
 
 /// # Setters.
 impl App {
+	/// # Digest Paths.
+	fn add_paths(&mut self, paths: Dowser) {
+		let mut paths = paths.filter(|p| crate::is_jpeg_png(p));
+
+		// Grab the first path manually so we can note its parent directory
+		// (for any subsequent file browsing needs).
+		let Some(first) = paths.next() else { return; };
+		if let Some(dir) = first.parent() {
+			if self.last_dir.as_ref().is_none_or(|old| old != dir) {
+				self.last_dir.replace(dir.to_path_buf());
+			}
+		}
+
+		// Add it and the rest.
+		self.paths.insert(first);
+		self.paths.extend(paths);
+	}
+
 	/// # Toggle Flag.
 	fn toggle_flag(&mut self, flag: u8) {
 		self.flags ^= flag;
@@ -277,7 +304,7 @@ impl App {
 			Message::NextImage => {
 				self.flags &= ! OTHER_BSIDE;
 				self.current = None;
-				while let Some(src) = self.paths.pop() {
+				while let Some(src) = self.paths.pop_first() {
 					if let Some(mut current) = CurrentImage::new(src, self.flags) {
 						// Add an entry for it.
 						self.done.push(ImageResults {
@@ -338,22 +365,30 @@ impl App {
 
 			// Add File(s) or Directory.
 			Message::AddPaths(dir) => {
+				// Try to set a sane starting directory for ourselves.
+				let mut fd = FileDialog::new();
+				if let Some(p) = self.last_dir.as_ref() { fd = fd.set_directory(p); }
+				else if let Ok(p) = std::env::current_dir() {
+					fd = fd.set_directory(p);
+				}
+
+				// Pop a dialog for the user and wait for their selection.
 				let paths =
 					if dir {
-						FileDialog::new()
-							.set_title("Open Directory")
+						fd.set_title("Open Directory")
 							.pick_folder()
 							.map(Dowser::from)
 					}
 					else {
-						FileDialog::new()
-							.add_filter("Images", &["jpg", "jpeg", "png"])
+						fd.add_filter("Images", &["jpg", "jpeg", "png"])
 							.set_title("Open Image(s)")
 							.pick_files()
 							.map(Dowser::from)
 					};
+
+				// Proceed if anything came back.
 				if let Some(paths) = paths {
-					self.paths.extend(paths.filter(|p: &PathBuf| crate::is_jpeg_png(p)));
+					self.add_paths(paths);
 					if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 				}
 			},
@@ -649,7 +684,7 @@ impl App {
 			}
 		}
 
-		scrollable(container(lines).padding(10))
+		scrollable(container(lines).width(Fill).padding(10))
 			.height(Fill)
 			.anchor_bottom()
 	}
