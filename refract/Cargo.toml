@@ -72,6 +72,10 @@ long = "--no-ycbcr"
 description = "Skip AVIF YCbCr encoding passes."
 
 [[package.metadata.bashman.switches]]
+long = "--save-auto"
+description = "Always use the (automatically) derived output paths when saving images instead of popping a file dialogue."
+
+[[package.metadata.bashman.switches]]
 short = "-V"
 long = "--version"
 description = "Print program version."

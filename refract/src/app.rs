@@ -25,12 +25,12 @@ use iced::{
 		Weight,
 	},
 	Padding,
-	Shrink,
 	Shadow,
+	Shrink,
 	Subscription,
 	Task,
-	theme::Palette,
 	Theme,
+	theme::Palette,
 	widget::{
 		button,
 		checkbox,
@@ -51,6 +51,7 @@ use iced::{
 		text,
 		text::Rich,
 		text_input,
+		tooltip,
 	},
 };
 use refract_core::{
@@ -78,41 +79,44 @@ use std::{
 
 
 /// # Format: AVIF.
-const FMT_AVIF: u8 =         0b0000_0001;
+const FMT_AVIF: u16 =         0b0000_0000_0001;
 
 /// # Format: JPEG XL.
-const FMT_JXL: u8 =          0b0000_0010;
+const FMT_JXL: u16 =          0b0000_0000_0010;
 
 /// # Format: WebP.
-const FMT_WEBP: u8 =         0b0000_0100;
+const FMT_WEBP: u16 =         0b0000_0000_0100;
 
 /// # Mode: Lossless.
-const MODE_LOSSLESS: u8 =    0b0000_1000;
+const MODE_LOSSLESS: u16 =    0b0000_0000_1000;
 
 /// # Mode: Lossy.
-const MODE_LOSSY: u8 =       0b0001_0000;
+const MODE_LOSSY: u16 =       0b0000_0001_0000;
 
 /// # Mode: Lossy + YCBCR.
 ///
 /// This only applies for AVIF conversions.
-const MODE_LOSSY_YCBCR: u8 = 0b0010_0000;
+const MODE_LOSSY_YCBCR: u16 = 0b0000_0010_0000;
 
 /// # Show B (Candidate) Image.
-const OTHER_BSIDE: u8 =      0b0100_0000;
+const OTHER_BSIDE: u16 =      0b0000_0100_0000;
 
 /// # Night Mode.
-const OTHER_NIGHT: u8 =      0b1000_0000;
+const OTHER_NIGHT: u16 =      0b0000_1000_0000;
+
+/// # Save w/o Prompt.
+const OTHER_SAVE_AUTO: u16 =  0b0001_0000_0000;
 
 /// # All Formats.
-const FMT_FLAGS: u8 =
+const FMT_FLAGS: u16 =
 	FMT_AVIF | FMT_JXL | FMT_WEBP;
 
 /// # All Modes.
-const MODE_FLAGS: u8 =
+const MODE_FLAGS: u16 =
 	MODE_LOSSLESS | MODE_LOSSY;
 
 /// # Default Flags.
-const DEFAULT_FLAGS: u8 =
+const DEFAULT_FLAGS: u16 =
 	FMT_FLAGS | MODE_FLAGS | MODE_LOSSY_YCBCR;
 
 /// # Hot Pink (#ff3596).
@@ -149,7 +153,7 @@ const BTN_PADDING: Padding = Padding {
 /// # Application.
 pub(super) struct App {
 	/// # Flags.
-	flags: u8,
+	flags: u16,
 
 	/// # Paths (Queue).
 	paths: BTreeSet<PathBuf>,
@@ -185,6 +189,7 @@ impl App {
 				Argument::Key("--no-lossless") => { flags &= ! MODE_LOSSLESS; },
 				Argument::Key("--no-lossy") => { flags &= ! MODE_LOSSY; },
 				Argument::Key("--no-ycbcr") => { flags &= ! MODE_LOSSY_YCBCR; },
+				Argument::Key("--save-auto") => { flags |= OTHER_SAVE_AUTO; },
 				Argument::Key("-V" | "--version") => return Err(RefractError::PrintVersion),
 
 				Argument::KeyWithValue("-l" | "--list", s) => {
@@ -225,7 +230,7 @@ impl App {
 /// # Getters.
 impl App {
 	/// # Has Flag.
-	const fn has_flag(&self, flag: u8) -> bool { flag == self.flags & flag }
+	const fn has_flag(&self, flag: u16) -> bool { flag == self.flags & flag }
 
 	/// # Background.
 	///
@@ -279,7 +284,7 @@ impl App {
 	}
 
 	/// # Toggle Flag.
-	fn toggle_flag(&mut self, flag: u8) {
+	fn toggle_flag(&mut self, flag: u16) {
 		self.flags ^= flag;
 
 		// Same as `new`, we need to make sure the format and mode flags aren't
@@ -325,6 +330,7 @@ impl App {
 			// Encode next image.
 			Message::NextStep => {
 				self.flags &= ! OTHER_BSIDE;
+				let confirm = ! self.has_flag(OTHER_SAVE_AUTO);
 				if let Some(current) = &mut self.current {
 					// Advance iterator and wait for feedback.
 					if current.advance() {
@@ -335,7 +341,7 @@ impl App {
 					// Save it!
 					if let Some((_, iter)) = current.finish() {
 						if let Some(last) = self.done.last_mut() {
-							last.push(iter);
+							last.push(iter, confirm);
 						}
 					}
 
@@ -699,9 +705,19 @@ impl App {
 			checkbox("Lossy", self.has_flag(MODE_LOSSY))
 				.on_toggle(|_| Message::ToggleFlag(MODE_LOSSY))
 				.size(CHK_SIZE),
-			checkbox("Lossy YCBCR", self.has_flag(MODE_LOSSY_YCBCR))
-				.on_toggle_maybe(self.has_flag(FMT_AVIF | MODE_LOSSY).then_some(|_| Message::ToggleFlag(MODE_LOSSY_YCBCR)))
-				.size(CHK_SIZE),
+			tooltip(
+				checkbox("Lossy YCBCR", self.has_flag(MODE_LOSSY_YCBCR))
+					.on_toggle_maybe(self.has_flag(FMT_AVIF | MODE_LOSSY).then_some(|_| Message::ToggleFlag(MODE_LOSSY_YCBCR)))
+					.size(CHK_SIZE),
+				container(
+					text("Repeat AVIF A/B tests in YCBCR colorspace to look for additional savings.")
+						.size(12)
+				)
+					.padding(20)
+					.max_width(300_u16)
+					.style(container::rounded_box),
+				tooltip::Position::Bottom,
+			),
 		)
 	}
 
@@ -709,6 +725,19 @@ impl App {
 	fn view_other(&self) -> Column<Message> {
 		column!(
 			text("Other").color(COLOR_PINK).font(BOLD),
+			tooltip(
+				checkbox("Auto-Save", self.has_flag(OTHER_SAVE_AUTO))
+					.on_toggle(|_| Message::ToggleFlag(OTHER_SAVE_AUTO))
+					.size(CHK_SIZE),
+				container(
+					text("Always use the (automatically) derived output paths when saving images instead of popping a file dialogue.")
+						.size(12)
+				)
+					.padding(20)
+					.max_width(300_u16)
+					.style(container::rounded_box),
+				tooltip::Position::Bottom,
+			),
 			checkbox("Night Mode", self.has_flag(OTHER_NIGHT))
 				.on_toggle(|_| Message::ToggleFlag(OTHER_NIGHT))
 				.size(CHK_SIZE),
@@ -1023,7 +1052,7 @@ struct CurrentImage {
 	input: Input,
 
 	/// # Refract Flags.
-	flags: u8,
+	flags: u16,
 
 	/// # Candidate Image.
 	candidate: Option<Candidate>,
@@ -1034,7 +1063,7 @@ struct CurrentImage {
 
 impl CurrentImage {
 	/// # New.
-	fn new(src: PathBuf, flags: u8) -> Option<Self> {
+	fn new(src: PathBuf, flags: u16) -> Option<Self> {
 		let input = std::fs::read(&src).ok()?;
 		let input = Input::try_from(input.as_slice()).ok()?;
 		Some(Self {
@@ -1148,36 +1177,46 @@ struct ImageResults {
 
 impl ImageResults {
 	/// # Push and Save Result.
-	fn push(&mut self, iter: EncodeIter) {
+	fn push(&mut self, iter: EncodeIter, confirm: bool) {
 		let kind = iter.output_kind();
 
 		if let Some((len, best)) = iter.output_size().zip(iter.take().ok()) {
-			// Come up with a suitable destination path.
+			// Come up with a suitable default destination path.
 			let mut dst = self.src.clone();
 			let v = dst.as_mut_os_string();
 			v.push(".");
 			v.push(kind.extension());
 
-			// But make the user verify it.
-			if let Some(dst) = FileDialog::new()
-				.add_filter(kind.as_str(), &[kind.extension()])
-				.set_can_create_directories(true)
-				.set_directory(dst.parent().unwrap_or_else(|| Path::new(".")))
-				.set_file_name(dst.file_name().map_or(Cow::Borrowed(""), OsStr::to_string_lossy))
-				.set_title(format!("Save the {kind}"))
-				.save_file()
-			{
-				let dst = crate::with_ng_extension(dst, kind);
-				if write_atomic::write_file(&dst, &best).is_ok() {
-					let quality = best.quality();
-
-					self.dst.push((kind, Some(ImageResult {
-						src: dst,
-						len,
-						quality,
-					})));
+			// If confirmation is required, suggest the default but let the
+			// user decide where it should go.
+			if confirm {
+				if let Some(p) = FileDialog::new()
+					.add_filter(kind.as_str(), &[kind.extension()])
+					.set_can_create_directories(true)
+					.set_directory(dst.parent().unwrap_or_else(|| Path::new(".")))
+					.set_file_name(dst.file_name().map_or(Cow::Borrowed(""), OsStr::to_string_lossy))
+					.set_title(format!("Save the {kind}"))
+					.save_file()
+				{
+					dst = crate::with_ng_extension(p, kind);
+				}
+				// Abort on CANCEL or whatever.
+				else {
+					self.dst.push((kind, None));
 					return;
 				}
+			}
+
+			// Save it and record the results!
+			if write_atomic::write_file(&dst, &best).is_ok() {
+				let quality = best.quality();
+
+				self.dst.push((kind, Some(ImageResult {
+					src: dst,
+					len,
+					quality,
+				})));
+				return;
 			}
 		}
 
@@ -1215,7 +1254,7 @@ pub(super) enum Message {
 	NextStep,
 
 	/// # Toggle Flag.
-	ToggleFlag(u8),
+	ToggleFlag(u16),
 }
 
 
