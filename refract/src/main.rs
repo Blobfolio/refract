@@ -72,6 +72,8 @@ use styles::{
 	button_style,
 	DARK_PALETTE,
 	DARK_THEME,
+	FONT_BOLD,
+	FONT_REGULAR,
 	LIGHT_PALETTE,
 	LIGHT_THEME,
 	NiceColors,
@@ -112,7 +114,6 @@ fn main() {
 /// with a pretty CLI error reason.
 fn main__() -> Result<(), RefractError> {
 	use iced::{
-		font::Font,
 		settings::Settings,
 		window::{
 			settings::PlatformSpecific,
@@ -123,7 +124,7 @@ fn main__() -> Result<(), RefractError> {
 	let app = App::new()?;
 	iced::application("Refract", App::update, App::view)
 		.settings(Settings {
-			default_font: Font::MONOSPACE,
+			default_font: FONT_REGULAR,
 			default_text_size: 14_u16.into(),
 			..Settings::default()
 		})
@@ -135,6 +136,8 @@ fn main__() -> Result<(), RefractError> {
 			},
 			..WindowSettings::default()
 		})
+		.font(include_bytes!("../skel/font/FiraMono-Bold.otf"))
+		.font(include_bytes!("../skel/font/FiraMono-Regular.otf"))
 		.theme(App::theme)
 		.subscription(App::subscription)
 		.run_with(move || {

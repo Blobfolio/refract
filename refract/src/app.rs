@@ -9,6 +9,7 @@ use crate::{
 	CHECKERS,
 	DARK_PALETTE,
 	DARK_THEME,
+	FONT_BOLD,
 	LIGHT_PALETTE,
 	LIGHT_THEME,
 	NiceColors,
@@ -29,10 +30,6 @@ use iced::{
 	ContentFit,
 	Element,
 	Fill,
-	font::{
-		Font,
-		Weight,
-	},
 	Padding,
 	Shrink,
 	Subscription,
@@ -129,17 +126,11 @@ const DEFAULT_FLAGS: u16 =
 /// # Check Size.
 const CHK_SIZE: u16 = 12_u16;
 
-/// # Bold Font.
-const BOLD: Font = Font {
-	weight: Weight::Bold,
-	..Font::MONOSPACE
-};
-
 /// # Button Padding.
 const BTN_PADDING: Padding = Padding {
 	top: 10.0,
 	right: 20.0,
-	bottom: 8.0,
+	bottom: 10.0,
 	left: 20.0,
 };
 
@@ -452,22 +443,23 @@ impl App {
 				span(concat!("v", env!("CARGO_PKG_VERSION"))).color(NiceColors::PURPLE),
 				span(format!(" ({})", utc2k::FmtUtc2k::now().date())).color(NiceColors::GREY),
 			)
-				.font(BOLD),
+				.font(FONT_BOLD),
 
 			// To make the text selectable, we need to use an input field,
 			// reskinned to not look like an input field. Haha.
 			text_input(env!("CARGO_PKG_REPOSITORY"), env!("CARGO_PKG_REPOSITORY"))
 				.style(|_, _| selectable_text_style(NiceColors::GREEN))
-				.font(BOLD)
+				.font(FONT_BOLD)
 				.padding(0),
 		)
+			.spacing(5)
 			.width(Shrink)
 	}
 
 	/// # Format Checkboxes.
 	fn view_formats(&self) -> Column<Message> {
 		column!(
-			text("Formats").color(NiceColors::PINK).font(BOLD),
+			text("Formats").color(NiceColors::PINK).font(FONT_BOLD),
 			checkbox("AVIF", self.has_flag(FMT_AVIF))
 				.on_toggle(|_| Message::ToggleFlag(FMT_AVIF))
 				.size(CHK_SIZE),
@@ -478,6 +470,7 @@ impl App {
 				.on_toggle(|_| Message::ToggleFlag(FMT_WEBP))
 				.size(CHK_SIZE),
 		)
+			.spacing(5)
 	}
 
 	#[expect(clippy::unused_self, reason = "Required by API.")]
@@ -486,14 +479,14 @@ impl App {
 		container(
 			column!(
 				row!(
-					button(text("Open Image(s)").size(18).font(BOLD))
+					button(text("Open Image(s)").size(18).font(FONT_BOLD))
 						.style(|_, status| button_style(status, NiceColors::PURPLE))
 						.padding(BTN_PADDING)
 						.on_press(Message::AddPaths(false)),
 
 					text("or").size(18),
 
-					button(text("Directory").size(18).font(BOLD))
+					button(text("Directory").size(18).font(FONT_BOLD))
 						.style(|_, status| button_style(status, NiceColors::PINK))
 						.padding(BTN_PADDING)
 						.on_press(Message::AddPaths(true)),
@@ -504,9 +497,9 @@ impl App {
 
 				rich_text!(
 					span("Choose one or more "),
-					span("JPEG").font(BOLD),
+					span("JPEG").font(FONT_BOLD),
 					span(" or "),
-					span("PNG").font(BOLD),
+					span("PNG").font(FONT_BOLD),
 					span(" images."),
 				),
 			)
@@ -602,15 +595,15 @@ impl App {
 
 			// Finally, add all the lines!
 			lines = lines.push(rich_text!(
-				span(format!("{:<w$}", headers[0], w=widths[0])).color(NiceColors::PURPLE).font(BOLD),
+				span(format!("{:<w$}", headers[0], w=widths[0])).color(NiceColors::PURPLE).font(FONT_BOLD),
 				span(" | ").color(NiceColors::PINK),
-				span(format!("{:<w$}", headers[1], w=widths[1])).color(NiceColors::PURPLE).font(BOLD),
+				span(format!("{:<w$}", headers[1], w=widths[1])).color(NiceColors::PURPLE).font(FONT_BOLD),
 				span(" | ").color(NiceColors::PINK),
-				span(format!("{:>w$}", headers[2], w=widths[2])).color(NiceColors::PURPLE).font(BOLD),
+				span(format!("{:>w$}", headers[2], w=widths[2])).color(NiceColors::PURPLE).font(FONT_BOLD),
 				span(" | ").color(NiceColors::PINK),
-				span(format!("{:>w$}", headers[3], w=widths[3])).color(NiceColors::PURPLE).font(BOLD),
+				span(format!("{:>w$}", headers[3], w=widths[3])).color(NiceColors::PURPLE).font(FONT_BOLD),
 				span(" | ").color(NiceColors::PINK),
-				span(format!("{:>w$}", headers[4], w=widths[4])).color(NiceColors::PURPLE).font(BOLD),
+				span(format!("{:>w$}", headers[4], w=widths[4])).color(NiceColors::PURPLE).font(FONT_BOLD),
 			));
 
 			for row in table {
@@ -663,7 +656,7 @@ impl App {
 	/// # View Checkboxes.
 	fn view_modes(&self) -> Column<Message> {
 		column!(
-			text("Compression").color(NiceColors::PINK).font(BOLD),
+			text("Compression").color(NiceColors::PINK).font(FONT_BOLD),
 			checkbox("Lossless", self.has_flag(MODE_LOSSLESS))
 				.on_toggle(|_| Message::ToggleFlag(MODE_LOSSLESS))
 				.size(CHK_SIZE),
@@ -684,12 +677,13 @@ impl App {
 				tooltip::Position::Bottom,
 			),
 		)
+			.spacing(5)
 	}
 
 	/// # View Checkboxes.
 	fn view_other(&self) -> Column<Message> {
 		column!(
-			text("Other").color(NiceColors::PINK).font(BOLD),
+			text("Other").color(NiceColors::PINK).font(FONT_BOLD),
 			tooltip(
 				checkbox("Auto-Save", self.has_flag(OTHER_SAVE_AUTO))
 					.on_toggle(|_| Message::ToggleFlag(OTHER_SAVE_AUTO))
@@ -707,6 +701,7 @@ impl App {
 				.on_toggle(|_| Message::ToggleFlag(OTHER_NIGHT))
 				.size(CHK_SIZE),
 		)
+			.spacing(5)
 	}
 
 	/// # View Settings.
@@ -751,16 +746,9 @@ impl App {
 						.padding(20)
 						.spacing(20)
 				)
-					.style(|_| {
-						let mut style = bordered_box(&self.theme());
-						let _res = style.background.take();
-						style
-					})
 					.width(Fill)
 			)
-				.spacing(10)
 		)
-			.padding(10)
 			.width(Fill)
 			.into()
 	}
@@ -774,19 +762,19 @@ impl App {
 
 			column!(
 				rich_text!(
-					span("[space]").font(BOLD),
+					span("[space]").font(FONT_BOLD),
 					span(" Toggle image view (").color(NiceColors::GREY),
-					span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(BOLD),
+					span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD),
 					span(" vs ").color(NiceColors::GREY),
-					span(dst_kind.to_string()).color(NiceColors::PINK).font(BOLD),
+					span(dst_kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD),
 					span(").").color(NiceColors::GREY),
 				),
 				rich_text!(
-					span("    [d]").color(NiceColors::RED).font(BOLD),
+					span("    [d]").color(NiceColors::RED).font(FONT_BOLD),
 					span(" Reject candidate.").color(NiceColors::GREY),
 				),
 				rich_text!(
-					span("    [k]").color(NiceColors::GREEN).font(BOLD),
+					span("    [k]").color(NiceColors::GREEN).font(FONT_BOLD),
 					span(" Accept candidate.").color(NiceColors::GREY),
 				),
 			)
@@ -798,11 +786,11 @@ impl App {
 					span("The next "),
 					current.iter.as_ref().map_or_else(
 						|| span("image"),
-						|(_, i)| span(i.output_kind().to_string()).color(NiceColors::PINK).font(BOLD)
+						|(_, i)| span(i.output_kind().to_string()).color(NiceColors::PINK).font(FONT_BOLD)
 					),
 					span(" is cooking…"),
 				),
-				text("Hang tight!").size(18).font(BOLD),
+				text("Hang tight!").size(18).font(FONT_BOLD),
 			)
 		}
 	}
@@ -823,15 +811,15 @@ impl App {
 					formats.push(span(" + ").color(NiceColors::GREY));
 				}
 				if kind == new_kind {
-					formats.push(span(kind.to_string()).color(NiceColors::PINK).font(BOLD));
+					formats.push(span(kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD));
 				}
 				else {
-					formats.push(span(kind.to_string()).color(NiceColors::GREY).font(BOLD));
+					formats.push(span(kind.to_string()).color(NiceColors::GREY).font(FONT_BOLD));
 				}
 			}
 		}
 		formats.insert(0, span(" > ").color(NiceColors::GREY));
-		formats.insert(0, span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(BOLD));
+		formats.insert(0, span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD));
 
 		column!(
 			text(current.src.to_string_lossy()).color(NiceColors::GREY),
@@ -872,35 +860,30 @@ impl App {
 			}
 		}
 
-		row = row.push(text(kind.to_string()).font(BOLD));
+		row = row.push(text(kind.to_string()).font(FONT_BOLD));
 
 		if count != 0 {
 			row = row.push(rich_text!(
 				span("Take: "),
-				span(format!("#{count}")).font(BOLD),
+				span(format!("#{count}")).font(FONT_BOLD),
 			));
 		}
 
 		if let Some(quality) = quality {
 			row = row.push(rich_text!(
 				span(format!("{}: ", quality.label_title())),
-				span(quality.quality().to_string()).font(BOLD),
+				span(quality.quality().to_string()).font(FONT_BOLD),
 			));
 		}
 		else {
 			row = row.push(rich_text!(
 				span("Quality: "),
-				span("Original").font(BOLD),
+				span("Original").font(FONT_BOLD),
 			));
 		}
 
 		container(row)
-			.padding(Padding {
-				top: 10.0,
-				right: 10.0,
-				bottom: 8.0,
-				left: 10.0,
-			})
+			.padding(10.0)
 			.center(Fill)
 			.height(Shrink)
 			.style(move |_| Style {
@@ -915,11 +898,11 @@ impl App {
 		let active = self.current.as_ref().is_some_and(|c| c.candidate.is_some());
 
 		// Keep and discard buttons.
-		let btn_no = button(text("Reject").size(18).font(BOLD))
+		let btn_no = button(text("Reject").size(18).font(FONT_BOLD))
 			.style(|_, status| button_style(status, NiceColors::RED))
 			.padding(BTN_PADDING)
 			.on_press_maybe(active.then_some(Message::Feedback(false)));
-		let btn_yes = button(text("Accept").size(18).font(BOLD))
+		let btn_yes = button(text("Accept").size(18).font(FONT_BOLD))
 			.style(|_, status| button_style(status, NiceColors::GREEN))
 			.padding(BTN_PADDING)
 			.on_press_maybe(active.then_some(Message::Feedback(true)));
@@ -998,7 +981,6 @@ impl App {
 					.height(Shrink)
 					.direction(Direction::Both { vertical: Scrollbar::new(), horizontal: Scrollbar::new() })
 			)
-				.padding(10)
 				.width(Fill)
 				.height(Fill)
 				.center(Fill)

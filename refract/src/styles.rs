@@ -10,6 +10,8 @@ use iced::{
 	border::Radius,
 	color,
 	Color,
+	Font,
+	font,
 	Shadow,
 	Theme,
 	theme::Palette,
@@ -21,6 +23,22 @@ use iced::{
 	},
 };
 use std::sync::LazyLock;
+
+/// # Fira Mono: Regular.
+pub(super) const FONT_REGULAR: Font = Font {
+	family:  font::Family::Name("Fira Mono"),
+	weight:  font::Weight::Normal,
+	stretch: font::Stretch::Normal,
+	style:   font::Style::Normal,
+};
+
+/// # Fira Mono: Bold.
+pub(super) const FONT_BOLD: Font = Font {
+	family:  font::Family::Name("Fira Mono"),
+	weight:  font::Weight::Bold,
+	stretch: font::Stretch::Normal,
+	style:   font::Style::Normal,
+};
 
 /// # Named Colors.
 pub(super) struct NiceColors;
