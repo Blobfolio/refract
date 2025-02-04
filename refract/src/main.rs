@@ -58,6 +58,7 @@
 mod app;
 mod candidate;
 mod img;
+mod styles;
 
 use app::App;
 use candidate::Candidate;
@@ -68,6 +69,16 @@ use img::{
 	with_ng_extension,
 };
 use refract_core::RefractError;
+use styles::{
+	button_style,
+	DARK_PALETTE,
+	DARK_THEME,
+	LIGHT_PALETTE,
+	LIGHT_THEME,
+	NiceColors,
+	selectable_text_style,
+	tooltip_style,
+};
 
 
 

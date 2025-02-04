@@ -3,7 +3,17 @@
 */
 
 use argyle::Argument;
-use crate::Candidate;
+use crate::{
+	button_style,
+	Candidate,
+	DARK_PALETTE,
+	DARK_THEME,
+	LIGHT_PALETTE,
+	LIGHT_THEME,
+	NiceColors,
+	selectable_text_style,
+	tooltip_style,
+};
 use dactyl::{
 	NicePercent,
 	NiceU64,
@@ -15,8 +25,6 @@ use iced::{
 		Vertical,
 	},
 	Background,
-	Border,
-	Color,
 	ContentFit,
 	Element,
 	Fill,
@@ -25,12 +33,10 @@ use iced::{
 		Weight,
 	},
 	Padding,
-	Shadow,
 	Shrink,
 	Subscription,
 	Task,
 	Theme,
-	theme::Palette,
 	widget::{
 		button,
 		checkbox,
@@ -118,18 +124,6 @@ const MODE_FLAGS: u16 =
 /// # Default Flags.
 const DEFAULT_FLAGS: u16 =
 	FMT_FLAGS | MODE_FLAGS | MODE_LOSSY_YCBCR;
-
-/// # Hot Pink (#ff3596).
-const COLOR_PINK: Color = Color::from_rgb(1.0, 0.208, 0.588);
-
-/// # Purple (#9b59b6).
-const COLOR_PURPLE: Color = Color::from_rgb(0.608, 0.349, 0.714);
-
-/// # Green (#2ecc71).
-const COLOR_GREEN: Color = Color::from_rgb(0.18, 0.8, 0.443);
-
-/// # Red (#e74c3c).
-const COLOR_RED: Color = Color::from_rgb(0.906, 0.298, 0.235);
 
 /// # Check Size.
 const CHK_SIZE: u16 = 12_u16;
@@ -245,21 +239,10 @@ impl App {
 		self.current.as_ref().map_or(State::Normal, CurrentImage::state)
 	}
 
-	/// # Half Text.
-	const fn half_text_color(&self) -> Color {
-		let palette =
-			if self.has_flag(OTHER_NIGHT) { Palette::DARK }
-			else { Palette::LIGHT };
-
-		let mut color = palette.text;
-		color.a = 0.5;
-		color
-	}
-
 	/// # Theme.
-	pub(super) const fn theme(&self) -> Theme {
-		if self.has_flag(OTHER_NIGHT) { Theme::Dark }
-		else { Theme::Light }
+	pub(super) fn theme(&self) -> Theme {
+		if self.has_flag(OTHER_NIGHT) { DARK_THEME.clone() }
+		else { LIGHT_THEME.clone() }
 	}
 }
 
@@ -411,7 +394,7 @@ impl App {
 		}
 	}
 
-	#[expect(clippy::unused_self, reason = "Not our API.")]
+	#[expect(clippy::unused_self, reason = "Required by API.")]
 	/// # Subscription.
 	pub(super) fn subscription(&self) -> Subscription<Message> {
 		use iced::{
@@ -467,31 +450,21 @@ impl App {
 			.into()
 	}
 
+	#[expect(clippy::unused_self, reason = "Required by API.")]
 	/// # About.
 	fn view_about(&self) -> Column<Message> {
 		column!(
 			rich_text!(
-				span("Refract ").color(COLOR_PINK),
-				span(concat!("v", env!("CARGO_PKG_VERSION"))).color(COLOR_PURPLE),
-				span(format!(" ({})", utc2k::FmtUtc2k::now().date())).color(self.half_text_color()),
+				span("Refract ").color(NiceColors::PINK),
+				span(concat!("v", env!("CARGO_PKG_VERSION"))).color(NiceColors::PURPLE),
+				span(format!(" ({})", utc2k::FmtUtc2k::now().date())).color(NiceColors::GREY),
 			)
 				.font(BOLD),
 
 			// To make the text selectable, we need to use an input field,
 			// reskinned to not look like an input field. Haha.
 			text_input(env!("CARGO_PKG_REPOSITORY"), env!("CARGO_PKG_REPOSITORY"))
-				.style(|_, _| iced::widget::text_input::Style {
-					background: Background::Color(Color::TRANSPARENT),
-					border: Border {
-						color: Color::TRANSPARENT,
-						width: 0.0,
-						radius: 0.0.into(),
-					},
-					icon: COLOR_PURPLE,
-					placeholder: Color::TRANSPARENT,
-					value: COLOR_GREEN,
-					selection: COLOR_GREEN.scale_alpha(0.2),
-				})
+				.style(|_, _| selectable_text_style(NiceColors::GREEN))
 				.font(BOLD)
 				.padding(0),
 		)
@@ -501,7 +474,7 @@ impl App {
 	/// # Format Checkboxes.
 	fn view_formats(&self) -> Column<Message> {
 		column!(
-			text("Formats").color(COLOR_PINK).font(BOLD),
+			text("Formats").color(NiceColors::PINK).font(BOLD),
 			checkbox("AVIF", self.has_flag(FMT_AVIF))
 				.on_toggle(|_| Message::ToggleFlag(FMT_AVIF))
 				.size(CHK_SIZE),
@@ -514,21 +487,21 @@ impl App {
 		)
 	}
 
-	#[expect(clippy::unused_self, reason = "Lifetime gets weird without it.")]
+	#[expect(clippy::unused_self, reason = "Required by API.")]
 	/// # View Instructions.
 	fn view_instructions(&self) -> Container<Message> {
 		container(
 			column!(
 				row!(
 					button(text("Open Image(s)").size(18).font(BOLD))
-						.style(|_, status| button_style(status, COLOR_PURPLE))
+						.style(|_, status| button_style(status, NiceColors::PURPLE))
 						.padding(BTN_PADDING)
 						.on_press(Message::AddPaths(false)),
 
 					text("or").size(18),
 
 					button(text("Directory").size(18).font(BOLD))
-						.style(|_, status| button_style(status, COLOR_PINK))
+						.style(|_, status| button_style(status, NiceColors::PINK))
 						.padding(BTN_PADDING)
 						.on_press(Message::AddPaths(true)),
 				)
@@ -560,10 +533,9 @@ impl App {
 
 		// Build up a pretty results table.
 		if ! self.done.is_empty() {
-			let grey = self.half_text_color();
 			let fg =
-				if self.has_flag(OTHER_NIGHT) { Palette::DARK.text }
-				else { Palette::LIGHT.text };
+				if self.has_flag(OTHER_NIGHT) { DARK_PALETTE.text }
+				else { LIGHT_PALETTE.text };
 
 			let mut table: Vec<Result<TableRow, &Path>> = Vec::new();
 			for job in &self.done {
@@ -637,15 +609,15 @@ impl App {
 
 			// Finally, add all the lines!
 			lines = lines.push(rich_text!(
-				span(format!("{:<w$}", headers[0], w=widths[0])).color(COLOR_PURPLE).font(BOLD),
-				span(" | ").color(COLOR_PINK),
-				span(format!("{:<w$}", headers[1], w=widths[1])).color(COLOR_PURPLE).font(BOLD),
-				span(" | ").color(COLOR_PINK),
-				span(format!("{:>w$}", headers[2], w=widths[2])).color(COLOR_PURPLE).font(BOLD),
-				span(" | ").color(COLOR_PINK),
-				span(format!("{:>w$}", headers[3], w=widths[3])).color(COLOR_PURPLE).font(BOLD),
-				span(" | ").color(COLOR_PINK),
-				span(format!("{:>w$}", headers[4], w=widths[4])).color(COLOR_PURPLE).font(BOLD),
+				span(format!("{:<w$}", headers[0], w=widths[0])).color(NiceColors::PURPLE).font(BOLD),
+				span(" | ").color(NiceColors::PINK),
+				span(format!("{:<w$}", headers[1], w=widths[1])).color(NiceColors::PURPLE).font(BOLD),
+				span(" | ").color(NiceColors::PINK),
+				span(format!("{:>w$}", headers[2], w=widths[2])).color(NiceColors::PURPLE).font(BOLD),
+				span(" | ").color(NiceColors::PINK),
+				span(format!("{:>w$}", headers[3], w=widths[3])).color(NiceColors::PURPLE).font(BOLD),
+				span(" | ").color(NiceColors::PINK),
+				span(format!("{:>w$}", headers[4], w=widths[4])).color(NiceColors::PURPLE).font(BOLD),
 			));
 
 			for row in table {
@@ -653,11 +625,11 @@ impl App {
 					Err(path) => {
 						let Some(dir) = path.parent() else { continue; };
 						let Some(file) = path.file_name() else { continue; };
-						lines = lines.push(text(divider.clone()).color(grey));
+						lines = lines.push(text(divider.clone()).color(NiceColors::GREY));
 						lines = lines.push(rich_text!(
-							span(format!("{}/", dir.to_string_lossy())).color(grey),
-							span(file.to_string_lossy()).color(COLOR_RED),
-							span(": Nothing doing.").color(grey),
+							span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
+							span(file.to_string_lossy()).color(NiceColors::RED),
+							span(": Nothing doing.").color(NiceColors::GREY),
 						));
 					},
 					Ok((path, kind, quality, len, per)) => {
@@ -666,23 +638,23 @@ impl App {
 						let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
 						let color =
 							if is_src { fg }
-							else if len.is_some() { COLOR_GREEN }
-							else { COLOR_RED };
+							else if len.is_some() { NiceColors::GREEN }
+							else { NiceColors::RED };
 
 						if is_src {
-							lines = lines.push(text(divider.clone()).color(COLOR_PINK));
+							lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
 						}
 
 						lines = lines.push(rich_text!(
-							span(format!("{}/", dir.to_string_lossy())).color(grey),
+							span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
 							span(file.to_string_lossy().into_owned()).color(color),
-							span(format!("{} | ", " ".repeat(widths[0].saturating_sub(dir.len() + 1 + file.len())))).color(COLOR_PINK),
+							span(format!("{} | ", " ".repeat(widths[0].saturating_sub(dir.len() + 1 + file.len())))).color(NiceColors::PINK),
 							span(format!("{:<w$}", kind.as_str(), w=widths[1])),
-							span(" | ").color(COLOR_PINK),
+							span(" | ").color(NiceColors::PINK),
 							span(format!("{:>w$}", quality.unwrap_or_else(String::new), w=widths[2])),
-							span(" | ").color(COLOR_PINK),
+							span(" | ").color(NiceColors::PINK),
 							span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
-							span(" | ").color(COLOR_PINK),
+							span(" | ").color(NiceColors::PINK),
 							span(format!("{:>w$}", per.as_ref().map_or("", NicePercent::as_str), w=widths[4])),
 						));
 					},
@@ -698,7 +670,7 @@ impl App {
 	/// # View Checkboxes.
 	fn view_modes(&self) -> Column<Message> {
 		column!(
-			text("Compression").color(COLOR_PINK).font(BOLD),
+			text("Compression").color(NiceColors::PINK).font(BOLD),
 			checkbox("Lossless", self.has_flag(MODE_LOSSLESS))
 				.on_toggle(|_| Message::ToggleFlag(MODE_LOSSLESS))
 				.size(CHK_SIZE),
@@ -715,7 +687,7 @@ impl App {
 				)
 					.padding(20)
 					.max_width(300_u16)
-					.style(container::rounded_box),
+					.style(|_| tooltip_style(! self.has_flag(OTHER_NIGHT))),
 				tooltip::Position::Bottom,
 			),
 		)
@@ -724,7 +696,7 @@ impl App {
 	/// # View Checkboxes.
 	fn view_other(&self) -> Column<Message> {
 		column!(
-			text("Other").color(COLOR_PINK).font(BOLD),
+			text("Other").color(NiceColors::PINK).font(BOLD),
 			tooltip(
 				checkbox("Auto-Save", self.has_flag(OTHER_SAVE_AUTO))
 					.on_toggle(|_| Message::ToggleFlag(OTHER_SAVE_AUTO))
@@ -735,7 +707,7 @@ impl App {
 				)
 					.padding(20)
 					.max_width(300_u16)
-					.style(container::rounded_box),
+					.style(|_| tooltip_style(! self.has_flag(OTHER_NIGHT))),
 				tooltip::Position::Bottom,
 			),
 			checkbox("Night Mode", self.has_flag(OTHER_NIGHT))
@@ -805,25 +777,24 @@ impl App {
 	fn view_image_legend(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 
-		let grey = self.half_text_color();
 		if let Some(dst_kind) = current.candidate.as_ref().map(|c| c.kind) {
 
 			column!(
 				rich_text!(
 					span("[space]").font(BOLD),
-					span(" Toggle image view (").color(grey),
-					span(current.input.kind().to_string()).color(COLOR_PURPLE).font(BOLD),
-					span(" vs ").color(grey),
-					span(dst_kind.to_string()).color(COLOR_PINK).font(BOLD),
-					span(").").color(grey),
+					span(" Toggle image view (").color(NiceColors::GREY),
+					span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(BOLD),
+					span(" vs ").color(NiceColors::GREY),
+					span(dst_kind.to_string()).color(NiceColors::PINK).font(BOLD),
+					span(").").color(NiceColors::GREY),
 				),
 				rich_text!(
-					span("    [d]").color(COLOR_RED).font(BOLD),
-					span(" Reject candidate.").color(grey),
+					span("    [d]").color(NiceColors::RED).font(BOLD),
+					span(" Reject candidate.").color(NiceColors::GREY),
 				),
 				rich_text!(
-					span("    [k]").color(COLOR_GREEN).font(BOLD),
-					span(" Accept candidate.").color(grey),
+					span("    [k]").color(NiceColors::GREEN).font(BOLD),
+					span(" Accept candidate.").color(NiceColors::GREY),
 				),
 			)
 				.spacing(5)
@@ -834,7 +805,7 @@ impl App {
 					span("The next "),
 					current.iter.as_ref().map_or_else(
 						|| span("image"),
-						|(_, i)| span(i.output_kind().to_string()).color(COLOR_PINK).font(BOLD)
+						|(_, i)| span(i.output_kind().to_string()).color(NiceColors::PINK).font(BOLD)
 					),
 					span(" is cooking…"),
 				),
@@ -846,7 +817,6 @@ impl App {
 	/// # Image Progress.
 	fn view_progress(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
-		let grey = self.half_text_color();
 
 		let new_kind = current.iter.as_ref().map_or(ImageKind::Png, |(_, i)| i.output_kind());
 		let mut formats = Vec::new();
@@ -857,21 +827,21 @@ impl App {
 		] {
 			if self.has_flag(flag) {
 				if ! formats.is_empty() {
-					formats.push(span(" + ").color(grey));
+					formats.push(span(" + ").color(NiceColors::GREY));
 				}
 				if kind == new_kind {
-					formats.push(span(kind.to_string()).color(COLOR_PINK).font(BOLD));
+					formats.push(span(kind.to_string()).color(NiceColors::PINK).font(BOLD));
 				}
 				else {
-					formats.push(span(kind.to_string()).color(grey).font(BOLD));
+					formats.push(span(kind.to_string()).color(NiceColors::GREY).font(BOLD));
 				}
 			}
 		}
-		formats.insert(0, span(" > ").color(grey));
-		formats.insert(0, span(current.input.kind().to_string()).color(COLOR_PURPLE).font(BOLD));
+		formats.insert(0, span(" > ").color(NiceColors::GREY));
+		formats.insert(0, span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(BOLD));
 
 		column!(
-			text(current.src.to_string_lossy()).color(grey),
+			text(current.src.to_string_lossy()).color(NiceColors::GREY),
 
 			Rich::with_spans(formats),
 
@@ -897,14 +867,14 @@ impl App {
 		let mut quality = None;
 		let mut kind = current.input.kind();
 		let mut count = 0;
-		let mut color = COLOR_PURPLE;
+		let mut color = NiceColors::PURPLE;
 
 		// Pull the candidate info if we're looking at that.
 		if self.has_flag(OTHER_BSIDE) {
 			if let Some(can) = current.candidate.as_ref() {
 				kind = can.kind;
 				count = can.count;
-				color = COLOR_PINK;
+				color = NiceColors::PINK;
 				quality.replace(can.quality);
 			}
 		}
@@ -941,7 +911,7 @@ impl App {
 			.center(Fill)
 			.height(Shrink)
 			.style(move |_| Style {
-				text_color: Some(Color::WHITE),
+				text_color: Some(NiceColors::WHITE),
 				background: Some(Background::Color(color)),
 				..Style::default()
 			})
@@ -953,11 +923,11 @@ impl App {
 
 		// Keep and discard buttons.
 		let btn_no = button(text("Reject").size(18).font(BOLD))
-			.style(|_, status| button_style(status, COLOR_RED))
+			.style(|_, status| button_style(status, NiceColors::RED))
 			.padding(BTN_PADDING)
 			.on_press_maybe(active.then_some(Message::Feedback(false)));
 		let btn_yes = button(text("Accept").size(18).font(BOLD))
-			.style(|_, status| button_style(status, COLOR_GREEN))
+			.style(|_, status| button_style(status, NiceColors::GREEN))
 			.padding(BTN_PADDING)
 			.on_press_maybe(active.then_some(Message::Feedback(true)));
 
@@ -1271,25 +1241,4 @@ pub(super) enum State {
 
 	/// # Waiting on Feedback.
 	WaitFeedback,
-}
-
-
-
-/// # Button Style.
-fn button_style(status: iced::widget::button::Status, base: Color) -> iced::widget::button::Style {
-	use iced::widget::button::{Status, Style};
-	Style {
-		background: Some(Background::Color(match status {
-			Status::Active => base,
-			Status::Hovered | Status::Pressed => base.scale_alpha(0.9),
-			Status::Disabled => base.scale_alpha(0.5),
-		})),
-		text_color: Color::WHITE,
-		border: Border {
-			color: Color::TRANSPARENT,
-			width: 0.0,
-			radius: 8.0.into(),
-		},
-		shadow: Shadow::default(),
-	}
 }

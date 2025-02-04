@@ -90,17 +90,12 @@ const E_WEBP: Extension = {};
 /// This shouldn't be necessary, but SVG rendering is a little wonky so it's
 /// best to hardcode the background and foreground colors.
 fn build_imgs() {
-	use iced_core::theme::Palette;
-
-	for (slug, palette) in [
-		("Light", Palette::LIGHT),
-		("Dark", Palette::DARK),
+	for (slug, bg, fg) in [
+		("Light", "ffffff", "333333"),
+		("Dark",  "333333", "ffffff"),
 	] {
-		let [br, bg, bb, _] = palette.background.into_rgba8();
-		let [fr, fg, fb, _] = palette.text.into_rgba8();
-
 		let out = format!(
-			r##"<svg xmlns="http://www.w3.org/2000/svg" width="7680" height="4320" viewBox="0 0 7680 4320"><pattern id="a" width="60" height="60" x="0" y="0" patternUnits="userSpaceOnUse"><path fill="#{fr:02x}{fg:02x}{fb:02x}" fill-rule="evenodd" d="M30 30h30v30H30zM0 0h30v30H0z" opacity=".15" paint-order="fill markers"/></pattern><path fill="#{br:02x}{bg:02x}{bb:02x}" d="M0 0h7680v4320H0z"/><path fill="url(#a)" d="M0 0h7680v4320H0z"/></svg>"##,
+			r##"<svg xmlns="http://www.w3.org/2000/svg" width="7680" height="4320" viewBox="0 0 7680 4320"><pattern id="a" width="60" height="60" x="0" y="0" patternUnits="userSpaceOnUse"><path fill="#{fg}" fill-rule="evenodd" d="M30 30h30v30H30zM0 0h30v30H0z" opacity=".15" paint-order="fill markers"/></pattern><path fill="#{bg}" d="M0 0h7680v4320H0z"/><path fill="url(#a)" d="M0 0h7680v4320H0z"/></svg>"##,
 		);
 
 		// Save them as a slice value!

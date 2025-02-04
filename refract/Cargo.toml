@@ -95,10 +95,6 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 argyle = "0.10.*"
 dowser = "0.11.*"
 
-[build-dependencies.iced_core]
-version = "0.13.2"
-default-features = false
-
 [dependencies]
 argyle = "0.10.*"
 dactyl = "0.9.*"
