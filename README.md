@@ -97,9 +97,9 @@ refract [FLAGS] [OPTIONS] <PATH(S)>...
 
 ## Installation
 
-Debian and Ubuntu users can just grab the pre-built `.deb` package from the [release page](https://github.com/Blobfolio/refract/releases/latest), and Arch Linux users can pull it from [AUR](https://aur.archlinux.org/packages/refract-bin) (community-maintained).
+Debian and Ubuntu users with x86-64 CPUs can just grab the pre-built `.deb` package from the [release page](https://github.com/Blobfolio/refract/releases/latest), and Arch Linux users can pull it from [AUR](https://aur.archlinux.org/packages/refract-bin) (community-maintained).
 
-To use refract on other environments, it needs to be built from source.
+To use refract in other environments, it needs to be built from source.
 
 Thankfully, [Rust](https://www.rust-lang.org/)/[Cargo](https://github.com/rust-lang/cargo) make this pretty easy:
 
@@ -114,8 +114,6 @@ cargo install \
     --bin refract
 ```
 
-For the above one-liner to work, though, you'll need a few other things installed beforehand (damn C/C++ dependencies).
-
-The specifics will vary by environment, but most likely you'll need a C compiler, a C++ compiler, `cmake`, `git` (obviously), `make`, `nasm`, and `ninja-build`.
+The extra build dependencies (required by all the damn image codecs) will vary by environment, but at a minimum you'll need C and C++ compilers, `cmake`, `git` (obviously), `make`, `nasm`, and `ninja-build`.
 
 Cargo will pop an error if anything's missing, so don't sweat it. If that happens, just fill in the hole and try again.

@@ -150,6 +150,9 @@ pub(super) struct App {
 
 	/// # Results.
 	done: Vec<ImageResults>,
+
+	/// # Error.
+	error: Option<MessageError>,
 }
 
 impl App {
@@ -201,6 +204,7 @@ impl App {
 			current: None,
 			last_dir: None,
 			done: Vec::new(),
+			error: None,
 		};
 
 		// Digest the paths, if any.
@@ -269,7 +273,61 @@ impl App {
 
 	/// # Update.
 	pub(super) fn update(&mut self, message: Message) -> Task<Message> {
+		// Clear the last error, if any.
+		let _res = self.error.take();
+
 		match message {
+			// Add File(s) or Directory.
+			Message::AddPaths(dir) => {
+				// Try to set a sane starting directory for ourselves.
+				let mut fd = FileDialog::new();
+				if let Some(p) = self.last_dir.as_ref() { fd = fd.set_directory(p); }
+				else if let Ok(p) = std::env::current_dir() {
+					fd = fd.set_directory(p);
+				}
+
+				// Pop a dialog for the user and wait for their selection.
+				let paths =
+					if dir {
+						fd.set_title("Open Directory")
+							.pick_folder()
+							.map(Dowser::from)
+					}
+					else {
+						fd.add_filter("Images", &["jpg", "jpeg", "png"])
+							.set_title("Open Image(s)")
+							.pick_files()
+							.map(Dowser::from)
+					};
+
+				// Proceed if anything came back.
+				if let Some(paths) = paths {
+					self.add_paths(paths);
+
+					// Nothing?
+					if self.paths.is_empty() {
+						return Task::done(Message::Error(MessageError::NoImages));
+					}
+
+					// Otherwise let's get going!
+					return Task::done(Message::NextImage);
+				}
+			},
+
+			// An error.
+			Message::Error(err) => { self.error.replace(err); },
+
+			// Provide Feedback.
+			Message::Feedback(feedback) => {
+				self.flags &= ! OTHER_BSIDE;
+				if let Some(current) = &mut self.current {
+					// Back around again!
+					if current.feedback(feedback) {
+						return Task::done(Message::NextStep);
+					}
+				}
+			},
+
 			// Load next image.
 			Message::NextImage => {
 				self.flags &= ! OTHER_BSIDE;
@@ -320,55 +378,22 @@ impl App {
 				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 			},
 
-			// Provide Feedback.
-			Message::Feedback(feedback) => {
-				self.flags &= ! OTHER_BSIDE;
-				if let Some(current) = &mut self.current {
-					// Back around again!
-					if current.feedback(feedback) {
-						return Task::done(Message::NextStep);
-					}
+			// Open a file.
+			Message::OpenFile(src) => {
+				if open::that_detached(src).is_err() {
+					return Task::done(Message::Error(MessageError::NoOpen));
+				}
+			},
+
+			// Open a URL.
+			Message::OpenUrl(url) => {
+				if open::that_detached(url).is_err() {
+					return Task::done(Message::Error(MessageError::NoOpen));
 				}
 			},
 
 			// Toggle a flag.
 			Message::ToggleFlag(flag) => { self.toggle_flag(flag); },
-
-			// Add File(s) or Directory.
-			Message::AddPaths(dir) => {
-				// Try to set a sane starting directory for ourselves.
-				let mut fd = FileDialog::new();
-				if let Some(p) = self.last_dir.as_ref() { fd = fd.set_directory(p); }
-				else if let Ok(p) = std::env::current_dir() {
-					fd = fd.set_directory(p);
-				}
-
-				// Pop a dialog for the user and wait for their selection.
-				let paths =
-					if dir {
-						fd.set_title("Open Directory")
-							.pick_folder()
-							.map(Dowser::from)
-					}
-					else {
-						fd.add_filter("Images", &["jpg", "jpeg", "png"])
-							.set_title("Open Image(s)")
-							.pick_files()
-							.map(Dowser::from)
-					};
-
-				// Proceed if anything came back.
-				if let Some(paths) = paths {
-					self.add_paths(paths);
-					if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
-				}
-			},
-
-			// Open a file.
-			Message::OpenFile(src) => { let _res = open::that_detached(src); },
-
-			// Open a URL.
-			Message::OpenUrl(url) => { let _res = open::that_detached(url); },
 		}
 
 		Task::none()
@@ -431,6 +456,7 @@ impl App {
 				self.view_settings(),
 				self.view_log(),
 			)
+				.push_maybe(self.view_error())
 				.spacing(10)
 		)
 			.padding(10)
@@ -458,6 +484,29 @@ impl App {
 			.align_x(Horizontal::Right)
 			.spacing(5)
 			.width(Shrink)
+	}
+
+	/// # Error.
+	fn view_error(&self) -> Option<Container<Message>> {
+		use iced::widget::container::Style;
+
+		self.error.map(|err|
+			container(row!(
+				rich_text!(
+					span("Warning: ").font(FONT_BOLD),
+					span(err.as_str()),
+				)
+					.width(Shrink)
+			))
+				.padding(10.0)
+				.center(Fill)
+				.height(Shrink)
+				.style(|_| Style {
+					text_color: Some(NiceColors::WHITE),
+					background: Some(Background::Color(NiceColors::ORANGE)),
+					..Style::default()
+				})
+		)
 	}
 
 	/// # Format Checkboxes.
@@ -1213,11 +1262,14 @@ struct ImageResult {
 #[derive(Debug, Clone)]
 /// # Message.
 pub(super) enum Message {
-	/// # Encoding Feedback.
-	Feedback(bool),
-
 	/// # File Open Dialog.
 	AddPaths(bool),
+
+	/// # An Error.
+	Error(MessageError),
+
+	/// # Encoding Feedback.
+	Feedback(bool),
 
 	/// # Next Image.
 	NextImage,
@@ -1233,6 +1285,31 @@ pub(super) enum Message {
 
 	/// # Toggle Flag.
 	ToggleFlag(u16),
+}
+
+
+
+#[derive(Debug, Clone, Copy)]
+/// # Message Error.
+///
+/// This is used for non-critical errors that nonetheless deserve a mention,
+/// like adding a directory without any qualifying images.
+pub(super) enum MessageError {
+	/// # No Images.
+	NoImages,
+
+	/// # Open Failed.
+	NoOpen,
+}
+
+impl MessageError {
+	/// # As Str.
+	const fn as_str(self) -> &'static str {
+		match self {
+			Self::NoImages => "No qualifying images were found.",
+			Self::NoOpen => "The link could not be opened.",
+		}
+	}
 }
 
 
