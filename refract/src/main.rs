@@ -130,6 +130,8 @@ fn main__() -> Result<(), RefractError> {
 		})
 		.window(WindowSettings {
 			size: iced::Size::INFINITY,
+			min_size: Some(iced::Size { width: 1200.0, height: 800.0 }),
+			icon: img::icon(),
 			platform_specific: PlatformSpecific {
 				application_id: "refract".to_owned(),
 				..PlatformSpecific::default()

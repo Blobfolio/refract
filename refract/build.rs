@@ -1,8 +1,5 @@
 /*!
-# `Refract GTK` - Build
-
-This is used to compile a resource bundle of the various assets that need to
-be pulled into GTK.
+# Refract - Build
 */
 
 use argyle::KeyWordsBuilder;
@@ -84,7 +81,34 @@ const E_WEBP: Extension = {};
 
 /// # Build Images.
 fn build_imgs() {
-	// Not currently used.
+	// Convert the icon to a bitmap to lessen the runtime overhead of using it.
+	let raw = std::fs::read("skel/deb/icons/hicolor/128x128/apps/refract.png")
+		.expect("Missing refract icon.");
+	let input = refract_core::Input::try_from(raw.as_slice())
+		.expect("Unable to decode icon.")
+		.into_rgba();
+	let size = input.width();
+	assert_eq!(size, input.height(), "BUG: the icon should be square!");
+	let pixels = input.take_pixels();
+
+	let out = format!(
+		"/// # Icon Size.
+const ICON_SIZE: NonZeroU32 = NonZeroU32::new({size}).unwrap();
+
+/// # Icon Bytes (RGBA).
+static ICON: &[u8; {}] = &{pixels:?};
+",
+		pixels.len(),
+	);
+
+	// Save it!
+	let mut file = _out_path("refract-icon.rs")
+		.and_then(|p| File::create(p).ok())
+		.expect("Missing OUT_DIR.");
+
+	file.write_all(out.as_bytes())
+		.and_then(|_| file.flush())
+		.expect("Unable to save icon.");
 }
 
 /// # Output Path.
