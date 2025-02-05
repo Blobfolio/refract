@@ -104,6 +104,10 @@ To use refract on other environments, it needs to be built from source.
 Thankfully, [Rust](https://www.rust-lang.org/)/[Cargo](https://github.com/rust-lang/cargo) make this pretty easy:
 
 ```bash
+# Install the build dependencies. Ubuntu and debian users, for example,
+# can run:
+sudo apt-get install -y cmake g++ gcc git make nasm ninja-build
+
 # See "cargo install --help" for more options.
 cargo install \
     --git https://github.com/Blobfolio/refract.git \
@@ -112,13 +116,6 @@ cargo install \
 
 For the above one-liner to work, though, you'll need a few other things installed beforehand (damn C/C++ dependencies).
 
-The specifics will vary by environment, but most likely you'll need:
-
-* `cmake`
-* `gcc` or `clang`
-* `git` (obviously)
-* `make`
-* `nasm`
-* `ninja`
+The specifics will vary by environment, but most likely you'll need a C compiler, a C++ compiler, `cmake`, `git` (obviously), `make`, `nasm`, and `ninja-build`.
 
 Cargo will pop an error if anything's missing, so don't sweat it. If that happens, just fill in the hole and try again.

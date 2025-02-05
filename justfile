@@ -28,6 +28,14 @@ release_dir := justfile_directory() + "/release"
 
 
 
+#export RUSTFLAGS := "-Ctarget-cpu=x86-64-v3 -Cllvm-args=--cost-kind=throughput -Clinker-plugin-lto -Clink-arg=-fuse-ld=lld"
+#export CC := "clang"
+#export CXX := "clang++"
+#export CFLAGS := "-Wall -Wextra -flto -march=x86-64-v3"
+#export CXXFLAGS := "-Wall -Wextra -flto -march=x86-64-v3"
+
+
+
 # Build Release!
 @build:
 	cargo build \
@@ -68,10 +76,41 @@ release_dir := justfile_directory() + "/release"
 # Clippy.
 @clippy:
 	clear
+
+	fyi task "All Features"
 	cargo clippy \
 		--release \
 		--workspace \
 		--all-features \
+		--target-dir "{{ cargo_dir }}"
+
+	just _clippy avif
+	just _clippy avif,jpeg
+	just _clippy avif,jpeg,jxl
+	just _clippy avif,jpeg,jxl,png
+	just _clippy avif,jpeg,jxl,png,webp
+
+	just _clippy jpeg
+	just _clippy jpeg,jxl
+	just _clippy jpeg,jxl,png
+	just _clippy jpeg,jxl,png,webp
+
+	just _clippy jxl
+	just _clippy jxl,png
+	just _clippy jxl,png,webp
+
+	just _clippy png
+	just _clippy png,webp
+
+	just _clippy webp
+
+@_clippy FEATURES:
+	fyi task "Features: {{ FEATURES }}"
+	cargo clippy \
+		--release \
+		-p refract_core \
+		--no-default-features \
+		--features "{{ FEATURES }}" \
 		--target-dir "{{ cargo_dir }}"
 
 

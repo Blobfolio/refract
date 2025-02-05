@@ -2,10 +2,10 @@
 # `Refract` - Kinds
 */
 
-pub(super) mod avif;
+#[cfg(feature = "avif")] pub(super) mod avif;
 pub(super) mod color;
 pub(super) mod image;
-pub(super) mod jpeg;
-pub(super) mod jxl;
-pub(super) mod png;
-pub(super) mod webp;
+#[cfg(feature = "jpeg")] pub(super) mod jpeg;
+#[cfg(feature = "jxl")]  pub(super) mod jxl;
+#[cfg(feature = "png")]  pub(super) mod png;
+#[cfg(feature = "webp")] pub(super) mod webp;

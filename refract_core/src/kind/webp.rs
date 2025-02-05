@@ -6,10 +6,15 @@ This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Go
 */
 
 use crate::{
+	ColorKind,
 	Input,
 	Output,
 	RefractError,
-	traits::Encoder,
+	traits::{
+		Decoder,
+		DecoderResult,
+		Encoder,
+	},
 };
 use libwebp_sys::{
 	WEBP_MAX_DIMENSION,
@@ -32,21 +37,11 @@ use std::{
 	num::NonZeroU8,
 };
 
-#[cfg(feature = "decode_ng")]
-use crate::{
-	ColorKind,
-	traits::{
-		Decoder,
-		DecoderResult,
-	},
-};
-
 
 
 /// # `WebP` Image.
 pub(crate) struct ImageWebp;
 
-#[cfg(feature = "decode_ng")]
 impl Decoder for ImageWebp {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Decode.
@@ -91,7 +86,6 @@ impl Encoder for ImageWebp {
 
 
 
-#[cfg(feature = "decode_ng")]
 /// # Decode Wrapper.
 ///
 /// This exists solely to help with garbage cleanup.
@@ -106,7 +100,6 @@ struct LibWebPDecode {
 	ptr: *mut u8,
 }
 
-#[cfg(feature = "decode_ng")]
 impl TryFrom<&[u8]> for LibWebPDecode {
 	type Error = RefractError;
 
@@ -132,7 +125,6 @@ impl TryFrom<&[u8]> for LibWebPDecode {
 	}
 }
 
-#[cfg(feature = "decode_ng")]
 impl Drop for LibWebPDecode {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]

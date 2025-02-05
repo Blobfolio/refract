@@ -2,22 +2,29 @@
 # `Refract` - Image Kind
 */
 
+#![allow(unreachable_patterns, reason = "The feature combinations make this impractical.")]
+
+use crate::RefractError;
+
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 use crate::{
-	ImageAvif,
-	ImageJpeg,
-	ImageJxl,
-	ImagePng,
-	ImageWebp,
 	Input,
 	NZ_100,
 	Output,
-	RefractError,
-	traits::DecoderResult,
 };
-use std::{
-	fmt,
-	num::NonZeroU8,
-};
+
+use crate::traits::DecoderResult;
+
+#[cfg(feature = "avif")] use crate::ImageAvif;
+#[cfg(feature = "jpeg")] use crate::ImageJpeg;
+#[cfg(feature = "jxl")]  use crate::ImageJxl;
+#[cfg(feature = "png")]  use crate::ImagePng;
+#[cfg(feature = "webp")] use crate::ImageWebp;
+
+use std::fmt;
+
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
+use std::num::NonZeroU8;
 
 
 
@@ -110,7 +117,6 @@ impl TryFrom<&[u8]> for ImageKind {
 
 /// ## Information.
 impl ImageKind {
-	#[cfg(not(feature = "decode_ng"))]
 	#[inline]
 	#[must_use]
 	/// # Can Decode?
@@ -118,17 +124,16 @@ impl ImageKind {
 	/// Returns `true` if decoding is supported for this image type.
 	///
 	/// When the feature flag `decode_ng` is used, this always returns `true`.
-	pub const fn can_decode(self) -> bool { matches!(self, Self::Jpeg | Self::Png) }
-
-	#[cfg(feature = "decode_ng")]
-	#[inline]
-	#[must_use]
-	/// # Can Decode?
-	///
-	/// Returns `true` if decoding is supported for this image type.
-	///
-	/// When the feature flag `decode_ng` is used, this always returns `true`.
-	pub const fn can_decode(self) -> bool { true }
+	pub const fn can_decode(self) -> bool {
+		match self {
+			#[cfg(feature = "avif")] Self::Avif => true,
+			#[cfg(feature = "jpeg")] Self::Jpeg => true,
+			#[cfg(feature = "jxl")]  Self::Jxl => true,
+			#[cfg(feature = "png")]  Self::Png => true,
+			#[cfg(feature = "webp")] Self::Webp => true,
+			#[cfg(not(feature = "images"))] _ => false,
+		}
+	}
 
 	#[inline]
 	#[must_use]
@@ -136,7 +141,12 @@ impl ImageKind {
 	///
 	/// Returns `true` if encoding is supported for this image type.
 	pub const fn can_encode(self) -> bool {
-		matches!(self, Self::Avif | Self::Jxl | Self::Webp)
+		match self {
+			#[cfg(feature = "avif")] Self::Avif => true,
+			#[cfg(feature = "jxl")]  Self::Jxl => true,
+			#[cfg(feature = "webp")] Self::Webp => true,
+			_ => false,
+		}
 	}
 }
 
@@ -194,6 +204,7 @@ impl ImageKind {
 		}
 	}
 
+	#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 	#[expect(clippy::unused_self, reason = "We may need `self` in the future.")]
 	#[must_use]
 	/// # Encoding Minimum Quality.
@@ -201,17 +212,18 @@ impl ImageKind {
 	/// At the moment, this always returns `1`.
 	pub(crate) const fn min_encoder_quality(self) -> NonZeroU8 { NonZeroU8::MIN }
 
+	#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 	#[must_use]
 	/// # Encoding Minimum Quality.
 	///
 	/// This returns the maximum encoding quality value for the given format,
 	/// or a default of `100`.
 	pub(crate) const fn max_encoder_quality(self) -> NonZeroU8 {
-		use crate::traits::Encoder;
+		#[cfg(any(feature = "avif", feature = "jxl"))] use crate::traits::Encoder;
 
 		match self {
-			Self::Avif => ImageAvif::MAX_QUALITY,
-			Self::Jxl => ImageJxl::MAX_QUALITY,
+			#[cfg(feature = "avif")] Self::Avif => ImageAvif::MAX_QUALITY,
+			#[cfg(feature = "jxl")]  Self::Jxl => ImageJxl::MAX_QUALITY,
 			_ => NZ_100,
 		}
 	}
@@ -224,10 +236,6 @@ impl ImageKind {
 	/// Decode a raw image of this kind into RGBA pixels (and width, height,
 	/// and color type).
 	///
-	/// Decoding support for the next-gen formats can be enabled with the
-	/// feature flag `decode_ng`. Otherwise only JPEG and PNG image sources
-	/// can be decoded.
-	///
 	/// ## Errors
 	///
 	/// This will bubble up any decoder errors encountered, including cases
@@ -236,17 +244,18 @@ impl ImageKind {
 		use crate::traits::Decoder;
 
 		match self {
-			Self::Jpeg => ImageJpeg::decode(raw),
-			Self::Png => ImagePng::decode(raw),
+			#[cfg(feature = "jpeg")] Self::Jpeg => ImageJpeg::decode(raw),
+			#[cfg(feature = "png")]  Self::Png => ImagePng::decode(raw),
+			#[cfg(feature = "avif")] Self::Avif => ImageAvif::decode(raw),
+			#[cfg(feature = "jxl")]  Self::Jxl => ImageJxl::decode(raw),
+			#[cfg(feature = "webp")] Self::Webp => ImageWebp::decode(raw),
 
-			#[cfg(feature = "decode_ng")] Self::Avif => ImageAvif::decode(raw),
-			#[cfg(feature = "decode_ng")] Self::Jxl => ImageJxl::decode(raw),
-			#[cfg(feature = "decode_ng")] Self::Webp => ImageWebp::decode(raw),
-			#[cfg(not(feature = "decode_ng"))] _ => Err(RefractError::ImageDecode(self)),
+			#[cfg(not(feature = "images"))] _ => Err(RefractError::ImageDecode(self)),
 		}
 	}
 }
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// ## Encoding.
 impl ImageKind {
 	/// # Encode Lossy.
@@ -267,9 +276,9 @@ impl ImageKind {
 		use crate::traits::Encoder;
 
 		match self {
-			Self::Avif => ImageAvif::encode_lossy(input, output, quality, flags),
-			Self::Jxl => ImageJxl::encode_lossy(input, output, quality, flags),
-			Self::Webp => ImageWebp::encode_lossy(input, output, quality, flags),
+			#[cfg(feature = "avif")] Self::Avif => ImageAvif::encode_lossy(input, output, quality, flags),
+			#[cfg(feature = "jxl")]  Self::Jxl => ImageJxl::encode_lossy(input, output, quality, flags),
+			#[cfg(feature = "webp")] Self::Webp => ImageWebp::encode_lossy(input, output, quality, flags),
 			_ => Err(RefractError::ImageEncode(self)),
 		}
 	}
@@ -291,9 +300,9 @@ impl ImageKind {
 		use crate::traits::Encoder;
 
 		match self {
-			Self::Avif => ImageAvif::encode_lossless(input, output, flags),
-			Self::Jxl => ImageJxl::encode_lossless(input, output, flags),
-			Self::Webp => ImageWebp::encode_lossless(input, output, flags),
+			#[cfg(feature = "avif")] Self::Avif => ImageAvif::encode_lossless(input, output, flags),
+			#[cfg(feature = "jxl")]  Self::Jxl => ImageJxl::encode_lossless(input, output, flags),
+			#[cfg(feature = "webp")] Self::Webp => ImageWebp::encode_lossless(input, output, flags),
 			_ => Err(RefractError::ImageEncode(self)),
 		}
 	}

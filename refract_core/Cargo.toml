@@ -9,42 +9,68 @@ repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
 publish = false
 
-[dependencies]
-dactyl = "0.9.*"
-jpeg-decoder = "=0.3.1"
-link-cplusplus = "=1.0.9"
+[dependencies.dactyl]
+version = "0.9.*"
+optional = true
+
+[dependencies.jpeg-decoder]
+version = "=0.3.1"
+optional = true
+
+[dependencies.link-cplusplus]
+version = "=1.0.9"
+optional = true
 
 [dependencies.lodepng]
 version = "=3.11.0"
 default-features = false
 features = [ "rust_backend" ]
+optional = true
 
 [dependencies.jpegxl-sys]
 version = "=0.11.2"
 default-features = false
 features = [ "vendored" ]
+optional = true
 
 [dependencies.libavif-sys]
 version = "=0.17.0"
 default-features = false
 features = [ "codec-aom" ]
+optional = true
 
 [dependencies.libwebp-sys2]
 version = "=0.1.10"
 features = [ "1_1", "static" ]
+optional = true
 
 [dependencies.rgb] # Match lodepng's dependency listing.
 version = "0.8.47"
 default-features = false
 features = ["bytemuck"]
+optional = true
 
 [features]
-default = []
+default = [ "images" ]
 
 # This feature adds a few generic RefractError types for the binary. It is not
 # something external crates implementing this library would really need to use.
 bin = []
 
-# This feature enables decoding support for the next-gen image formats, i.e.
-# WebP, AVIF, and JPEG XL.
-decode_ng = []
+# Enable all image formats.
+images = [ "jpeg", "png", "avif", "jxl", "webp" ]
+
+# Support AVIF.
+avif = [ "dactyl", "libavif-sys" ]
+
+# Support JPEG (decode-only).
+jpeg = [ "jpeg-decoder", "rgb" ]
+
+# Support JPEG-XL.
+jxl = [ "dactyl", "jpegxl-sys", "link-cplusplus" ]
+
+# Support PNG (decode-only).
+png = [ "lodepng" ]
+
+# Support WebP.
+webp = [ "dactyl", "libwebp-sys2" ]

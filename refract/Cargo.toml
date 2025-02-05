@@ -98,6 +98,7 @@ dowser = "0.11.*"
 [build-dependencies.refract_core]
 path = "../refract_core"
 default-features = false
+features = [ "png" ]
 
 [dependencies]
 argyle = "0.10.*"
@@ -113,4 +114,4 @@ features = [ "advanced", "image-without-codecs", "svg" ]
 
 [dependencies.refract_core]
 path = "../refract_core"
-features = [ "bin", "decode_ng" ]
+features = [ "bin", "images" ]

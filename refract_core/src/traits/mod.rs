@@ -4,12 +4,18 @@
 
 use crate::{
 	ColorKind,
+	RefractError,
+};
+
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
+use std::num::NonZeroU8;
+
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
+use crate::{
 	Input,
 	NZ_100,
 	Output,
-	RefractError,
 };
-use std::num::NonZeroU8;
 
 
 
@@ -34,6 +40,7 @@ pub(super) trait Decoder {
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError>;
 }
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// # Encoder.
 ///
 /// This is implemented for image formats capable of encoding from RGBA pixels
