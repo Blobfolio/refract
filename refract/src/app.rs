@@ -845,41 +845,49 @@ impl App {
 			.width(Shrink);
 
 		let Some(current) = self.current.as_ref() else { return container(row); };
-		let mut quality = None;
-		let mut kind = current.input.kind();
-		let mut count = 0;
 		let mut color = NiceColors::PURPLE;
 
-		// Pull the candidate info if we're looking at that.
-		if self.has_flag(OTHER_BSIDE) {
-			if let Some(can) = current.candidate.as_ref() {
-				kind = can.kind;
-				count = can.count;
-				color = NiceColors::PINK;
-				quality.replace(can.quality);
-			}
-		}
-
-		row = row.push(text(kind.to_string()).font(FONT_BOLD));
-
-		if count != 0 {
-			row = row.push(rich_text!(
-				span("Take: "),
-				span(format!("#{count}")).font(FONT_BOLD),
-			));
-		}
-
-		if let Some(quality) = quality {
-			row = row.push(rich_text!(
-				span(format!("{}: ", quality.label_title())),
-				span(quality.quality().to_string()).font(FONT_BOLD),
-			));
+		// If there's no candidate, print a stock message.
+		if current.candidate.is_none() {
+			color = NiceColors::BLUE;
+			row = row.push(text("Reticulating splines…").font(FONT_BOLD));
 		}
 		else {
-			row = row.push(rich_text!(
-				span("Quality: "),
-				span("Original").font(FONT_BOLD),
-			));
+			let mut quality = None;
+			let mut kind = current.input.kind();
+			let mut count = 0;
+
+			// Pull the candidate info if we're looking at that.
+			if self.has_flag(OTHER_BSIDE) {
+				if let Some(can) = current.candidate.as_ref() {
+					kind = can.kind;
+					count = can.count;
+					color = NiceColors::PINK;
+					quality.replace(can.quality);
+				}
+			}
+
+			row = row.push(text(kind.to_string()).font(FONT_BOLD));
+
+			if count != 0 {
+				row = row.push(rich_text!(
+					span("Take: "),
+					span(format!("#{count}")).font(FONT_BOLD),
+				));
+			}
+
+			if let Some(quality) = quality {
+				row = row.push(rich_text!(
+					span(format!("{}: ", quality.label_title())),
+					span(quality.quality().to_string()).font(FONT_BOLD),
+				));
+			}
+			else {
+				row = row.push(rich_text!(
+					span("Quality: "),
+					span("Original").font(FONT_BOLD),
+				));
+			}
 		}
 
 		container(row)
