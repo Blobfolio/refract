@@ -850,7 +850,16 @@ impl App {
 		// If there's no candidate, print a stock message.
 		if current.candidate.is_none() {
 			color = NiceColors::BLUE;
-			row = row.push(text("Reticulating splines…").font(FONT_BOLD));
+			// Lossless/auto requires no feedback, so let's give a different
+			// message.
+			if ! self.has_flag(MODE_LOSSY) && self.has_flag(OTHER_SAVE_AUTO) {
+				row = row.push(text(
+					"Lossless conversion is automatic. Just sit back and wait!"
+				).font(FONT_BOLD));
+			}
+			else {
+				row = row.push(text("Reticulating splines…").font(FONT_BOLD));
+			}
 		}
 		else {
 			let mut quality = None;

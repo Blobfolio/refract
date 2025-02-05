@@ -102,16 +102,7 @@ fn main() {
 #[inline]
 /// # Actual Main.
 ///
-/// This initializes, sets up, and runs the GTK application.
-///
-/// ## Panics
-///
-/// This will panic if the building of the UI model itself fails. This
-/// shouldn't ever happen, but we can't propagate that particular failure as a
-/// proper `Result`.
-///
-/// Any other kind of issue encountered will cause the application to fail, but
-/// with a pretty CLI error reason.
+/// Initialize and launch the GUI, or return an error.
 fn main__() -> Result<(), RefractError> {
 	use iced::{
 		settings::Settings,

@@ -1,5 +1,5 @@
 /*!
-# `Refract GTK` - Candidate
+# Refract: Candidate
 */
 
 use refract_core::{
