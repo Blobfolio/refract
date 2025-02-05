@@ -105,7 +105,6 @@ argyle = "0.10.*"
 dactyl = "0.9.*"
 dowser = "0.11.*"
 rfd = "=0.15.2"
-utc2k = "0.11.*"
 write_atomic = "0.5.*"
 
 [dependencies.iced]

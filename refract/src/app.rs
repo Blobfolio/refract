@@ -441,7 +441,6 @@ impl App {
 			rich_text!(
 				span("Refract ").color(NiceColors::PINK),
 				span(concat!("v", env!("CARGO_PKG_VERSION"))).color(NiceColors::PURPLE),
-				span(format!(" ({})", utc2k::FmtUtc2k::now().date())).color(NiceColors::GREY),
 			)
 				.font(FONT_BOLD),
 
