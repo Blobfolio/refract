@@ -664,11 +664,11 @@ impl App {
 				.on_toggle(|_| Message::ToggleFlag(MODE_LOSSY))
 				.size(CHK_SIZE),
 			tooltip(
-				checkbox("Lossy YCBCR", self.has_flag(MODE_LOSSY_YCBCR))
+				checkbox("Lossy YCbCr", self.has_flag(MODE_LOSSY_YCBCR))
 					.on_toggle_maybe(self.has_flag(FMT_AVIF | MODE_LOSSY).then_some(|_| Message::ToggleFlag(MODE_LOSSY_YCBCR)))
 					.size(CHK_SIZE),
 				container(
-					text("Repeat AVIF A/B tests in YCBCR colorspace to look for additional savings.")
+					text("Repeat AVIF A/B tests in YCbCr colorspace to look for additional savings.")
 						.size(12)
 				)
 					.padding(20)
