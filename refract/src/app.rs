@@ -13,7 +13,6 @@ use crate::{
 	LIGHT_PALETTE,
 	LIGHT_THEME,
 	NiceColors,
-	selectable_text_style,
 	tooltip_style,
 };
 use dactyl::{
@@ -54,7 +53,6 @@ use iced::{
 		svg,
 		text,
 		text::Rich,
-		text_input,
 		tooltip,
 	},
 };
@@ -365,6 +363,12 @@ impl App {
 					if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 				}
 			},
+
+			// Open a file.
+			Message::OpenFile(src) => { let _res = open::that_detached(src); },
+
+			// Open a URL.
+			Message::OpenUrl(url) => { let _res = open::that_detached(url); },
 		}
 
 		Task::none()
@@ -444,13 +448,14 @@ impl App {
 			)
 				.font(FONT_BOLD),
 
-			// To make the text selectable, we need to use an input field,
-			// reskinned to not look like an input field. Haha.
-			text_input(env!("CARGO_PKG_REPOSITORY"), env!("CARGO_PKG_REPOSITORY"))
-				.style(|_, _| selectable_text_style(NiceColors::GREEN))
-				.font(FONT_BOLD)
-				.padding(0),
+			rich_text!(
+				span(env!("CARGO_PKG_REPOSITORY"))
+					.color(NiceColors::GREEN)
+					.link(Message::OpenUrl(env!("CARGO_PKG_REPOSITORY")))
+			)
+				.font(FONT_BOLD),
 		)
+			.align_x(Horizontal::Right)
 			.spacing(5)
 			.width(Shrink)
 	}
@@ -626,13 +631,17 @@ impl App {
 							else if len.is_some() { NiceColors::GREEN }
 							else { NiceColors::RED };
 
+						let link =
+							if len.is_some() && path.is_file() { Some(Message::OpenFile(path.to_path_buf())) }
+							else { None };
+
 						if is_src {
 							lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
 						}
 
 						lines = lines.push(rich_text!(
 							span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
-							span(file.to_string_lossy().into_owned()).color(color),
+							span(file.to_string_lossy().into_owned()).color(color).link_maybe(link),
 							span(format!("{} | ", " ".repeat(widths[0].saturating_sub(dir.len() + 1 + file.len())))).color(NiceColors::PINK),
 							span(format!("{:<w$}", kind.as_str(), w=widths[1])),
 							span(" | ").color(NiceColors::PINK),
@@ -1201,7 +1210,7 @@ struct ImageResult {
 
 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 /// # Message.
 pub(super) enum Message {
 	/// # Encoding Feedback.
@@ -1215,6 +1224,12 @@ pub(super) enum Message {
 
 	/// # Next Step.
 	NextStep,
+
+	/// # Open File.
+	OpenFile(PathBuf),
+
+	/// # Open URL.
+	OpenUrl(&'static str),
 
 	/// # Toggle Flag.
 	ToggleFlag(u16),

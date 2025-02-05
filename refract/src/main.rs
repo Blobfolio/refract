@@ -77,7 +77,6 @@ use styles::{
 	LIGHT_PALETTE,
 	LIGHT_THEME,
 	NiceColors,
-	selectable_text_style,
 	tooltip_style,
 };
 

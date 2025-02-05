@@ -19,7 +19,6 @@ use iced::{
 	widget::{
 		button,
 		container,
-		text_input,
 	},
 };
 use std::sync::LazyLock;
@@ -136,22 +135,6 @@ pub(super) const fn button_style(status: button::Status, base: Color) -> button:
 		text_color: NiceColors::WHITE,
 		border: border_style(NiceColors::TRANSPARENT, 0.0, 8.0),
 		shadow: NO_SHADOW,
-	}
-}
-
-/// # Selectable Text Style.
-///
-/// This workaround styles a `TextInput` like a `Text` so that users can
-/// select the contents (which for some reason isn't possible with regular
-/// display widgets).
-pub(super) const fn selectable_text_style(base: Color) -> text_input::Style {
-	text_input::Style {
-		background: Background::Color(NiceColors::TRANSPARENT),
-		border: border_style(NiceColors::TRANSPARENT, 0.0, 0.0),
-		icon: NiceColors::TRANSPARENT,
-		placeholder: NiceColors::TRANSPARENT,
-		value: base,
-		selection: Color { a: 0.2, ..base },
 	}
 }
 
