@@ -82,6 +82,7 @@ pub use enc::{
 	quality::{
 		Quality,
 		QualityValue,
+		QualityValueFmt,
 	},
 	range::QualityRange,
 };

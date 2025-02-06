@@ -48,6 +48,7 @@ use iced::{
 		Row,
 		scrollable,
 		span,
+		stack,
 		Stack,
 		svg,
 		text,
@@ -63,6 +64,7 @@ use refract_core::{
 	ImageKind,
 	Input,
 	Quality,
+	QualityValueFmt,
 	RefractError,
 };
 use rfd::FileDialog;
@@ -134,6 +136,10 @@ const BTN_PADDING: Padding = Padding {
 
 
 /// # Application.
+///
+/// This struct serves as a sort of universal state for `refract`. The
+/// settings, tasks, logs, etc., are all kept here, as are the view/update
+/// models required by `iced`.
 pub(super) struct App {
 	/// # Flags.
 	flags: u16,
@@ -145,12 +151,23 @@ pub(super) struct App {
 	current: Option<CurrentImage>,
 
 	/// # Last Directory.
+	///
+	/// This holds the last directory — or at least one of them — that an
+	/// image was enqueued from, for the sole purpose of being able to set it
+	/// as the starting point should the user decide to later add more images.
 	last_dir: Option<PathBuf>,
 
-	/// # Results.
+	/// # Activity Log.
+	///
+	/// This holds the image sources that have been loaded, along with any
+	/// conversion results associated with them.
 	done: Vec<ImageResults>,
 
-	/// # Error.
+	/// # (Last) Error.
+	///
+	/// This is used to clarify awkward situations resulting in nothing
+	/// happening, such as after a user adds a directory that doesn't have any
+	/// images in it.
 	error: Option<MessageError>,
 }
 
@@ -158,7 +175,8 @@ impl App {
 	/// # New.
 	///
 	/// Parse the CLI arguments (if any) and return a new instance, unless
-	/// `--help` or `--version` were requested instead.
+	/// `--help` or `--version` were requested instead, in which case the
+	/// corresponding "error" is returned.
 	pub(super) fn new() -> Result<Self, RefractError> {
 		let mut paths = Dowser::default();
 		let mut flags = DEFAULT_FLAGS;
@@ -216,15 +234,14 @@ impl App {
 
 /// # Getters.
 impl App {
-	/// # Has Flag.
+	/// # Has Flag?
+	///
+	/// Returns true a given flag is set.
 	const fn has_flag(&self, flag: u16) -> bool { flag == self.flags & flag }
 
-	/// # State.
-	pub(super) fn state(&self) -> State {
-		self.current.as_ref().map_or(State::Normal, CurrentImage::state)
-	}
-
 	/// # Theme.
+	///
+	/// Returns the current theme, i.e. light or dark.
 	pub(super) fn theme(&self) -> Theme {
 		if self.has_flag(OTHER_NIGHT) { DARK_THEME.clone() }
 		else { LIGHT_THEME.clone() }
@@ -234,6 +251,12 @@ impl App {
 /// # Setters.
 impl App {
 	/// # Digest Paths.
+	///
+	/// Traverse the provided paths, adding any `jpeg` or `png` files to
+	/// the queue for later crunching.
+	///
+	/// This method will also set `last_dir` to the parent directory of the
+	/// first such file, if any.
 	fn add_paths(&mut self, paths: Dowser) {
 		let mut paths = paths.filter(|p| crate::is_jpeg_png(p));
 
@@ -246,12 +269,16 @@ impl App {
 			}
 		}
 
-		// Add it and the rest.
+		// Add the first and the rest.
 		self.paths.insert(first);
 		self.paths.extend(paths);
 	}
 
 	/// # Toggle Flag.
+	///
+	/// Flip the bits corresponding to a given flag, except in cases where
+	/// that would leave us without any formats or modes, in which case _all_
+	/// formats or modes (respectively) will be flipped back _on_.
 	fn toggle_flag(&mut self, flag: u16) {
 		self.flags ^= flag;
 
@@ -265,12 +292,23 @@ impl App {
 /// # Iced Controls.
 impl App {
 	/// # First Task.
+	///
+	/// This does nothing, unless paths happened to be added via CLI, in which
+	/// case it lets `iced` know it should jump straight into conversion.
 	pub(super) fn start(&self) -> Task<Message> {
 		if self.paths.is_empty() { Task::none() }
 		else { Task::done(Message::NextImage) }
 	}
 
 	/// # Update.
+	///
+	/// This method serves as the entrypoint for the application's
+	/// "reactivity". Anytime a user checks a box or clicks a button, a
+	/// `Message` gets generated and sent here.
+	///
+	/// Depending on the nature of the work, this method might "recurse" in a
+	/// roundabout way by returning a new `Message` that will make its way
+	/// back to itself.
 	pub(super) fn update(&mut self, message: Message) -> Task<Message> {
 		// Clear the last error, if any.
 		let _res = self.error.take();
@@ -285,7 +323,8 @@ impl App {
 					fd = fd.set_directory(p);
 				}
 
-				// Pop a dialog for the user and wait for their selection.
+				// Pop a (native) dialog for the user and block until they make
+				// a selection or cancel.
 				let paths =
 					if dir {
 						fd.set_title("Open Directory")
@@ -299,27 +338,27 @@ impl App {
 							.map(Dowser::from)
 					};
 
-				// Proceed if anything came back.
+				// Parse and enqueue the result, if any.
 				if let Some(paths) = paths {
 					self.add_paths(paths);
 
-					// Nothing?
+					// If none of the path(s) were valid, record the "error"
+					// so we can explain why nothing is happening.
 					if self.paths.is_empty() {
 						return Task::done(Message::Error(MessageError::NoImages));
 					}
-					// This should always be true, but iced tasks can stagger
-					// so it is a good idea to confirm the program hasn't
-					// already moved on.
+					// Otherwise we probably want to load up the first image,
+					// but only if we aren't already processing another one.
 					else if self.current.is_none() {
 						return Task::done(Message::NextImage);
 					}
 				}
 			},
 
-			// An error.
+			// Record an "error" message so we can let the user know what's up.
 			Message::Error(err) => { self.error.replace(err); },
 
-			// Provide Feedback.
+			// Process the user's yay/nay evaluation of a candidate image.
 			Message::Feedback(feedback) => {
 				self.flags &= ! OTHER_BSIDE;
 				if let Some(current) = &mut self.current {
@@ -330,7 +369,8 @@ impl App {
 				}
 			},
 
-			// Load next image.
+			// If there are images in the queue, pull the first and start up
+			// the conversion process for it.
 			Message::NextImage => {
 				self.flags &= ! OTHER_BSIDE;
 				self.current = None;
@@ -352,13 +392,15 @@ impl App {
 				}
 			},
 
-			// Encode next image.
+			// Crunch the next candidate image for the current source or, if
+			// it's done, save the best version (if any) and move onto the
+			// next format.
 			Message::NextStep => {
 				self.flags &= ! OTHER_BSIDE;
 				let confirm = ! self.has_flag(OTHER_SAVE_AUTO);
 				if let Some(current) = &mut self.current {
 					// Advance iterator and wait for feedback.
-					if current.advance() {
+					if current.next_candidate() {
 						self.flags |= OTHER_BSIDE;
 						return Task::none();
 					}
@@ -376,19 +418,26 @@ impl App {
 					}
 				}
 
+				// We've exhausted the current source; move onto the next image
+				// (if any).
 				self.current = None;
 				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 			},
 
-			// Open a file.
+			// Open a local image path using whatever (external) program the
+			// desktop environment would normally use to open that file type.
 			Message::OpenFile(src) => {
+				// If this fails, note the problem so we can let the user
+				// know that we aren't just ignoring them.
 				if open::that_detached(src).is_err() {
 					return Task::done(Message::Error(MessageError::NoOpen));
 				}
 			},
 
-			// Open a URL.
+			// Open a URL in e.g. the system's default web browser.
 			Message::OpenUrl(url) => {
+				// If this fails, note the problem so we can let the user
+				// know that we aren't just ignoring them.
 				if open::that_detached(url).is_err() {
 					return Task::done(Message::Error(MessageError::NoOpen));
 				}
@@ -402,15 +451,27 @@ impl App {
 	}
 
 	/// # View.
-	pub(super) fn view(&self) -> Element<'_, Message> {
-		match self.state() {
-			State::Normal => self.view_normal(),
-			State::WaitEncode | State::WaitFeedback => self.view_working(),
+	///
+	/// This method returns everything `iced` needs to draw the screen.
+	///
+	/// Under the hood, this defers to either `view_home` or `view_ab`
+	/// depending on whether or not an image source is actively being worked
+	/// on.
+	pub(super) fn view(&self) -> Container<Message> {
+		// If we're processing an image, return the A/B screen.
+		if self.current.as_ref().is_some_and(CurrentImage::active) {
+			self.view_ab()
 		}
+		// Otherwise the home screen.
+		else { self.view_home() }
 	}
 
 	#[expect(clippy::unused_self, reason = "Required by API.")]
 	/// # Subscription.
+	///
+	/// This method sets up listeners for the keyboard shortcuts available
+	/// during image processing. If matched, an `Message` will get bubbled up
+	/// to `update`, same as when interacting with a proper widget.
 	pub(super) fn subscription(&self) -> Subscription<Message> {
 		use iced::{
 			event::Status,
@@ -449,10 +510,15 @@ impl App {
 
 /// # View: Normal.
 impl App {
-	/// # View.
+	/// # View: Normal.
 	///
-	/// This screen is shown when nothing else is going on.
-	fn view_normal(&self) -> Element<'_, Message> {
+	/// This screen is shown when nothing else is going on. It comprises the
+	/// main program settings, file/directory open buttons, version details,
+	/// and either an activity log or decorative `refract` logo.
+	///
+	/// (A warning/error message may also be presented, but they're short-
+	/// lived and uncommon.)
+	fn view_home(&self) -> Container<Message> {
 		container(
 			column!(
 				self.view_settings(),
@@ -463,11 +529,12 @@ impl App {
 		)
 			.padding(10)
 			.width(Fill)
-			.into()
 	}
 
 	#[expect(clippy::unused_self, reason = "Required by API.")]
-	/// # About.
+	/// # View: About.
+	///
+	/// This returns the application name, version, and repository URL.
 	fn view_about(&self) -> Column<Message> {
 		column!(
 			rich_text!(
@@ -488,7 +555,11 @@ impl App {
 			.width(Shrink)
 	}
 
-	/// # Error.
+	/// # View: Last Error.
+	///
+	/// If the user did something that did nothing instead of something, this
+	/// returns a message explaining why they got nothing instead of something,
+	/// lest they think it's our fault!
 	fn view_error(&self) -> Option<Container<Message>> {
 		use iced::widget::container::Style;
 
@@ -511,26 +582,12 @@ impl App {
 		)
 	}
 
-	/// # Format Checkboxes.
-	fn view_formats(&self) -> Column<Message> {
-		column!(
-			text("Formats").color(NiceColors::PINK).font(FONT_BOLD),
-			checkbox("AVIF", self.has_flag(FMT_AVIF))
-				.on_toggle(|_| Message::ToggleFlag(FMT_AVIF))
-				.size(CHK_SIZE),
-			checkbox("JPEG XL", self.has_flag(FMT_JXL))
-				.on_toggle(|_| Message::ToggleFlag(FMT_JXL))
-				.size(CHK_SIZE),
-			checkbox("WebP", self.has_flag(FMT_WEBP))
-				.on_toggle(|_| Message::ToggleFlag(FMT_WEBP))
-				.size(CHK_SIZE),
-		)
-			.spacing(5)
-	}
-
 	#[expect(clippy::unused_self, reason = "Required by API.")]
-	/// # View Instructions.
-	fn view_instructions(&self) -> Container<Message> {
+	/// # View: Enqueue Buttons.
+	///
+	/// This returns button widgets for adding file(s) or directories, and
+	/// some basic instructions for same.
+	fn view_enqueue_buttons(&self) -> Container<Message> {
 		container(
 			column!(
 				row!(
@@ -565,102 +622,43 @@ impl App {
 			.width(Fill)
 	}
 
-	#[expect(clippy::too_many_lines, reason = "Yeah, it's a bit much.")]
-	/// # View Log.
+	/// # View: Activity Log.
+	///
+	/// This returns a table containing detailed information about each of the
+	/// source images and next-gen conversions that have been processed,
+	/// successfully or otherwise.
 	fn view_log(&self) -> Element<'_, Message> {
-		type TableRow<'a> = (Cow<'a, Path>, ImageKind, Option<String>, Option<NiceU64>, Option<NicePercent>);
-
-		// If there's no activity, just show the logo.
+		// If there's no activity, display our logo instead.
 		if self.done.is_empty() { return self.view_logo(); }
 
+		// Follow the theme for coloration pointers.
 		let fg =
 			if self.has_flag(OTHER_NIGHT) { DARK_PALETTE.text }
 			else { LIGHT_PALETTE.text };
 
-		let mut table: Vec<Result<TableRow, &Path>> = Vec::new();
-		for job in &self.done {
-			// Nothing?
-			if job.dst.is_empty() {
-				table.push(Err(job.src.as_path()));
-			}
-			else {
-				// Push the source.
-				table.push(Ok((
-					Cow::Borrowed(&job.src),
-					job.src_kind,
-					None,
-					Some(NiceU64::from(job.src_len)),
-					Some(NicePercent::MAX),
-				)));
+		// Reformat the data.
+		let table = ActivityTable::from(self.done.as_slice());
 
-				// Push the conversions.
-				for (kind, res) in &job.dst {
-					if let Some(res) = res {
-						table.push(Ok((
-							Cow::Borrowed(&res.src),
-							*kind,
-							Some(res.quality.quality().to_string()),
-							Some(NiceU64::from(res.len)),
-							NicePercent::try_from((res.len.get(), job.src_len.get())).ok(),
-						)));
-					}
-					else {
-						let mut dst = job.src.clone();
-						let v = dst.as_mut_os_string();
-						v.push(".");
-						v.push(kind.extension());
-						table.push(Ok((
-							Cow::Owned(dst),
-							*kind,
-							None,
-							None,
-							None,
-						)));
-					}
-				}
-			}
-		}
-
-		let headers = [
-			"File",
-			"Kind",
-			"Quality",
-			"Size",
-			"Ratio",
-		];
-
-		// Find the max column lengths.
-		let mut widths = headers.map(str::len);
-		for row in table.iter().filter_map(|r| r.as_ref().ok()) {
-			let tmp = [
-				row.0.to_string_lossy().len(),
-				row.1.len(),
-				row.2.as_ref().map_or(0, String::len),
-				row.3.as_ref().map_or(0, NiceU64::len),
-				row.4.as_ref().map_or(0, NicePercent::len),
-			];
-			for (w1, w2) in widths.iter_mut().zip(tmp) {
-				if *w1 < w2 { *w1 = w2; }
-			}
-		}
-
+		// Figure out some bounds.
+		let widths = table.widths();
 		let total_width = widths.iter().copied().sum::<usize>() + 4 * 3;
 		let divider = "-".repeat(total_width);
 
 		// Finally, add all the lines!
 		let mut lines = column!(rich_text!(
-			span(format!("{:<w$}", headers[0], w=widths[0])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])).color(NiceColors::PURPLE).font(FONT_BOLD),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:<w$}", headers[1], w=widths[1])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])).color(NiceColors::PURPLE).font(FONT_BOLD),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:>w$}", headers[2], w=widths[2])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])).color(NiceColors::PURPLE).font(FONT_BOLD),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:>w$}", headers[3], w=widths[3])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])).color(NiceColors::PURPLE).font(FONT_BOLD),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:>w$}", headers[4], w=widths[4])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])).color(NiceColors::PURPLE).font(FONT_BOLD),
 		));
 
-		for row in table {
+		// The rows, interspersed with dividers for each new source.
+		for row in table.0 {
 			match row {
 				Err(path) => {
 					let Some(dir) = path.parent() else { continue; };
@@ -672,9 +670,9 @@ impl App {
 						span(": Nothing doing.").color(NiceColors::GREY),
 					));
 				},
-				Ok((path, kind, quality, len, per)) => {
-					let Some(dir) = path.parent().map(Path::as_os_str) else { continue; };
-					let Some(file) = path.file_name() else { continue; };
+				Ok(ActivityTableRow { src, kind, quality, len, ratio }) => {
+					let Some(dir) = src.parent().map(Path::as_os_str) else { continue; };
+					let Some(file) = src.file_name() else { continue; };
 					let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
 					let color =
 						if is_src { fg }
@@ -682,7 +680,7 @@ impl App {
 						else { NiceColors::RED };
 
 					let link =
-						if len.is_some() && path.is_file() { Some(Message::OpenFile(path.to_path_buf())) }
+						if len.is_some() && src.is_file() { Some(Message::OpenFile(src.to_path_buf())) }
 						else { None };
 
 					if is_src {
@@ -693,13 +691,13 @@ impl App {
 						span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
 						span(file.to_string_lossy().into_owned()).color(color).link_maybe(link),
 						span(format!("{} | ", " ".repeat(widths[0].saturating_sub(dir.len() + 1 + file.len())))).color(NiceColors::PINK),
-						span(format!("{:<w$}", kind.as_str(), w=widths[1])),
+						span(format!("{kind:<w$}", w=widths[1])),
 						span(" | ").color(NiceColors::PINK),
-						span(format!("{:>w$}", quality.unwrap_or_else(String::new), w=widths[2])),
+						span(format!("{:>w$}", quality.as_str(), w=widths[2])),
 						span(" | ").color(NiceColors::PINK),
 						span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
 						span(" | ").color(NiceColors::PINK),
-						span(format!("{:>w$}", per.as_ref().map_or("", NicePercent::as_str), w=widths[4])),
+						span(format!("{:>w$}", ratio.as_ref().map_or("", NicePercent::as_str), w=widths[4])),
 					));
 				},
 			}
@@ -713,12 +711,61 @@ impl App {
 
 	#[expect(clippy::unused_self, reason = "Required by API.")]
 	/// # View Logo.
+	///
+	/// This returns a simple program logo to fill the whitespace that would
+	/// otherwise exist at startup owing to the lack of history to report.
 	fn view_logo(&self) -> Element<'_, Message> {
 		container(image(crate::logo())).center(Fill).into()
 	}
 
-	/// # View Checkboxes.
-	fn view_modes(&self) -> Column<Message> {
+	/// # View: Settings.
+	///
+	/// This collects and returns the contents of the `view_settings_*`
+	/// helpers, along with the add-file buttons and about information.
+	fn view_settings(&self) -> Container<Message> {
+		container(
+			row!(
+				self.view_settings_fmt(),
+				self.view_settings_mode(),
+				self.view_settings_other(),
+				self.view_enqueue_buttons(),
+				self.view_about(),
+			)
+				.padding(20)
+				.spacing(20)
+		)
+			.style(|_| {
+				let mut style = bordered_box(&self.theme());
+				let _res = style.background.take();
+				style
+			})
+			.width(Fill)
+	}
+
+	/// # View: Format Checkboxes.
+	///
+	/// This returns a list of checkboxes corresponding to the available
+	/// next-gen image formats (the encoders that will be used).
+	fn view_settings_fmt(&self) -> Column<Message> {
+		column!(
+			text("Formats").color(NiceColors::PINK).font(FONT_BOLD),
+			checkbox("AVIF", self.has_flag(FMT_AVIF))
+				.on_toggle(|_| Message::ToggleFlag(FMT_AVIF))
+				.size(CHK_SIZE),
+			checkbox("JPEG XL", self.has_flag(FMT_JXL))
+				.on_toggle(|_| Message::ToggleFlag(FMT_JXL))
+				.size(CHK_SIZE),
+			checkbox("WebP", self.has_flag(FMT_WEBP))
+				.on_toggle(|_| Message::ToggleFlag(FMT_WEBP))
+				.size(CHK_SIZE),
+		)
+			.spacing(5)
+	}
+
+	/// # View: Mode Checkboxes.
+	///
+	/// This returns checkboxes for the various compression modes.
+	fn view_settings_mode(&self) -> Column<Message> {
 		column!(
 			text("Compression").color(NiceColors::PINK).font(FONT_BOLD),
 			checkbox("Lossless", self.has_flag(MODE_LOSSLESS))
@@ -744,8 +791,11 @@ impl App {
 			.spacing(5)
 	}
 
-	/// # View Checkboxes.
-	fn view_other(&self) -> Column<Message> {
+	/// # View: Other Checkboxes.
+	///
+	/// This returns checkboxes for the program's one-off settings, i.e.
+	/// night mode and automatic saving.
+	fn view_settings_other(&self) -> Column<Message> {
 		column!(
 			text("Other").color(NiceColors::PINK).font(FONT_BOLD),
 			tooltip(
@@ -767,44 +817,27 @@ impl App {
 		)
 			.spacing(5)
 	}
-
-	/// # View Settings.
-	fn view_settings(&self) -> Container<Message> {
-		container(
-			row!(
-				self.view_formats(),
-				self.view_modes(),
-				self.view_other(),
-				self.view_instructions(),
-				self.view_about(),
-			)
-				.padding(20)
-				.spacing(20)
-		)
-			.style(|_| {
-				let mut style = bordered_box(&self.theme());
-				let _res = style.background.take();
-				style
-			})
-			.width(Fill)
-	}
 }
 
 /// # View: Images.
 impl App {
-	/// # View Images.
+	/// # View: Images.
 	///
-	/// This screen is shown when there are images happening.
-	fn view_working(&self) -> Element<'_, Message> {
+	/// This screen is shown when an image is being processed, whether
+	/// actively or awaiting user feedback.
+	///
+	/// It comprises a title-like bar, image stack, and footer with
+	/// instructions, progress, and action buttons.
+	fn view_ab(&self) -> Container<Message> {
 		container(
 			column!(
-				self.view_image_summary(),
+				self.view_ab_header(),
 				self.view_image(),
 				container(
 					row!(
-						self.view_image_legend(),
-						self.view_progress(),
-						self.view_image_actions(),
+						self.view_keyboard_shortcuts(),
+						self.view_ab_progress(),
+						self.view_ab_feedback(),
 					)
 						.align_y(Vertical::Center)
 						.padding(20)
@@ -814,93 +847,40 @@ impl App {
 			)
 		)
 			.width(Fill)
-			.into()
 	}
 
-	#[expect(clippy::option_if_let_else, reason = "Absolutely not!")]
-	/// # Image Summary Legend.
-	fn view_image_legend(&self) -> Column<Message> {
-		let Some(current) = self.current.as_ref() else { return Column::new(); };
+	/// # View: Image A/B Feedback Buttons.
+	///
+	/// This returns the "Accept" and "Reject" buttons used for candidate image
+	/// feedback, though they'll only be enabled if the program is ready to
+	/// receive said feedback.
+	fn view_ab_feedback(&self) -> Row<Message> {
+		let active = self.current.as_ref().is_some_and(|c| c.candidate.is_some());
 
-		if let Some(dst_kind) = current.candidate.as_ref().map(|c| c.kind) {
+		// Keep and discard buttons.
+		let btn_no = button(text("Reject").size(18).font(FONT_BOLD))
+			.style(|_, status| button_style(status, NiceColors::RED))
+			.padding(BTN_PADDING)
+			.on_press_maybe(active.then_some(Message::Feedback(false)));
+		let btn_yes = button(text("Accept").size(18).font(FONT_BOLD))
+			.style(|_, status| button_style(status, NiceColors::GREEN))
+			.padding(BTN_PADDING)
+			.on_press_maybe(active.then_some(Message::Feedback(true)));
 
-			column!(
-				rich_text!(
-					span("[space]").font(FONT_BOLD),
-					span(" Toggle image view (").color(NiceColors::GREY),
-					span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD),
-					span(" vs ").color(NiceColors::GREY),
-					span(dst_kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD),
-					span(").").color(NiceColors::GREY),
-				),
-				rich_text!(
-					span("    [d]").color(NiceColors::RED).font(FONT_BOLD),
-					span(" Reject candidate.").color(NiceColors::GREY),
-				),
-				rich_text!(
-					span("    [k]").color(NiceColors::GREEN).font(FONT_BOLD),
-					span(" Accept candidate.").color(NiceColors::GREY),
-				),
-			)
-				.spacing(5)
-		}
-		else {
-			column!(
-				rich_text!(
-					span("The next "),
-					current.iter.as_ref().map_or_else(
-						|| span("image"),
-						|(_, i)| span(i.output_kind().to_string()).color(NiceColors::PINK).font(FONT_BOLD)
-					),
-					span(" is cooking…"),
-				),
-				text("Hang tight!").size(18).font(FONT_BOLD),
-			)
-		}
+		row!(btn_no, btn_yes)
+			.width(Shrink)
+			.spacing(10)
 	}
 
-	/// # Image Progress.
-	fn view_progress(&self) -> Column<Message> {
-		let Some(current) = self.current.as_ref() else { return Column::new(); };
-
-		let new_kind = current.iter.as_ref().map_or(ImageKind::Png, |(_, i)| i.output_kind());
-		let mut formats = Vec::new();
-		for (flag, kind) in [
-			(FMT_WEBP, ImageKind::Webp),
-			(FMT_AVIF, ImageKind::Avif),
-			(FMT_JXL, ImageKind::Jxl),
-		] {
-			if self.has_flag(flag) {
-				if ! formats.is_empty() {
-					formats.push(span(" + ").color(NiceColors::GREY));
-				}
-				if kind == new_kind {
-					formats.push(span(kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD));
-				}
-				else {
-					formats.push(span(kind.to_string()).color(NiceColors::GREY).font(FONT_BOLD));
-				}
-			}
-		}
-		formats.insert(0, span(" > ").color(NiceColors::GREY));
-		formats.insert(0, span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD));
-
-		column!(
-			text(current.src.to_string_lossy()).color(NiceColors::GREY),
-
-			Rich::with_spans(formats),
-
-			checkbox("Night Mode", self.has_flag(OTHER_NIGHT))
-				.on_toggle(|_| Message::ToggleFlag(OTHER_NIGHT))
-				.size(CHK_SIZE),
-		)
-			.spacing(5)
-			.align_x(Horizontal::Center)
-			.width(Fill)
-	}
-
-	/// # Image Summary.
-	fn view_image_summary(&self) -> Container<Message> {
+	/// # View: Image Header.
+	///
+	/// This returns one of three possible pseudo-titlebars for use during
+	/// image processing:
+	///
+	/// 1. In A/B mode, it contains the format and quality details for the image actively being displayed, i.e. the source or candidate.
+	/// 2. In lossless-only mode, it lets the user know that no feedback will be required.
+	/// 3. Otherwise a generic "reticulating splines" message, since there's nothing to do but wait.
+	fn view_ab_header(&self) -> Container<Message> {
 		use iced::widget::container::Style;
 
 		let mut row = Row::new()
@@ -974,52 +954,88 @@ impl App {
 			})
 	}
 
-	/// # Image Summary Actions.
-	fn view_image_actions(&self) -> Row<Message> {
-		let active = self.current.as_ref().is_some_and(|c| c.candidate.is_some());
+	/// # View: Image Progress.
+	///
+	/// This returns some basic information about the current processing job,
+	/// namely the source and target formats.
+	///
+	/// It also includes a checkbox to toggle night mode, since visually it
+	/// fits better in this column than anywhere else.
+	fn view_ab_progress(&self) -> Column<Message> {
+		let Some(current) = self.current.as_ref() else { return Column::new(); };
 
-		// Keep and discard buttons.
-		let btn_no = button(text("Reject").size(18).font(FONT_BOLD))
-			.style(|_, status| button_style(status, NiceColors::RED))
-			.padding(BTN_PADDING)
-			.on_press_maybe(active.then_some(Message::Feedback(false)));
-		let btn_yes = button(text("Accept").size(18).font(FONT_BOLD))
-			.style(|_, status| button_style(status, NiceColors::GREEN))
-			.padding(BTN_PADDING)
-			.on_press_maybe(active.then_some(Message::Feedback(true)));
+		let new_kind = current.iter.as_ref().map_or(ImageKind::Png, |(_, i)| i.output_kind());
+		let mut formats = Vec::new();
+		for (flag, kind) in [
+			(FMT_WEBP, ImageKind::Webp),
+			(FMT_AVIF, ImageKind::Avif),
+			(FMT_JXL, ImageKind::Jxl),
+		] {
+			if self.has_flag(flag) {
+				if ! formats.is_empty() {
+					formats.push(span(" + ").color(NiceColors::GREY));
+				}
+				if kind == new_kind {
+					formats.push(span(kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD));
+				}
+				else {
+					formats.push(span(kind.to_string()).color(NiceColors::GREY).font(FONT_BOLD));
+				}
+			}
+		}
+		formats.insert(0, span(" > ").color(NiceColors::GREY));
+		formats.insert(0, span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD));
 
-		row!(btn_no, btn_yes)
-			.width(Shrink)
-			.spacing(10)
+		column!(
+			text(current.src.to_string_lossy()).color(NiceColors::GREY),
+
+			Rich::with_spans(formats),
+
+			checkbox("Night Mode", self.has_flag(OTHER_NIGHT))
+				.on_toggle(|_| Message::ToggleFlag(OTHER_NIGHT))
+				.size(CHK_SIZE),
+		)
+			.spacing(5)
+			.align_x(Horizontal::Center)
+			.width(Fill)
 	}
 
-	/// # Image Stack.
+	/// # View: Image Stack.
+	///
+	/// This returns a fullscreen image — either the source or candidate,
+	/// depending on A/B — overtop a static checked tile background (to make it
+	/// easier to distinguish transparent regions).
+	///
+	/// The image itself is technically optional, but should always be present
+	/// in practice.
 	fn view_image(&self) -> Stack<Message> {
-		let mut layers = Stack::new();
-		layers = layers.push(self.view_image_layer0());
-		layers = layers.push_maybe(self.view_image_layer1());
-		layers
+		use iced::widget::svg::Handle;
+
+		stack!(
+			container(
+				svg(Handle::from_memory(CHECKERS))
+					.opacity(0.2)
+					.content_fit(ContentFit::None)
+					.width(Fill)
+					.height(Fill)
+			)
+				.clip(true)
+		)
+			.push_maybe(self.view_image_image())
 			.width(Fill)
 			.height(Fill)
 	}
 
-	#[expect(clippy::unused_self, reason = "Required by API.")]
-	/// # Pixel Background Layer.
-	fn view_image_layer0(&self) -> Container<Message> {
-		use iced::widget::svg::Handle;
-		container(
-			svg(Handle::from_memory(CHECKERS))
-				.opacity(0.2)
-				.content_fit(ContentFit::None)
-				.width(Fill)
-				.height(Fill)
-		)
-			.clip(true)
-	}
-
 	#[expect(clippy::cast_possible_truncation, reason = "Meh.")]
 	/// # Image Layer.
-	fn view_image_layer1(&self) -> Option<Container<Message>> {
+	///
+	/// Return a rendering of either the source image or candidate for
+	/// display. When no candidate is available, the source image is returned
+	/// in a semi-transparent state to help imply "loading".
+	///
+	/// This method is technically fallible, but in practice it should never
+	/// not return something.
+	fn view_image_image(&self) -> Option<Container<Message>> {
 		use iced::widget::{
 			image::Handle,
 			scrollable::{
@@ -1067,11 +1083,187 @@ impl App {
 				.center(Fill)
 		)
 	}
+
+	#[expect(clippy::option_if_let_else, reason = "Absolutely not!")]
+	/// # View: Image Screen Keyboard Shortcuts.
+	///
+	/// This returns a simple legend illustrating the available keyboard
+	/// shortcuts that can be used in lieu of the button widgets.
+	fn view_keyboard_shortcuts(&self) -> Column<Message> {
+		let Some(current) = self.current.as_ref() else { return Column::new(); };
+
+		if let Some(dst_kind) = current.candidate.as_ref().map(|c| c.kind) {
+
+			column!(
+				rich_text!(
+					span("[space]").font(FONT_BOLD),
+					span(" Toggle image view (").color(NiceColors::GREY),
+					span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD),
+					span(" vs ").color(NiceColors::GREY),
+					span(dst_kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD),
+					span(").").color(NiceColors::GREY),
+				),
+				rich_text!(
+					span("    [d]").color(NiceColors::RED).font(FONT_BOLD),
+					span(" Reject candidate.").color(NiceColors::GREY),
+				),
+				rich_text!(
+					span("    [k]").color(NiceColors::GREEN).font(FONT_BOLD),
+					span(" Accept candidate.").color(NiceColors::GREY),
+				),
+			)
+				.spacing(5)
+		}
+		else {
+			column!(
+				rich_text!(
+					span("The next "),
+					current.iter.as_ref().map_or_else(
+						|| span("image"),
+						|(_, i)| span(i.output_kind().to_string()).color(NiceColors::PINK).font(FONT_BOLD)
+					),
+					span(" is cooking…"),
+				),
+				text("Hang tight!").size(18).font(FONT_BOLD),
+			)
+		}
+	}
+}
+
+
+
+/// # Activity Table.
+///
+/// This is essentially an alternative view into the `ImageResults`, one more
+/// suitable for display.
+///
+/// It holds the path, kind, quality, file size, and compression ratio for each
+/// source and output, whether saved or not, though owing to the variety, most
+/// fields are optional.
+struct ActivityTable<'a>(Vec<Result<ActivityTableRow<'a>, &'a Path>>);
+
+impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
+	fn from(src: &'a [ImageResults]) -> Self {
+		let mut out = Vec::with_capacity(src.len() * 5);
+		for job in src {
+			// Nothing?
+			if job.dst.is_empty() { out.push(Err(job.src.as_path())); }
+			// Something!
+			else {
+				// Push the source.
+				out.push(Ok(ActivityTableRow {
+					src: Cow::Borrowed(&job.src),
+					kind: job.src_kind,
+					quality: QualityValueFmt::None,
+					len: Some(NiceU64::from(job.src_len)),
+					ratio: Some(NicePercent::MAX),
+				}));
+
+				// Push the conversions.
+				for (kind, res) in &job.dst {
+					if let Some(res) = res {
+						out.push(Ok(ActivityTableRow {
+							src: Cow::Borrowed(&res.src),
+							kind: *kind,
+							quality: res.quality.quality_fmt(),
+							len: Some(NiceU64::from(res.len)),
+							ratio: NicePercent::try_from((res.len.get(), job.src_len.get())).ok(),
+						}));
+					}
+					else {
+						let mut dst = job.src.clone();
+						let v = dst.as_mut_os_string();
+						v.push(".");
+						v.push(kind.extension());
+						out.push(Ok(ActivityTableRow {
+							src: Cow::Owned(dst),
+							kind: *kind,
+							quality: QualityValueFmt::None,
+							len: None,
+							ratio: None,
+						}));
+					}
+				}
+			}
+		}
+
+		// Done!
+		Self(out)
+	}
+}
+
+impl ActivityTable<'_> {
+	/// # Headers.
+	const HEADERS: [&'static str; 5] = [
+		"File",
+		"Kind",
+		"Quality",
+		"Size",
+		"Ratio",
+	];
+
+	/// # Column Widths.
+	///
+	/// Calculate and return the (approximate) maximum display width for each
+	/// column, packed into a more serviceable array format.
+	fn widths(&self) -> [usize; 5] {
+		self.0.iter()
+			.filter_map(|r| r.as_ref().map(ActivityTableRow::widths).ok())
+			.fold(Self::HEADERS.map(str::len), |mut acc, v| {
+				for (w1, w2) in acc.iter_mut().zip(v) {
+					if *w1 < w2 { *w1 = w2; }
+				}
+				acc
+			})
+	}
+}
+
+/// # Activity Table Row.
+///
+/// A single row in the table.
+struct ActivityTableRow<'a> {
+	/// # File Path.
+	src: Cow<'a, Path>,
+
+	/// # Image Kind.
+	kind: ImageKind,
+
+	/// # Compression Quality.
+	quality: QualityValueFmt,
+
+	/// # File Size.
+	len: Option<NiceU64>,
+
+	/// # Compression Ratio (relative to source).
+	ratio: Option<NicePercent>,
+}
+
+impl ActivityTableRow<'_> {
+	/// # Column Widths.
+	///
+	/// Calculate and return the (approximate) display width for each field,
+	/// packed into a more serviceable array format.
+	fn widths(&self) -> [usize; 5] {
+		[
+			fyi_msg::width(self.src.to_string_lossy().as_bytes()), // Could be multibyte.
+			self.kind.len(),
+			self.quality.len(),
+			self.len.as_ref().map_or(0, NiceU64::len),
+			self.ratio.as_ref().map_or(0, NicePercent::len),
+		]
+	}
 }
 
 
 
 /// # Current Image.
+///
+/// This struct holds the state details for an image that is currently being
+/// processed, including the source, settings, last candidate, and encoding
+/// iterator.
+///
+/// Because there is only ever one of these at a time, its existence (or lack
+/// thereof) is used to tell which screen to display.
 struct CurrentImage {
 	/// # Source Path.
 	src: PathBuf,
@@ -1082,7 +1274,7 @@ struct CurrentImage {
 	/// # Refract Flags.
 	flags: u16,
 
-	/// # Candidate Image.
+	/// # Decoded Candidate Image.
 	candidate: Option<Candidate>,
 
 	/// # Encoding Count and Iterator.
@@ -1091,6 +1283,12 @@ struct CurrentImage {
 
 impl CurrentImage {
 	/// # New.
+	///
+	/// This method returns a new instance containing the decoded source
+	/// image, if valid.
+	///
+	/// Note that this does _not_ initialize an encoder or generate a
+	/// candidate image. Those tasks can be long-running so are left for later.
 	fn new(src: PathBuf, flags: u16) -> Option<Self> {
 		let input = std::fs::read(&src).ok()?;
 		let input = Input::try_from(input.as_slice()).ok()?;
@@ -1103,33 +1301,10 @@ impl CurrentImage {
 		})
 	}
 
-	/// # Finish (Current Encoder).
-	fn finish(&mut self) -> Option<(u8, EncodeIter)> { self.iter.take() }
-
-	/// # State.
-	const fn state(&self) -> State {
-		if self.iter.is_some() {
-			if self.candidate.is_some() { State::WaitFeedback }
-			else { State::WaitEncode }
-		}
-		else { State::Normal }
-	}
-
-	/// # Advance.
+	/// # Is Active?
 	///
-	/// Advance the guide, returning `true` if a new candidate was generated.
-	fn advance(&mut self) -> bool {
-		self.candidate = None;
-		if let Some((count, iter)) = &mut self.iter {
-			if let Some(candidate) = iter.advance().and_then(|out| Candidate::try_from(out).ok()) {
-				*count += 1;
-				self.candidate = Some(candidate.with_count(*count));
-				return true;
-			}
-		}
-
-		false
-	}
+	/// Returns `true` if an encoder has been set up.
+	const fn active(&self) -> bool { self.iter.is_some() }
 
 	/// # Provide Feedback.
 	fn feedback(&mut self, keep: bool) -> bool {
@@ -1144,12 +1319,37 @@ impl CurrentImage {
 		false
 	}
 
+	/// # Finish (Current Encoder).
+	///
+	/// Remove and return the current encoding count and iterator, if any, so
+	/// the appropriate actions can be taken based on the results, and a new
+	/// iterator can be loaded for the next format, if any.
+	fn finish(&mut self) -> Option<(u8, EncodeIter)> { self.iter.take() }
+
+	/// # Next Candidate.
+	///
+	/// Advance the guide, returning `true` if a new candidate was generated.
+	fn next_candidate(&mut self) -> bool {
+		self.candidate = None;
+		if let Some((count, iter)) = &mut self.iter {
+			if let Some(candidate) = iter.advance().and_then(|out| Candidate::try_from(out).ok()) {
+				*count += 1;
+				self.candidate = Some(candidate.with_count(*count));
+				return true;
+			}
+		}
+
+		false
+	}
+
 	/// # Next Encoder.
 	///
-	/// Clear any previous results and move onto the next encoder, returning
-	/// `true` if there is one.
+	/// Pluck the next encoding format from the settings, if any, and
+	/// initialize a corresponding encoder.
+	///
+	/// Returns `true` if successful.
 	fn next_encoder(&mut self) -> bool {
-		let _res = self.candidate.take();
+		self.candidate = None;
 		let encoder =
 			if FMT_WEBP == self.flags & FMT_WEBP {
 				self.flags &= ! FMT_WEBP;
@@ -1189,6 +1389,15 @@ impl CurrentImage {
 
 
 /// # Image Encoding Results.
+///
+/// This struct is used to help group activity logs by source while still
+/// allowing for duplication should the user decide to repeat any work.
+///
+/// It gets initialized each time an image is moved from the queue to `current`,
+/// but only if the source can be decoded.
+///
+/// The conversion details are added as available, with `None` indicating an
+/// error or, more typically, a fruitless effort that wasn't worth saving.
 struct ImageResults {
 	/// # Source Path.
 	src: PathBuf,
@@ -1205,6 +1414,14 @@ struct ImageResults {
 
 impl ImageResults {
 	/// # Push and Save Result.
+	///
+	/// Consume an encoder instance, record the details, and if it produced a
+	/// worthy candidate image, save it permanently to disk.
+	///
+	/// By default files are saved to the original source path, with an extra
+	/// extension tacked onto the end (e.g. "/path/to/source.jpg.webp"). If
+	/// `confirm` is true, a file dialogue is popped to give the user a chance
+	/// to put it somewhere else or cancel the save altogether.
 	fn push(&mut self, iter: EncodeIter, confirm: bool) {
 		let kind = iter.output_kind();
 
@@ -1253,6 +1470,10 @@ impl ImageResults {
 }
 
 /// # (Best) Image Encoding Result.
+///
+/// This struct holds the details for the best image candidate produced by a
+/// given encoding instance, i.e. its location, size, and the codec quality
+/// used.
 struct ImageResult {
 	/// # Path.
 	src: PathBuf,
@@ -1268,6 +1489,11 @@ struct ImageResult {
 
 #[derive(Debug, Clone)]
 /// # Message.
+///
+/// This enum is used by `iced` (and occasionally us) to communicate events
+/// like button and checkbox clicks so we can react and repaint accordingly.
+///
+/// They're signals, basically.
 pub(super) enum Message {
 	/// # File Open Dialog.
 	AddPaths(bool),
@@ -1299,8 +1525,9 @@ pub(super) enum Message {
 #[derive(Debug, Clone, Copy)]
 /// # Message Error.
 ///
-/// This is used for non-critical errors that nonetheless deserve a mention,
-/// like adding a directory without any qualifying images.
+/// These enum variants are used to help clarify situations in which nothing,
+/// rather than something, happens, such as when a user adds a directory that
+/// doesn't actually have any images in it.
 pub(super) enum MessageError {
 	/// # No Images.
 	NoImages,
@@ -1317,20 +1544,4 @@ impl MessageError {
 			Self::NoOpen => "The link could not be opened.",
 		}
 	}
-}
-
-
-
-#[derive(Default, Debug, Clone, Copy)]
-/// # State.
-pub(super) enum State {
-	#[default]
-	/// # Normal.
-	Normal,
-
-	/// # Encoding.
-	WaitEncode,
-
-	/// # Waiting on Feedback.
-	WaitFeedback,
 }
