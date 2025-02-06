@@ -47,7 +47,6 @@ use iced::{
 		row,
 		Row,
 		scrollable,
-		Scrollable,
 		span,
 		Stack,
 		svg,
@@ -308,9 +307,12 @@ impl App {
 					if self.paths.is_empty() {
 						return Task::done(Message::Error(MessageError::NoImages));
 					}
-
-					// Otherwise let's get going!
-					return Task::done(Message::NextImage);
+					// This should always be true, but iced tasks can stagger
+					// so it is a good idea to confirm the program hasn't
+					// already moved on.
+					else if self.current.is_none() {
+						return Task::done(Message::NextImage);
+					}
 				}
 			},
 
@@ -565,149 +567,154 @@ impl App {
 
 	#[expect(clippy::too_many_lines, reason = "Yeah, it's a bit much.")]
 	/// # View Log.
-	fn view_log(&self) -> Scrollable<Message> {
+	fn view_log(&self) -> Element<'_, Message> {
 		type TableRow<'a> = (Cow<'a, Path>, ImageKind, Option<String>, Option<NiceU64>, Option<NicePercent>);
 
-		let mut lines = Column::new();
+		// If there's no activity, just show the logo.
+		if self.done.is_empty() { return self.view_logo(); }
 
-		// Build up a pretty results table.
-		if ! self.done.is_empty() {
-			let fg =
-				if self.has_flag(OTHER_NIGHT) { DARK_PALETTE.text }
-				else { LIGHT_PALETTE.text };
+		let fg =
+			if self.has_flag(OTHER_NIGHT) { DARK_PALETTE.text }
+			else { LIGHT_PALETTE.text };
 
-			let mut table: Vec<Result<TableRow, &Path>> = Vec::new();
-			for job in &self.done {
-				// Nothing?
-				if job.dst.is_empty() {
-					table.push(Err(job.src.as_path()));
-				}
-				else {
-					// Push the source.
-					table.push(Ok((
-						Cow::Borrowed(&job.src),
-						job.src_kind,
-						None,
-						Some(NiceU64::from(job.src_len)),
-						Some(NicePercent::MAX),
-					)));
+		let mut table: Vec<Result<TableRow, &Path>> = Vec::new();
+		for job in &self.done {
+			// Nothing?
+			if job.dst.is_empty() {
+				table.push(Err(job.src.as_path()));
+			}
+			else {
+				// Push the source.
+				table.push(Ok((
+					Cow::Borrowed(&job.src),
+					job.src_kind,
+					None,
+					Some(NiceU64::from(job.src_len)),
+					Some(NicePercent::MAX),
+				)));
 
-					// Push the conversions.
-					for (kind, res) in &job.dst {
-						if let Some(res) = res {
-							table.push(Ok((
-								Cow::Borrowed(&res.src),
-								*kind,
-								Some(res.quality.quality().to_string()),
-								Some(NiceU64::from(res.len)),
-								NicePercent::try_from((res.len.get(), job.src_len.get())).ok(),
-							)));
-						}
-						else {
-							let mut dst = job.src.clone();
-							let v = dst.as_mut_os_string();
-							v.push(".");
-							v.push(kind.extension());
-							table.push(Ok((
-								Cow::Owned(dst),
-								*kind,
-								None,
-								None,
-								None,
-							)));
-						}
+				// Push the conversions.
+				for (kind, res) in &job.dst {
+					if let Some(res) = res {
+						table.push(Ok((
+							Cow::Borrowed(&res.src),
+							*kind,
+							Some(res.quality.quality().to_string()),
+							Some(NiceU64::from(res.len)),
+							NicePercent::try_from((res.len.get(), job.src_len.get())).ok(),
+						)));
+					}
+					else {
+						let mut dst = job.src.clone();
+						let v = dst.as_mut_os_string();
+						v.push(".");
+						v.push(kind.extension());
+						table.push(Ok((
+							Cow::Owned(dst),
+							*kind,
+							None,
+							None,
+							None,
+						)));
 					}
 				}
 			}
+		}
 
-			let headers = [
-				"File",
-				"Kind",
-				"Quality",
-				"Size",
-				"Ratio",
+		let headers = [
+			"File",
+			"Kind",
+			"Quality",
+			"Size",
+			"Ratio",
+		];
+
+		// Find the max column lengths.
+		let mut widths = headers.map(str::len);
+		for row in table.iter().filter_map(|r| r.as_ref().ok()) {
+			let tmp = [
+				row.0.to_string_lossy().len(),
+				row.1.len(),
+				row.2.as_ref().map_or(0, String::len),
+				row.3.as_ref().map_or(0, NiceU64::len),
+				row.4.as_ref().map_or(0, NicePercent::len),
 			];
-
-			// Find the max column lengths.
-			let mut widths = headers.map(str::len);
-			for row in table.iter().filter_map(|r| r.as_ref().ok()) {
-				let tmp = [
-					row.0.to_string_lossy().len(),
-					row.1.len(),
-					row.2.as_ref().map_or(0, String::len),
-					row.3.as_ref().map_or(0, NiceU64::len),
-					row.4.as_ref().map_or(0, NicePercent::len),
-				];
-				for (w1, w2) in widths.iter_mut().zip(tmp) {
-					if *w1 < w2 { *w1 = w2; }
-				}
+			for (w1, w2) in widths.iter_mut().zip(tmp) {
+				if *w1 < w2 { *w1 = w2; }
 			}
+		}
 
-			let total_width = widths.iter().copied().sum::<usize>() + 4 * 3;
-			let divider = "-".repeat(total_width);
+		let total_width = widths.iter().copied().sum::<usize>() + 4 * 3;
+		let divider = "-".repeat(total_width);
 
-			// Finally, add all the lines!
-			lines = lines.push(rich_text!(
-				span(format!("{:<w$}", headers[0], w=widths[0])).color(NiceColors::PURPLE).font(FONT_BOLD),
-				span(" | ").color(NiceColors::PINK),
-				span(format!("{:<w$}", headers[1], w=widths[1])).color(NiceColors::PURPLE).font(FONT_BOLD),
-				span(" | ").color(NiceColors::PINK),
-				span(format!("{:>w$}", headers[2], w=widths[2])).color(NiceColors::PURPLE).font(FONT_BOLD),
-				span(" | ").color(NiceColors::PINK),
-				span(format!("{:>w$}", headers[3], w=widths[3])).color(NiceColors::PURPLE).font(FONT_BOLD),
-				span(" | ").color(NiceColors::PINK),
-				span(format!("{:>w$}", headers[4], w=widths[4])).color(NiceColors::PURPLE).font(FONT_BOLD),
-			));
+		// Finally, add all the lines!
+		let mut lines = column!(rich_text!(
+			span(format!("{:<w$}", headers[0], w=widths[0])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(" | ").color(NiceColors::PINK),
+			span(format!("{:<w$}", headers[1], w=widths[1])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(" | ").color(NiceColors::PINK),
+			span(format!("{:>w$}", headers[2], w=widths[2])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(" | ").color(NiceColors::PINK),
+			span(format!("{:>w$}", headers[3], w=widths[3])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(" | ").color(NiceColors::PINK),
+			span(format!("{:>w$}", headers[4], w=widths[4])).color(NiceColors::PURPLE).font(FONT_BOLD),
+		));
 
-			for row in table {
-				match row {
-					Err(path) => {
-						let Some(dir) = path.parent() else { continue; };
-						let Some(file) = path.file_name() else { continue; };
-						lines = lines.push(text(divider.clone()).color(NiceColors::GREY));
-						lines = lines.push(rich_text!(
-							span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
-							span(file.to_string_lossy()).color(NiceColors::RED),
-							span(": Nothing doing.").color(NiceColors::GREY),
-						));
-					},
-					Ok((path, kind, quality, len, per)) => {
-						let Some(dir) = path.parent().map(Path::as_os_str) else { continue; };
-						let Some(file) = path.file_name() else { continue; };
-						let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
-						let color =
-							if is_src { fg }
-							else if len.is_some() { NiceColors::GREEN }
-							else { NiceColors::RED };
+		for row in table {
+			match row {
+				Err(path) => {
+					let Some(dir) = path.parent() else { continue; };
+					let Some(file) = path.file_name() else { continue; };
+					lines = lines.push(text(divider.clone()).color(NiceColors::GREY));
+					lines = lines.push(rich_text!(
+						span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
+						span(file.to_string_lossy()).color(NiceColors::RED),
+						span(": Nothing doing.").color(NiceColors::GREY),
+					));
+				},
+				Ok((path, kind, quality, len, per)) => {
+					let Some(dir) = path.parent().map(Path::as_os_str) else { continue; };
+					let Some(file) = path.file_name() else { continue; };
+					let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
+					let color =
+						if is_src { fg }
+						else if len.is_some() { NiceColors::GREEN }
+						else { NiceColors::RED };
 
-						let link =
-							if len.is_some() && path.is_file() { Some(Message::OpenFile(path.to_path_buf())) }
-							else { None };
+					let link =
+						if len.is_some() && path.is_file() { Some(Message::OpenFile(path.to_path_buf())) }
+						else { None };
 
-						if is_src {
-							lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
-						}
+					if is_src {
+						lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
+					}
 
-						lines = lines.push(rich_text!(
-							span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
-							span(file.to_string_lossy().into_owned()).color(color).link_maybe(link),
-							span(format!("{} | ", " ".repeat(widths[0].saturating_sub(dir.len() + 1 + file.len())))).color(NiceColors::PINK),
-							span(format!("{:<w$}", kind.as_str(), w=widths[1])),
-							span(" | ").color(NiceColors::PINK),
-							span(format!("{:>w$}", quality.unwrap_or_else(String::new), w=widths[2])),
-							span(" | ").color(NiceColors::PINK),
-							span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
-							span(" | ").color(NiceColors::PINK),
-							span(format!("{:>w$}", per.as_ref().map_or("", NicePercent::as_str), w=widths[4])),
-						));
-					},
-				}
+					lines = lines.push(rich_text!(
+						span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
+						span(file.to_string_lossy().into_owned()).color(color).link_maybe(link),
+						span(format!("{} | ", " ".repeat(widths[0].saturating_sub(dir.len() + 1 + file.len())))).color(NiceColors::PINK),
+						span(format!("{:<w$}", kind.as_str(), w=widths[1])),
+						span(" | ").color(NiceColors::PINK),
+						span(format!("{:>w$}", quality.unwrap_or_else(String::new), w=widths[2])),
+						span(" | ").color(NiceColors::PINK),
+						span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
+						span(" | ").color(NiceColors::PINK),
+						span(format!("{:>w$}", per.as_ref().map_or("", NicePercent::as_str), w=widths[4])),
+					));
+				},
 			}
 		}
 
 		scrollable(container(lines).width(Fill).padding(10))
 			.height(Fill)
 			.anchor_bottom()
+			.into()
+	}
+
+	#[expect(clippy::unused_self, reason = "Required by API.")]
+	/// # View Logo.
+	fn view_logo(&self) -> Element<'_, Message> {
+		container(image(crate::logo())).center(Fill).into()
 	}
 
 	/// # View Checkboxes.

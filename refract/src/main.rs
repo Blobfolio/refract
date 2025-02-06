@@ -65,6 +65,7 @@ use candidate::Candidate;
 use img::{
 	CHECKERS,
 	is_jpeg_png,
+	logo,
 	with_ng_extension,
 };
 use refract_core::RefractError;

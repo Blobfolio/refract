@@ -7,7 +7,10 @@ use dowser::Extension;
 use std::{
 	fs::File,
 	io::Write,
-	path::PathBuf,
+	path::{
+		Path,
+		PathBuf,
+	},
 };
 
 
@@ -80,35 +83,53 @@ const E_WEBP: Extension = {};
 }
 
 /// # Build Images.
+///
+/// Pre-decode a couple images for embed to lessen the runtime costs of using
+/// them.
 fn build_imgs() {
-	// Convert the icon to a bitmap to lessen the runtime overhead of using it.
-	let raw = std::fs::read("skel/deb/icons/hicolor/128x128/apps/refract.png")
-		.expect("Missing refract icon.");
-	let input = refract_core::Input::try_from(raw.as_slice())
-		.expect("Unable to decode icon.")
-		.into_rgba();
-	let size = input.width();
-	assert_eq!(size, input.height(), "BUG: the icon should be square!");
-	let pixels = input.take_pixels();
+	/// # Load PNG.
+	///
+	/// Being a build script, this will just panic with an appropriate message
+	/// if something goes awry.
+	fn load_png<P: AsRef<Path>>(src: P) -> (usize, Vec<u8>) {
+		let src: &Path = src.as_ref();
+		let Ok(raw) = std::fs::read(src) else { panic!("Missing {}", src.display()); };
+		let Ok(dec) = refract_core::Input::try_from(raw.as_slice()) else {
+			panic!("Unable to decode {}", src.display());
+		};
+
+		let width = dec.width();
+		assert_eq!(width, dec.height(), "Non-square image {}", src.display());
+
+		(width, dec.into_rgba().take_pixels())
+	}
+
+	let (icon_size, icon) = load_png("skel/deb/icons/hicolor/128x128/apps/refract.png");
+	let (logo_size, logo) = load_png("skel/img/logo.png");
 
 	let out = format!(
-		"/// # Icon Size.
-const ICON_SIZE: NonZeroU32 = NonZeroU32::new({size}).unwrap();
+		"/// # Icon W/H.
+const ICON_SIZE: NonZeroU32 = NonZeroU32::new({icon_size}).unwrap();
 
 /// # Icon Bytes (RGBA).
-static ICON: &[u8; {}] = &{pixels:?};
+static ICON: &[u8; 65_536] = &{icon:?};
+
+/// # Startup Logo W/H.
+const LOGO_SIZE: NonZeroU32 = NonZeroU32::new({logo_size}).unwrap();
+
+/// # Logo Bytes (RGBA).
+static LOGO: &[u8; 262_144] = &{logo:?};
 ",
-		pixels.len(),
 	);
 
 	// Save it!
-	let mut file = _out_path("refract-icon.rs")
+	let mut file = _out_path("refract-img.rs")
 		.and_then(|p| File::create(p).ok())
 		.expect("Missing OUT_DIR.");
 
 	file.write_all(out.as_bytes())
 		.and_then(|_| file.flush())
-		.expect("Unable to save icon.");
+		.expect("Unable to save img.");
 }
 
 /// # Output Path.
