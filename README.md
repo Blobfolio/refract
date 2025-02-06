@@ -114,6 +114,18 @@ cargo install \
     --bin refract
 ```
 
+### Build Dependencies
+
 The extra build dependencies (required by all the damn image codecs) will vary by environment, but at a minimum you'll need C and C++ compilers, `cmake`, `git` (obviously), `make`, `nasm`, and `ninja-build`.
 
-Cargo will pop an error if anything's missing, so don't sweat it. If that happens, just fill in the hole and try again.
+Cargo should pop an error if anything's missing. If that happens, just find/install the missing dep and give `cargo install` another shot.
+
+### Runtime Dependencies
+
+On Linux, the file dialogues require one of `xdg-desktop-portal-[gnome, gtk, kde]` or `zenity`, user's choice.
+
+In theory, _None of the Above_ should work too, provided you use the CLI to enqueue image paths and enable automatic saving with the `--save-auto` flag (along with any other settings tweaks you might want):
+
+```bash
+refract --save-auto /path/to/image.jpg
+```

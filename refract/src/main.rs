@@ -119,6 +119,7 @@ fn main__() -> Result<(), RefractError> {
 			..Settings::default()
 		})
 		.window(WindowSettings {
+			// TODO: replace with maximized: true when stable.
 			size: iced::Size::INFINITY,
 			min_size: Some(iced::Size { width: 1200.0, height: 800.0 }),
 			icon: img::icon(),
