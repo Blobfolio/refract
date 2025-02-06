@@ -16,8 +16,9 @@ use crate::{
 	tooltip_style,
 };
 use dactyl::{
-	NicePercent,
+	NiceFloat,
 	NiceU64,
+	traits::IntDivFloat,
 };
 use dowser::Dowser;
 use iced::{
@@ -78,6 +79,7 @@ use std::{
 		PathBuf,
 	},
 };
+use utc2k::FmtUtc2k;
 
 
 
@@ -377,6 +379,7 @@ impl App {
 				while let Some(src) = self.paths.pop_first() {
 					if let Some(mut current) = CurrentImage::new(src, self.flags) {
 						// Add an entry for it.
+						cli_log(&current.src, None);
 						self.done.push(ImageResults {
 							src: current.src.clone(),
 							src_kind: current.input.kind(),
@@ -641,7 +644,7 @@ impl App {
 
 		// Figure out some bounds.
 		let widths = table.widths();
-		let total_width = widths.iter().copied().sum::<usize>() + 4 * 3;
+		let total_width = widths.iter().copied().sum::<usize>() + 5 * 3;
 		let divider = "-".repeat(total_width);
 
 		// Finally, add all the lines!
@@ -655,6 +658,8 @@ impl App {
 			span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])).color(NiceColors::PURPLE).font(FONT_BOLD),
 			span(" | ").color(NiceColors::PINK),
 			span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			span(" | ").color(NiceColors::PINK),
+			span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])).color(NiceColors::PURPLE).font(FONT_BOLD),
 		));
 
 		// The rows, interspersed with dividers for each new source.
@@ -670,7 +675,9 @@ impl App {
 						span(": Nothing doing.").color(NiceColors::GREY),
 					));
 				},
-				Ok(ActivityTableRow { src, kind, quality, len, ratio }) => {
+				Ok(ActivityTableRow { src, kind, quality, len, ratio, time }) => {
+					use unicode_width::UnicodeWidthStr;
+
 					let Some(dir) = src.parent().map(Path::as_os_str) else { continue; };
 					let Some(file) = src.file_name() else { continue; };
 					let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
@@ -690,14 +697,19 @@ impl App {
 					lines = lines.push(rich_text!(
 						span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
 						span(file.to_string_lossy().into_owned()).color(color).link_maybe(link),
-						span(format!("{} | ", " ".repeat(widths[0].saturating_sub(dir.len() + 1 + file.len())))).color(NiceColors::PINK),
+						span(format!("{} | ", " ".repeat(widths[0].saturating_sub(src.to_string_lossy().width())))).color(NiceColors::PINK),
 						span(format!("{kind:<w$}", w=widths[1])),
 						span(" | ").color(NiceColors::PINK),
 						span(format!("{:>w$}", quality.as_str(), w=widths[2])),
 						span(" | ").color(NiceColors::PINK),
 						span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
 						span(" | ").color(NiceColors::PINK),
-						span(format!("{:>w$}", ratio.as_ref().map_or("", NicePercent::as_str), w=widths[4])),
+						span(format!("{:>w$}", ratio.as_ref().map_or("", |n| n.precise_str(4)), w=widths[4])),
+						span(" | ").color(NiceColors::PINK),
+						time.as_ref().map_or_else(
+							|| span(""),
+							|n| span(format!("{:>w$}s", n.precise_str(2), w=widths[5] - 1)),
+						),
 					));
 				},
 			}
@@ -1156,18 +1168,20 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 					kind: job.src_kind,
 					quality: QualityValueFmt::None,
 					len: Some(NiceU64::from(job.src_len)),
-					ratio: Some(NicePercent::MAX),
+					ratio: Some(NiceFloat::from(1.0)),
+					time: None,
 				}));
 
 				// Push the conversions.
 				for (kind, res) in &job.dst {
-					if let Some(res) = res {
+					if let Some((len, quality)) = res.len.zip(res.quality) {
 						out.push(Ok(ActivityTableRow {
 							src: Cow::Borrowed(&res.src),
 							kind: *kind,
-							quality: res.quality.quality_fmt(),
-							len: Some(NiceU64::from(res.len)),
-							ratio: NicePercent::try_from((res.len.get(), job.src_len.get())).ok(),
+							quality: quality.quality_fmt(),
+							len: Some(NiceU64::from(len)),
+							ratio: job.src_len.get().div_float(len.get()).map(NiceFloat::from),
+							time: Some(&res.time),
 						}));
 					}
 					else {
@@ -1181,6 +1195,7 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 							quality: QualityValueFmt::None,
 							len: None,
 							ratio: None,
+							time: Some(&res.time),
 						}));
 					}
 				}
@@ -1194,19 +1209,20 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 
 impl ActivityTable<'_> {
 	/// # Headers.
-	const HEADERS: [&'static str; 5] = [
+	const HEADERS: [&'static str; 6] = [
 		"File",
 		"Kind",
 		"Quality",
 		"Size",
-		"Ratio",
+		"CR",
+		"Time",
 	];
 
 	/// # Column Widths.
 	///
 	/// Calculate and return the (approximate) maximum display width for each
 	/// column, packed into a more serviceable array format.
-	fn widths(&self) -> [usize; 5] {
+	fn widths(&self) -> [usize; 6] {
 		self.0.iter()
 			.filter_map(|r| r.as_ref().map(ActivityTableRow::widths).ok())
 			.fold(Self::HEADERS.map(str::len), |mut acc, v| {
@@ -1234,8 +1250,11 @@ struct ActivityTableRow<'a> {
 	/// # File Size.
 	len: Option<NiceU64>,
 
-	/// # Compression Ratio (relative to source).
-	ratio: Option<NicePercent>,
+	/// # Compression Ratio (old:new).
+	ratio: Option<NiceFloat>,
+
+	/// # Computational Time.
+	time: Option<&'a NiceFloat>,
 }
 
 impl ActivityTableRow<'_> {
@@ -1243,13 +1262,16 @@ impl ActivityTableRow<'_> {
 	///
 	/// Calculate and return the (approximate) display width for each field,
 	/// packed into a more serviceable array format.
-	fn widths(&self) -> [usize; 5] {
+	fn widths(&self) -> [usize; 6] {
+		use unicode_width::UnicodeWidthStr;
+
 		[
-			fyi_msg::width(self.src.to_string_lossy().as_bytes()), // Could be multibyte.
+			self.src.to_string_lossy().width(),
 			self.kind.len(),
 			self.quality.len(),
 			self.len.as_ref().map_or(0, NiceU64::len),
-			self.ratio.as_ref().map_or(0, NicePercent::len),
+			self.ratio.as_ref().map_or(0, |n| n.precise_str(4).len()),
+			self.time.as_ref().map_or(0, |n| n.precise_str(2).len() + 1),
 		]
 	}
 }
@@ -1409,7 +1431,7 @@ struct ImageResults {
 	src_len: NonZeroUsize,
 
 	/// # Conversions.
-	dst: Vec<(ImageKind, Option<ImageResult>)>,
+	dst: Vec<(ImageKind, ImageResult)>,
 }
 
 impl ImageResults {
@@ -1424,16 +1446,19 @@ impl ImageResults {
 	/// to put it somewhere else or cancel the save altogether.
 	fn push(&mut self, iter: EncodeIter, confirm: bool) {
 		let kind = iter.output_kind();
+		let time = NiceFloat::from(iter.time().as_secs_f32());
 
+		// Come up with a suitable default destination path.
+		let mut dst = self.src.clone();
+		let v = dst.as_mut_os_string();
+		v.push(".");
+		v.push(kind.extension());
+
+		// Pull the best!
 		if let Some((len, best)) = iter.output_size().zip(iter.take().ok()) {
-			// Come up with a suitable default destination path.
-			let mut dst = self.src.clone();
-			let v = dst.as_mut_os_string();
-			v.push(".");
-			v.push(kind.extension());
-
 			// If confirmation is required, suggest the default but let the
 			// user decide where it should go.
+			let mut confirmed = false;
 			if confirm {
 				if let Some(p) = FileDialog::new()
 					.add_filter(kind.as_str(), &[kind.extension()])
@@ -1444,28 +1469,32 @@ impl ImageResults {
 					.save_file()
 				{
 					dst = crate::with_ng_extension(p, kind);
-				}
-				// Abort on CANCEL or whatever.
-				else {
-					self.dst.push((kind, None));
-					return;
+					confirmed = true;
 				}
 			}
 
 			// Save it and record the results!
-			if write_atomic::write_file(&dst, &best).is_ok() {
+			if (confirmed || ! confirm) && write_atomic::write_file(&dst, &best).is_ok() {
 				let quality = best.quality();
 
-				self.dst.push((kind, Some(ImageResult {
+				cli_log(&dst, Some(quality));
+				self.dst.push((kind, ImageResult {
 					src: dst,
-					len,
-					quality,
-				})));
+					len: Some(len),
+					quality: Some(quality),
+					time,
+				}));
 				return;
 			}
 		}
 
-		self.dst.push((kind, None));
+		cli_log_sad(&dst);
+		self.dst.push((kind, ImageResult {
+			src: dst,
+			len: None,
+			quality: None,
+			time,
+		}));
 	}
 }
 
@@ -1479,10 +1508,13 @@ struct ImageResult {
 	src: PathBuf,
 
 	/// # Size.
-	len: NonZeroUsize,
+	len: Option<NonZeroUsize>,
 
 	/// # Quality.
-	quality: Quality,
+	quality: Option<Quality>,
+
+	/// # Computational Time (seconds).
+	time: NiceFloat,
 }
 
 
@@ -1544,4 +1576,48 @@ impl MessageError {
 			Self::NoOpen => "The link could not be opened.",
 		}
 	}
+}
+
+
+
+/// # CLI Log.
+///
+/// Print a quick timestamped message to STDERR in case anybody's watching.
+fn cli_log(src: &Path, quality: Option<Quality>) {
+	let Some(dir) = src.parent() else { return; };
+	let Some(name) = src.file_name() else { return; };
+	let now = FmtUtc2k::now_local();
+	let mut out = format!(
+		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m] {}/\x1b[0m{} \x1b[2m(",
+		now.time(),
+		dir.display(),
+		name.to_string_lossy(),
+	);
+
+	if let Some(quality) = quality {
+		if ! quality.is_lossless() {
+			out.push_str(quality.label());
+			out.push(' ');
+		}
+		out.push_str(&quality.quality_fmt().as_str());
+	}
+	else { out.push_str("source"); }
+
+	eprintln!("{out})\x1b[0m");
+}
+
+/// # Cli Log: Sad Conversion.
+///
+/// Print a quick timestamped error message to STDERR.
+fn cli_log_sad(src: &Path) {
+	let Some(dir) = src.parent() else { return; };
+	let Some(name) = src.file_name() else { return; };
+	let now = FmtUtc2k::now_local();
+
+	eprintln!(
+		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m]\x1b[91m {}/\x1b[0;91m{}\x1b[0m",
+		now.time(),
+		dir.display(),
+		name.to_string_lossy(),
+	);
 }
