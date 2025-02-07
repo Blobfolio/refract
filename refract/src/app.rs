@@ -241,6 +241,13 @@ impl App {
 	/// Returns true a given flag is set.
 	const fn has_flag(&self, flag: u16) -> bool { flag == self.flags & flag }
 
+	/// # Interactive?
+	///
+	/// Returns true if only crunching losslessly and auto-save is enabled.
+	const fn automatic(&self) -> bool {
+		! self.has_flag(MODE_LOSSY) && self.has_flag(OTHER_SAVE_AUTO)
+	}
+
 	/// # Theme.
 	///
 	/// Returns the current theme, i.e. light or dark.
@@ -329,13 +336,13 @@ impl App {
 				// a selection or cancel.
 				let paths =
 					if dir {
-						fd.set_title("Open Directory")
+						fd.set_title("Choose Directory")
 							.pick_folder()
 							.map(Dowser::from)
 					}
 					else {
 						fd.add_filter("Images", &["jpg", "jpeg", "png"])
-							.set_title("Open Image(s)")
+							.set_title("Choose Image(s)")
 							.pick_files()
 							.map(Dowser::from)
 					};
@@ -350,7 +357,7 @@ impl App {
 						return Task::done(Message::Error(MessageError::NoImages));
 					}
 					// Otherwise we probably want to load up the first image,
-					// but only if we aren't already processing another one.
+					// but only if we aren't already processing something else.
 					else if self.current.is_none() {
 						return Task::done(Message::NextImage);
 					}
@@ -361,15 +368,16 @@ impl App {
 			Message::Error(err) => { self.error.replace(err); },
 
 			// Process the user's yay/nay evaluation of a candidate image.
-			Message::Feedback(feedback) => {
-				self.flags &= ! OTHER_BSIDE;
+			Message::Feedback(feedback) =>
 				if let Some(current) = &mut self.current {
-					// Back around again!
-					if current.feedback(feedback) {
-						return Task::done(Message::NextStep);
+					if current.candidate.is_some() {
+						self.flags &= ! OTHER_BSIDE;
+						// Back around again!
+						if current.feedback(feedback) {
+							return Task::done(Message::NextStep);
+						}
 					}
-				}
-			},
+				},
 
 			// If there are images in the queue, pull the first and start up
 			// the conversion process for it.
@@ -483,6 +491,7 @@ impl App {
 				Event::KeyPressed,
 				key::Named,
 				Key,
+				Modifiers,
 			},
 		};
 
@@ -495,13 +504,27 @@ impl App {
 						..
 					}) => Some(Message::ToggleFlag(OTHER_BSIDE)),
 
-					// Keep or discard a candidate image.
+					// Other actions.
 					Event::Keyboard(KeyPressed {
 						key: Key::Character(c),
+						modifiers: m,
 						..
 					}) =>
-						if c == "d" { Some(Message::Feedback(false)) }
+						if m.contains(Modifiers::CTRL) {
+							// Night mode.
+							if c == "n" { Some(Message::ToggleFlag(OTHER_NIGHT)) }
+							// Open files or directory.
+							else if c == "o" {
+								Some(Message::AddPaths(m.contains(Modifiers::SHIFT)))
+							}
+							// Noop.
+							else { None }
+						}
+						// Discard candidate.
+						else if c == "d" { Some(Message::Feedback(false)) }
+						// Keep candidate.
 						else if c == "k" { Some(Message::Feedback(true)) }
+						// Noop.
 						else { None },
 					_ => None,
 				}
@@ -594,7 +617,7 @@ impl App {
 		container(
 			column!(
 				row!(
-					button(text("Open Image(s)").size(18).font(FONT_BOLD))
+					button(text("File(s)").size(18).font(FONT_BOLD))
 						.style(|_, status| button_style(status, NiceColors::PURPLE))
 						.padding(BTN_PADDING)
 						.on_press(Message::AddPaths(false)),
@@ -908,10 +931,13 @@ impl App {
 			color = NiceColors::BLUE;
 			// Lossless/auto requires no feedback, so let's give a different
 			// message.
-			if ! self.has_flag(MODE_LOSSY) && self.has_flag(OTHER_SAVE_AUTO) {
+			if self.automatic() {
 				row = row.push(text(
 					"Lossless conversion is automatic. Just sit back and wait!"
 				).font(FONT_BOLD));
+			}
+			else if let Some(kind) = current.output_kind() {
+				row = row.push(text(format!("Preparing the next {kind}; sit tight!")).font(FONT_BOLD));
 			}
 			else {
 				row = row.push(text("Reticulating splines…").font(FONT_BOLD));
@@ -932,7 +958,10 @@ impl App {
 				}
 			}
 
-			row = row.push(text(kind.to_string()).font(FONT_BOLD));
+			row = row.push(rich_text!(
+				span("Viewing: "),
+				span(kind.to_string()).font(FONT_BOLD)
+			));
 
 			if count != 0 {
 				row = row.push(rich_text!(
@@ -976,7 +1005,7 @@ impl App {
 	fn view_ab_progress(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 
-		let new_kind = current.iter.as_ref().map_or(ImageKind::Png, |(_, i)| i.output_kind());
+		let new_kind = current.output_kind().unwrap_or(ImageKind::Png);
 		let mut formats = Vec::new();
 		for (flag, kind) in [
 			(FMT_WEBP, ImageKind::Webp),
@@ -1084,7 +1113,7 @@ impl App {
 							.content_fit(ContentFit::None)
 							.width(Shrink)
 							.height(Shrink)
-							.opacity(if current.candidate.is_some() { 1.0 } else { 0.5 })
+							.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 })
 				)
 					.width(Shrink)
 					.height(Shrink)
@@ -1096,49 +1125,38 @@ impl App {
 		)
 	}
 
-	#[expect(clippy::option_if_let_else, reason = "Absolutely not!")]
 	/// # View: Image Screen Keyboard Shortcuts.
 	///
 	/// This returns a simple legend illustrating the available keyboard
 	/// shortcuts that can be used in lieu of the button widgets.
 	fn view_keyboard_shortcuts(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
-
-		if let Some(dst_kind) = current.candidate.as_ref().map(|c| c.kind) {
-
-			column!(
-				rich_text!(
-					span("[space]").font(FONT_BOLD),
-					span(" Toggle image view (").color(NiceColors::GREY),
-					span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD),
-					span(" vs ").color(NiceColors::GREY),
-					span(dst_kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD),
-					span(").").color(NiceColors::GREY),
-				),
-				rich_text!(
-					span("    [d]").color(NiceColors::RED).font(FONT_BOLD),
-					span(" Reject candidate.").color(NiceColors::GREY),
-				),
-				rich_text!(
-					span("    [k]").color(NiceColors::GREEN).font(FONT_BOLD),
-					span(" Accept candidate.").color(NiceColors::GREY),
-				),
-			)
-				.spacing(5)
-		}
-		else {
-			column!(
-				rich_text!(
-					span("The next "),
-					current.iter.as_ref().map_or_else(
-						|| span("image"),
-						|(_, i)| span(i.output_kind().to_string()).color(NiceColors::PINK).font(FONT_BOLD)
-					),
-					span(" is cooking…"),
-				),
-				text("Hang tight!").size(18).font(FONT_BOLD),
-			)
-		}
+		let Some(dst_kind) = current.output_kind() else { return Column::new(); };
+		column!(
+			rich_text!(
+				span("   [space]").font(FONT_BOLD),
+				span(" Toggle image view (").color(NiceColors::GREY),
+				span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD),
+				span(" vs ").color(NiceColors::GREY),
+				span(dst_kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD),
+				span(").").color(NiceColors::GREY),
+			),
+			rich_text!(
+				span("       [d]").color(NiceColors::RED).font(FONT_BOLD),
+				span(" Reject candidate.").color(NiceColors::GREY),
+			),
+			rich_text!(
+				span("       [k]").color(NiceColors::GREEN).font(FONT_BOLD),
+				span(" Accept candidate.").color(NiceColors::GREY),
+			),
+			rich_text!(
+				span("[ctrl]").font(FONT_BOLD),
+				span("+").color(NiceColors::GREY),
+				span("[n]").font(FONT_BOLD),
+				span(" Toggle night mode.").color(NiceColors::GREY),
+			),
+		)
+			.spacing(5)
 	}
 }
 
@@ -1405,6 +1423,13 @@ impl CurrentImage {
 
 		// It worked if it worked.
 		self.iter.is_some()
+	}
+
+	/// # Output Kind.
+	///
+	/// Return the output format that is currently being crunched, if any.
+	fn output_kind(&self) -> Option<ImageKind> {
+		self.iter.as_ref().map(|(_, iter)| iter.output_kind())
 	}
 }
 
