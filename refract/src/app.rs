@@ -1030,12 +1030,7 @@ impl App {
 
 		column!(
 			text(current.src.to_string_lossy()).color(NiceColors::GREY),
-
 			Rich::with_spans(formats),
-
-			checkbox("Night Mode", self.has_flag(OTHER_NIGHT))
-				.on_toggle(|_| Message::ToggleFlag(OTHER_NIGHT))
-				.size(CHK_SIZE),
 		)
 			.spacing(5)
 			.align_x(Horizontal::Center)
