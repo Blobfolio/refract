@@ -4,6 +4,7 @@
 
 use argyle::Argument;
 use crate::{
+	border_style,
 	button_style,
 	Candidate,
 	CHECKERS,
@@ -1068,6 +1069,7 @@ impl App {
 	}
 
 	#[expect(clippy::cast_possible_truncation, reason = "Meh.")]
+	#[expect(clippy::default_trait_access, reason = "Can't.")]
 	/// # Image Layer.
 	///
 	/// Return a rendering of either the source image or candidate for
@@ -1077,11 +1079,26 @@ impl App {
 	/// This method is technically fallible, but in practice it should never
 	/// not return something.
 	fn view_image_image(&self) -> Option<Container<Message>> {
-		use iced::widget::{
-			image::Handle,
-			scrollable::{
-				Direction,
-				Scrollbar,
+		use iced::{
+			widget::{
+				image::Handle,
+				scrollable::{
+					Direction,
+					Rail,
+					Scrollbar,
+					Scroller,
+					Style,
+				},
+			},
+		};
+
+		/// # Scroll paddle thingy.
+		const RAIL: Rail = Rail {
+			background: Some(Background::Color(NiceColors::YELLUCK)),
+			border: border_style(NiceColors::TRANSPARENT, 0.0, 0.0),
+			scroller: Scroller {
+				color: NiceColors::YELLOW,
+				border: border_style(NiceColors::BABYFOOD, 2.0, 0.0),
 			},
 		};
 
@@ -1118,6 +1135,12 @@ impl App {
 					.width(Shrink)
 					.height(Shrink)
 					.direction(Direction::Both { vertical: Scrollbar::new(), horizontal: Scrollbar::new() })
+					.style(|_, _| Style {
+						container: Default::default(),
+						vertical_rail: RAIL,
+						horizontal_rail: RAIL,
+						gap: None,
+					})
 			)
 				.width(Fill)
 				.height(Fill)

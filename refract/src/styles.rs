@@ -50,9 +50,9 @@ macro_rules! nice_color {
 	)+)
 }
 
-#[expect(dead_code, reason = "We might want these colors eventually.")]
 impl NiceColors {
 	nice_color!(
+		BABYFOOD:    color!(0xa49c00),
 		BLACK:       color!(0x333333),
 		BLUE:        color!(0x00abc0),
 		GREEN:       color!(0x2ecc71),
@@ -66,6 +66,7 @@ impl NiceColors {
 		TEAL:        color!(0x1abc9c),
 		WHITE:       color!(0xffffff),
 		YELLOW:      color!(0xfff200),
+		YELLUCK:     color!(0xebe577),
 		TRANSPARENT: Color::TRANSPARENT,
 	);
 }
@@ -108,7 +109,7 @@ pub(super) const NO_SHADOW: Shadow = Shadow {
 
 
 /// # Border Style.
-const fn border_style(color: Color, width: f32, radius: f32) -> Border {
+pub(super) const fn border_style(color: Color, width: f32, radius: f32) -> Border {
 	Border {
 		color,
 		width,

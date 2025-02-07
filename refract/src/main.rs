@@ -70,6 +70,7 @@ use img::{
 };
 use refract_core::RefractError;
 use styles::{
+	border_style,
 	button_style,
 	DARK_PALETTE,
 	DARK_THEME,
