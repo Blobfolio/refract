@@ -107,18 +107,30 @@ fn build_imgs() {
 	let (icon_size, icon) = load_png("skel/deb/icons/hicolor/128x128/apps/refract.png");
 	let (logo_size, logo) = load_png("skel/img/logo.png");
 
+	let (tmp, checkers0) = load_png("skel/img/checkers0.png");
+	assert_eq!(tmp, 60, "Bug: checker tiles must be 60x60."); // Sanity check.
+	let (tmp, checkers1) = load_png("skel/img/checkers1.png");
+	assert_eq!(tmp, 60, "Bug: checker tiles must be 60x60."); // Sanity check.
+
 	let out = format!(
-		"/// # Icon W/H.
-const ICON_SIZE: NonZeroU32 = NonZeroU32::new({icon_size}).unwrap();
+		"/// # Checkers.
+pub(super) fn checkers() -> (image::Handle, image::Handle) {{
+	(
+		tile_checkers(&{checkers0:?}),
+		tile_checkers(&{checkers1:?}),
+	)
+}}
 
-/// # Icon Bytes (RGBA).
-static ICON: &[u8; 65_536] = &{icon:?};
+/// # Program Icon.
+pub(super) fn icon() -> Option<Icon> {{
+	icon::from_rgba(vec!{icon:?}, {icon_size}, {icon_size}).ok()
+}}
 
-/// # Startup Logo W/H.
-const LOGO_SIZE: NonZeroU32 = NonZeroU32::new({logo_size}).unwrap();
-
-/// # Logo Bytes (RGBA).
-static LOGO: &[u8; 262_144] = &{logo:?};
+/// # Logo.
+pub(super) fn logo() -> image::Handle {{
+	static LOGO: &[u8] = &{logo:?};
+	image::Handle::from_rgba({logo_size}, {logo_size}, LOGO)
+}}
 ",
 	);
 

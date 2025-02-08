@@ -333,7 +333,8 @@ impl EncodeIter {
 	/// offloaded to a separate function to make it easier to track execution
 	/// time.
 	fn next_inner(&mut self) -> Option<()> {
-		// Before we try lossy, we might lossless to do.
+		// Start with a lossless pass (if enabled) since it requires no
+		// feedback and can help rule out some subsequent lossy passes.
 		if 0 == self.flags & FLAG_DID_LOSSLESS {
 			self.flags |= FLAG_DID_LOSSLESS;
 			if 0 == self.flags & FLAG_NO_LOSSLESS {

@@ -2,8 +2,8 @@
 # Refract: Candidate
 */
 
+use iced::widget::image;
 use refract_core::{
-	ColorKind,
 	ImageKind,
 	Input,
 	Output,
@@ -20,14 +20,8 @@ use std::num::NonZeroU32;
 /// This holds the decoded pixels and basic details for a newly-converted image
 /// for display purposes.
 pub(super) struct Candidate {
-	/// # Image Data.
-	pub(super) buf: Box<[u8]>,
-
-	/// # Image Width.
-	pub(super) width: NonZeroU32,
-
-	/// # Image Height.
-	pub(super) height: NonZeroU32,
+	/// # Iced-Ready Image Data.
+	pub(super) img: image::Handle,
 
 	/// # Kind.
 	pub(super) kind: ImageKind,
@@ -44,20 +38,7 @@ impl TryFrom<Input> for Candidate {
 
 	/// # Source Image.
 	fn try_from(src: Input) -> Result<Self, Self::Error> {
-		Self::try_from(&src)
-	}
-}
-
-impl TryFrom<&Input> for Candidate {
-	type Error = RefractError;
-
-	/// # Source Image.
-	fn try_from(src: &Input) -> Result<Self, Self::Error> {
-		// Upscale.
-		if src.depth() != ColorKind::Rgba {
-			return Self::try_from(src.clone().into_rgba());
-		}
-
+		let src = src.into_rgba();
 		let width = u32::try_from(src.width()).ok()
 			.and_then(NonZeroU32::new)
 			.ok_or(RefractError::Overflow)?;
@@ -67,11 +48,9 @@ impl TryFrom<&Input> for Candidate {
 		let kind = src.kind();
 
 		Ok(Self {
-			buf: Box::from(src.as_ref()),
-			width,
-			height,
+			img: image::Handle::from_rgba(width.get(), height.get(), src.take_pixels()),
 			kind,
-			quality: Quality::Lossless(src.kind()),
+			quality: Quality::Lossless(kind),
 			count: 0,
 		})
 	}
@@ -83,9 +62,9 @@ impl TryFrom<&Output> for Candidate {
 	#[inline]
 	/// # Candidate Image.
 	fn try_from(src: &Output) -> Result<Self, Self::Error> {
-		let quality = src.quality();
-		let mut out = Input::try_from(src.as_ref()).and_then(|i| Self::try_from(&i))?;
-		out.quality = quality;
+		let quality = src.quality(); // Note the quality.
+		let mut out = Input::try_from(src.as_ref()).and_then(Self::try_from)?;
+		out.quality = quality;       // Quality goes here.
 		Ok(out)
 	}
 }

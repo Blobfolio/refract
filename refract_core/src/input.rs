@@ -8,6 +8,7 @@ use crate::{
 	RefractError,
 };
 use std::{
+	borrow::Cow,
 	fmt,
 	num::{
 		NonZeroU32,
@@ -55,10 +56,14 @@ pub struct Input {
 	/// # Original File Size.
 	size: NonZeroUsize,
 
-	/// # Color Kind.
+	/// # (Native) Color Kind.
+	///
+	/// Or: the colors the image needs.
 	color: ColorKind,
 
-	/// Color Depth.
+	/// # (Stored) Color Depth.
+	///
+	/// This can be larger than `color` if upsampled to RGBA, for example.
 	depth: ColorKind,
 
 	/// # Image Kind.
@@ -285,6 +290,43 @@ impl Input {
 /// ## Copying and Mutation.
 impl Input {
 	#[must_use]
+	/// # RGBA Pixels.
+	///
+	/// Return the pixels as 4-byte RGBA, upsampling the colorspace as
+	/// necessary.
+	pub fn pixels_rgba(&self) -> Cow<[u8]> {
+		// The expected size.
+		let size = self.width() * self.height() * 4;
+
+		match self.depth {
+			ColorKind::Rgba => Cow::Borrowed(&self.pixels),
+			ColorKind::Rgb => Cow::Owned(
+				self.pixels.chunks_exact(3)
+					.fold(Vec::with_capacity(size), |mut acc, px| {
+						acc.extend_from_slice(px); // Push RGB.
+						acc.push(255);             // Push Alpha.
+						acc
+					})
+			),
+			ColorKind::GreyAlpha => Cow::Owned(
+				self.pixels.chunks_exact(2)
+					.fold(Vec::with_capacity(size), |mut acc, px| {
+						acc.extend_from_slice(&[px[0], px[0], px[0], px[1]]);
+						acc
+					})
+			),
+			ColorKind::Grey => Cow::Owned(
+				self.pixels.iter()
+					.copied()
+					.fold(Vec::with_capacity(size), |mut acc, px| {
+						acc.extend_from_slice(&[px, px, px, 255]);
+						acc
+					})
+			),
+		}
+	}
+
+	#[must_use]
 	/// ## To Native Channels.
 	///
 	/// Return a copy of the instance holding a buffer reduced to only those
@@ -360,42 +402,11 @@ impl Input {
 	///
 	/// This will panic if a 4-byte RGBA slice cannot be created. This
 	/// shouldn't happen in practice, but there is an assertion to make sure.
-	pub fn into_rgba(self) -> Self {
-		// The expected size.
-		let size = self.width() * self.height() * 4;
-
-		let buf: Vec<u8> = match self.depth {
-			ColorKind::Rgba => self.pixels,
-			ColorKind::Rgb => self.pixels.chunks_exact(3)
-				.fold(Vec::with_capacity(size), |mut acc, px| {
-					acc.extend_from_slice(px); // Push RGB.
-					acc.push(255); // Push Alpha.
-					acc
-				}),
-			ColorKind::GreyAlpha => self.pixels.chunks_exact(2)
-				.fold(Vec::with_capacity(size), |mut acc, px| {
-					acc.extend_from_slice(&[px[0], px[0], px[0], px[1]]);
-					acc
-				}),
-			ColorKind::Grey => self.pixels.iter()
-				.copied()
-				.fold(Vec::with_capacity(size), |mut acc, px| {
-					acc.extend_from_slice(&[px, px, px, 255]);
-					acc
-				}),
-		};
-
-		// Make sure we actually filled the buffer appropriately.
-		assert!(buf.len() == size, "BUG: buffer length does not match size.");
-
-		Self {
-			pixels: buf,
-			width: self.width,
-			height: self.height,
-			size: self.size,
-			color: self.color,
-			depth: ColorKind::Rgba,
-			kind: self.kind,
+	pub fn into_rgba(mut self) -> Self {
+		if ! matches!(self.depth, ColorKind::Rgba) {
+			self.pixels = self.pixels_rgba().into_owned();
+			self.depth = ColorKind::Rgba;
 		}
+		self
 	}
 }

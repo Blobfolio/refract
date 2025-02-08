@@ -63,7 +63,7 @@ mod styles;
 use app::App;
 use candidate::Candidate;
 use img::{
-	CHECKERS,
+	checkers,
 	is_jpeg_png,
 	logo,
 	with_ng_extension,

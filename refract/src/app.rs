@@ -7,7 +7,6 @@ use crate::{
 	border_style,
 	button_style,
 	Candidate,
-	CHECKERS,
 	DARK_PALETTE,
 	DARK_THEME,
 	FONT_BOLD,
@@ -50,9 +49,7 @@ use iced::{
 		Row,
 		scrollable,
 		span,
-		stack,
 		Stack,
-		svg,
 		text,
 		text::Rich,
 		tooltip,
@@ -172,6 +169,9 @@ pub(super) struct App {
 	/// happening, such as after a user adds a directory that doesn't have any
 	/// images in it.
 	error: Option<MessageError>,
+
+	/// # Widget Cache.
+	cache: WidgetCache,
 }
 
 impl App {
@@ -225,6 +225,7 @@ impl App {
 			last_dir: None,
 			done: Vec::new(),
 			error: None,
+			cache: WidgetCache::default(),
 		};
 
 		// Digest the paths, if any.
@@ -247,6 +248,11 @@ impl App {
 	/// Returns true if only crunching losslessly and auto-save is enabled.
 	const fn automatic(&self) -> bool {
 		! self.has_flag(MODE_LOSSY) && self.has_flag(OTHER_SAVE_AUTO)
+	}
+
+	/// # Has Candidate?
+	fn has_candidate(&self) -> bool {
+		self.current.as_ref().is_some_and(CurrentImage::has_candidate)
 	}
 
 	/// # Theme.
@@ -745,13 +751,12 @@ impl App {
 			.into()
 	}
 
-	#[expect(clippy::unused_self, reason = "Required by API.")]
 	/// # View Logo.
 	///
 	/// This returns a simple program logo to fill the whitespace that would
 	/// otherwise exist at startup owing to the lack of history to report.
 	fn view_logo(&self) -> Element<'_, Message> {
-		container(image(crate::logo())).center(Fill).into()
+		container(image(self.cache.logo.clone())).center(Fill).into()
 	}
 
 	/// # View: Settings.
@@ -891,7 +896,7 @@ impl App {
 	/// feedback, though they'll only be enabled if the program is ready to
 	/// receive said feedback.
 	fn view_ab_feedback(&self) -> Row<Message> {
-		let active = self.current.as_ref().is_some_and(|c| c.candidate.is_some());
+		let active = self.has_candidate();
 
 		// Keep and discard buttons.
 		let btn_no = button(text("Reject").size(18).font(FONT_BOLD))
@@ -1046,24 +1051,47 @@ impl App {
 	/// The image itself is technically optional, but should always be present
 	/// in practice.
 	fn view_image(&self) -> Stack<Message> {
-		use iced::widget::svg::Handle;
-
-		stack!(
-			container(
-				svg(Handle::from_memory(CHECKERS))
-					.opacity(0.2)
-					.content_fit(ContentFit::None)
-					.width(Fill)
-					.height(Fill)
-			)
-				.clip(true)
-		)
+		Stack::with_capacity(3)
+			.push(self.view_image_checkers_a())
+			.push_maybe(self.view_image_checkers_b())
 			.push_maybe(self.view_image_image())
 			.width(Fill)
 			.height(Fill)
 	}
 
-	#[expect(clippy::cast_possible_truncation, reason = "Meh.")]
+	/// # View: Image Checkers (A).
+	///
+	/// Produce a checkered background to make it easier to visualize image
+	/// transparency.
+	fn view_image_checkers_a(&self) -> Container<Message> {
+		container(
+			image(self.cache.checkers_a.clone())
+			.content_fit(ContentFit::None)
+			.width(Fill)
+			.height(Fill)
+		)
+			.clip(true)
+	}
+
+	/// # View: Image Checkers (B).
+	///
+	/// This adds a "B" to every fourth square for added emphasis, but only
+	/// when viewing a candidate image.
+	fn view_image_checkers_b(&self) -> Option<Container<Message>> {
+		if self.has_flag(OTHER_BSIDE) && self.has_candidate() {
+			Some(
+				container(
+					image(self.cache.checkers_b.clone())
+						.content_fit(ContentFit::None)
+						.width(Fill)
+						.height(Fill)
+				)
+					.clip(true)
+			)
+		}
+		else { None }
+	}
+
 	#[expect(clippy::default_trait_access, reason = "Can't.")]
 	/// # Image Layer.
 	///
@@ -1074,17 +1102,12 @@ impl App {
 	/// This method is technically fallible, but in practice it should never
 	/// not return something.
 	fn view_image_image(&self) -> Option<Container<Message>> {
-		use iced::{
-			widget::{
-				image::Handle,
-				scrollable::{
-					Direction,
-					Rail,
-					Scrollbar,
-					Scroller,
-					Style,
-				},
-			},
+		use iced::widget::scrollable::{
+			Direction,
+			Rail,
+			Scrollbar,
+			Scroller,
+			Style,
 		};
 
 		/// # Scroll paddle thingy.
@@ -1103,20 +1126,12 @@ impl App {
 		// Show the new one?
 		if self.has_flag(OTHER_BSIDE) {
 			if let Some(can) = current.candidate.as_ref() {
-				handle.replace(Handle::from_rgba(
-					can.width.get(),
-					can.height.get(),
-					can.buf.to_vec(),
-				));
+				handle.replace(can.img.clone());
 			}
 		}
 
 		// If we aren't showing the new one, show the old one.
-		let handle = handle.unwrap_or_else(|| Handle::from_rgba(
-			current.input.width() as u32,
-			current.input.height() as u32,
-			current.input.to_vec(),
-		));
+		let handle = handle.unwrap_or_else(|| current.img.clone());
 
 		Some(
 			container(
@@ -1329,6 +1344,12 @@ struct CurrentImage {
 	/// # Decoded Source.
 	input: Input,
 
+	/// # Iced-Ready Image Data.
+	///
+	/// This is largely redundant given that `input` holds the same pixels,
+	/// but the caching should help speed up A/B renders.
+	img: image::Handle,
+
 	/// # Refract Flags.
 	flags: u16,
 
@@ -1349,10 +1370,16 @@ impl CurrentImage {
 	/// candidate image. Those tasks can be long-running so are left for later.
 	fn new(src: PathBuf, flags: u16) -> Option<Self> {
 		let input = std::fs::read(&src).ok()?;
-		let input = Input::try_from(input.as_slice()).ok()?;
+		let input = Input::try_from(input.as_slice()).ok()?.into_rgba();
+		let img = image::Handle::from_rgba(
+			u32::try_from(input.width()).ok()?,
+			u32::try_from(input.height()).ok()?,
+			input.pixels_rgba().into_owned(),
+		);
 		Some(Self {
 			src,
 			input,
+			img,
 			flags,
 			candidate: None,
 			iter: None,
@@ -1383,6 +1410,11 @@ impl CurrentImage {
 	/// the appropriate actions can be taken based on the results, and a new
 	/// iterator can be loaded for the next format, if any.
 	fn finish(&mut self) -> Option<(u8, EncodeIter)> { self.iter.take() }
+
+	/// # Has Candidate?
+	///
+	/// Returns `true` if a candidate has been generated.
+	const fn has_candidate(&self) -> bool { self.candidate.is_some() }
 
 	/// # Next Candidate.
 	///
@@ -1617,6 +1649,35 @@ impl MessageError {
 		match self {
 			Self::NoImages => "No qualifying images were found.",
 			Self::NoOpen => "The link could not be opened.",
+		}
+	}
+}
+
+
+
+/// # Widget Cache.
+///
+/// This struct holds image handles for our embedded and unchanging assets,
+/// i.e. the A/B checkerboard backgrounds and program logo, to speed up tree
+/// render.
+struct WidgetCache {
+	/// # Checkerboard Underlay (A).
+	checkers_a: image::Handle,
+
+	/// # Checkerboard Underlay (B).
+	checkers_b: image::Handle,
+
+	/// # Program Logo.
+	logo: image::Handle,
+}
+
+impl Default for WidgetCache {
+	fn default() -> Self {
+		let (checkers_a, checkers_b) = crate::checkers();
+		Self {
+			checkers_a,
+			checkers_b,
+			logo: crate::logo(),
 		}
 	}
 }

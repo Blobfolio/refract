@@ -111,7 +111,7 @@ write_atomic = "0.5.*"
 
 [dependencies.iced]
 version = "=0.13.1"
-features = [ "advanced", "image-without-codecs", "svg" ]
+features = [ "image-without-codecs" ]
 
 [dependencies.refract_core]
 path = "../refract_core"
