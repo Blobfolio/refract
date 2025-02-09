@@ -683,7 +683,7 @@ impl App {
 				Err(path) => {
 					let Some(dir) = path.parent() else { continue; };
 					let Some(file) = path.file_name() else { continue; };
-					lines = lines.push(text(divider.clone()).color(NiceColors::GREY));
+					lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
 					lines = lines.push(rich_text!(
 						span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
 						span(file.to_string_lossy()).color(NiceColors::RED),
@@ -723,12 +723,36 @@ impl App {
 						span(" | ").color(NiceColors::PINK),
 						time.as_ref().map_or_else(
 							|| span(""),
-							|n| span(format!("{:>w$}s", n.precise_str(2), w=widths[5] - 1)),
+							|n| {
+								let nice = n.precise_str(3);
+								let tmp = span(format!("{:>w$}s", n.precise_str(3), w=widths[5] - 1));
+								if nice.bytes().all(|b| matches!(b, b'0' | b'.')) {
+									tmp.color(NiceColors::GREY)
+								}
+								else { tmp }
+							},
 						),
 					));
 				},
 			}
 		}
+
+		// Add footnotes.
+		lines = lines.push(text(divider).color(NiceColors::PINK))
+			.push(text(""))
+			.push(text(""))
+			.push(rich_text!(
+				span(" *").color(NiceColors::PURPLE),
+				span(" Compression ratio is ").color(NiceColors::GREY),
+				span("src").color(NiceColors::PURPLE).font(FONT_BOLD),
+				span(":").color(NiceColors::GREY).font(FONT_BOLD),
+				span("dst").color(NiceColors::PINK).font(FONT_BOLD),
+				span(".").color(NiceColors::GREY),
+			))
+			.push(rich_text!(
+				span("**").color(NiceColors::PURPLE),
+				span(" Total encoding time.").color(NiceColors::GREY),
+			));
 
 		scrollable(container(lines).width(Fill).padding(10))
 			.height(Fill)
@@ -1296,8 +1320,8 @@ impl ActivityTable<'_> {
 		"Kind",
 		"Quality",
 		"Size",
-		"CR",
-		"Time",
+		"CR*",
+		"Time**",
 	];
 
 	/// # Column Widths.
@@ -1353,7 +1377,7 @@ impl ActivityTableRow<'_> {
 			self.quality.len(),
 			self.len.as_ref().map_or(0, NiceU64::len),
 			self.ratio.as_ref().map_or(0, |n| n.precise_str(4).len()),
-			self.time.as_ref().map_or(0, |n| n.precise_str(2).len() + 1),
+			self.time.as_ref().map_or(0, |n| n.precise_str(3).len() + 1),
 		]
 	}
 }
