@@ -30,6 +30,11 @@ use iced::{
 	ContentFit,
 	Element,
 	Fill,
+	keyboard::{
+		Key,
+		key::Named,
+		Modifiers,
+	},
 	Padding,
 	Shrink,
 	Subscription,
@@ -468,6 +473,23 @@ impl App {
 		Task::none()
 	}
 
+	/// # Subscription.
+	///
+	/// This method sets up listeners for the program's keyboard shortcuts,
+	/// bubbling up `Message`s as needed.
+	pub(super) fn subscription(&self) -> Subscription<Message> {
+		let whenever = iced::keyboard::on_key_press(subscribe_whenever);
+
+		// Some actions are only applicable in A/B contexts.
+		if self.has_candidate() {
+			Subscription::batch(vec![
+				whenever,
+				iced::keyboard::on_key_press(subscribe_ab),
+			])
+		}
+		else { whenever }
+	}
+
 	/// # View.
 	///
 	/// This method returns everything `iced` needs to draw the screen.
@@ -482,62 +504,6 @@ impl App {
 		}
 		// Otherwise the home screen.
 		else { self.view_home() }
-	}
-
-	#[expect(clippy::unused_self, reason = "Required by API.")]
-	/// # Subscription.
-	///
-	/// This method sets up listeners for the keyboard shortcuts available
-	/// during image processing. If matched, an `Message` will get bubbled up
-	/// to `update`, same as when interacting with a proper widget.
-	pub(super) fn subscription(&self) -> Subscription<Message> {
-		use iced::{
-			event::Status,
-			Event,
-			keyboard::{
-				Event::KeyPressed,
-				key::Named,
-				Key,
-				Modifiers,
-			},
-		};
-
-		iced::event::listen_with(|event, status, _id| {
-			if matches!(status, Status::Ignored) {
-				match event {
-					// Toggle image A/B.
-					Event::Keyboard(KeyPressed {
-						key: Key::Named(Named::Space),
-						..
-					}) => Some(Message::ToggleFlag(OTHER_BSIDE)),
-
-					// Other actions.
-					Event::Keyboard(KeyPressed {
-						key: Key::Character(c),
-						modifiers: m,
-						..
-					}) =>
-						if m.contains(Modifiers::CTRL) {
-							// Night mode.
-							if c == "n" { Some(Message::ToggleFlag(OTHER_NIGHT)) }
-							// Open files or directory.
-							else if c == "o" {
-								Some(Message::AddPaths(m.contains(Modifiers::SHIFT)))
-							}
-							// Noop.
-							else { None }
-						}
-						// Discard candidate.
-						else if c == "d" { Some(Message::Feedback(false)) }
-						// Keep candidate.
-						else if c == "k" { Some(Message::Feedback(true)) }
-						// Noop.
-						else { None },
-					_ => None,
-				}
-			}
-			else { None }
-		})
 	}
 }
 
@@ -1724,4 +1690,40 @@ fn cli_log_sad(src: &Path) {
 		dir.display(),
 		name.to_string_lossy(),
 	);
+}
+
+/// # General Subscriptions.
+///
+/// This callback for `on_key_press` binds listeners for the night mode
+/// and file dialogue titles, which can be triggered at any time.
+fn subscribe_whenever(key: Key, modifiers: Modifiers) -> Option<Message> {
+	// These require CTRL and not ALT.
+	if modifiers.command() && ! modifiers.alt() {
+		if let Key::Character(c) = key {
+			if c == "n" { return Some(Message::ToggleFlag(OTHER_NIGHT)); }
+			if c == "o" { return Some(Message::AddPaths(modifiers.shift())); }
+		}
+	}
+
+	None
+}
+
+/// # A/B Subscriptions.
+///
+/// This callback for `on_key_press` binds listeners for A/B-related
+/// feedback, applicable only when a candidate image is available, though we
+/// can't actually guarantee that's when they'll be triggered.
+fn subscribe_ab(key: Key, modifiers: Modifiers) -> Option<Message> {
+	// No modifiers required or expected.
+	if modifiers.command() || modifiers.alt() { None }
+	else {
+		match key {
+			Key::Named(Named::Space) => Some(Message::ToggleFlag(OTHER_BSIDE)),
+			Key::Character(c) =>
+				if c == "d" { Some(Message::Feedback(false)) }
+				else if c == "k" { Some(Message::Feedback(true)) }
+				else { None }
+			_ => None,
+		}
+	}
 }
