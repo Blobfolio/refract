@@ -67,14 +67,12 @@ use refract_core::{
 	FLAG_NO_LOSSY,
 	ImageKind,
 	Input,
+	Output,
 	Quality,
 	QualityValueFmt,
 	RefractError,
 };
-use rfd::{
-	AsyncFileDialog,
-	FileDialog,
-};
+use rfd::AsyncFileDialog;
 use std::{
 	borrow::Cow,
 	collections::BTreeSet,
@@ -403,20 +401,16 @@ impl App {
 					if let Some(m) = current.next_candidate() { return m; }
 
 					// Save it!
-					if let Some((_, iter)) = current.finish() {
-						if let Some(last) = self.done.last_mut() {
-							last.push(iter, confirm);
-						}
+					if let Some(res) = current.finish_encoder() {
+						if confirm { return res.open_fd(); }
+						return Task::done(Message::SaveImage(res));
 					}
 
 					// Advance the encoder.
-					if current.next_encoder() {
-						return Task::done(Message::NextStep);
-					}
+					if current.next_encoder() { return Task::done(Message::NextStep); }
 				}
 
-				// We've exhausted the current source; move onto the next image
-				// (if any).
+				// This image is done; move onto the next!
 				self.current = None;
 				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 			},
@@ -433,20 +427,38 @@ impl App {
 					}
 
 					// Save it!
-					if let Some((_, iter)) = current.finish() {
-						if let Some(last) = self.done.last_mut() {
-							last.push(iter, confirm);
+					if let Some(res) = current.finish_encoder() {
+						if confirm { return res.open_fd(); }
+						return Task::done(Message::SaveImage(res));
+					}
+
+					// Advance the encoder.
+					if current.next_encoder() { return Task::done(Message::NextStep); }
+				}
+
+				// This image is done; move onto the next!
+				self.current = None;
+				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
+			},
+
+			// Save the image and continue.
+			Message::SaveImage(mut wrapper) => {
+				if let Some(current) = &mut self.current {
+					// Actually save the image.
+					wrapper.save();
+
+					// Log the results.
+					if let Some(last) = self.done.last_mut() {
+						if last.src == wrapper.src {
+							last.dst.push(wrapper.into_result());
 						}
 					}
 
 					// Advance the encoder.
-					if current.next_encoder() {
-						return Task::done(Message::NextStep);
-					}
+					if current.next_encoder() { return Task::done(Message::NextStep); }
 				}
 
-				// We've exhausted the current source; move onto the next image
-				// (if any).
+				// This image is done; move onto the next!
 				self.current = None;
 				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 			},
@@ -1427,14 +1439,30 @@ impl CurrentImage {
 		false
 	}
 
-	/// # Finish (Current Encoder).
+	/// # Finish Current Encoder.
 	///
-	/// Remove and return the current encoding count and iterator, if any, so
-	/// the appropriate actions can be taken based on the results, and a new
-	/// iterator can be loaded for the next format, if any.
-	fn finish(&mut self) -> Option<(u8, EncodeIter)> {
-		self.output_kind = None;
-		self.iter.take()
+	/// Remove and return the current encoder data, if any, making room for
+	/// the next job.
+	///
+	/// Post-processing of said data is an exercise left up to the caller.
+	fn finish_encoder(&mut self) -> Option<ImageResultWrapper> {
+		// Extract a bunch of data.
+		let kind = self.output_kind().take();
+		let (_, iter) = self.iter.take()?;
+		let time = NiceFloat::from(iter.time().as_secs_f32());
+		let best = iter.take().ok();
+		let kind = kind.or_else(|| best.as_ref().map(Output::kind))?;
+
+		// Copy the source.
+		let src = self.src.clone();
+
+		// Come up with a suitable default destination path.
+		let mut dst = src.clone();
+		let v = dst.as_mut_os_string();
+		v.push(".");
+		v.push(kind.extension());
+
+		Some(ImageResultWrapper { src, dst, kind, time, best })
 	}
 
 	/// # Has Candidate?
@@ -1596,69 +1624,7 @@ struct ImageResults {
 	dst: Vec<(ImageKind, ImageResult)>,
 }
 
-impl ImageResults {
-	/// # Push and Save Result.
-	///
-	/// Consume an encoder instance, record the details, and if it produced a
-	/// worthy candidate image, save it permanently to disk.
-	///
-	/// By default files are saved to the original source path, with an extra
-	/// extension tacked onto the end (e.g. "/path/to/source.jpg.webp"). If
-	/// `confirm` is true, a file dialogue is popped to give the user a chance
-	/// to put it somewhere else or cancel the save altogether.
-	fn push(&mut self, iter: EncodeIter, confirm: bool) {
-		let kind = iter.output_kind();
-		let time = NiceFloat::from(iter.time().as_secs_f32());
 
-		// Come up with a suitable default destination path.
-		let mut dst = self.src.clone();
-		let v = dst.as_mut_os_string();
-		v.push(".");
-		v.push(kind.extension());
-
-		// Pull the best!
-		if let Some((len, best)) = iter.output_size().zip(iter.take().ok()) {
-			// If confirmation is required, suggest the default but let the
-			// user decide where it should go.
-			let mut confirmed = false;
-			if confirm {
-				if let Some(p) = FileDialog::new()
-					.add_filter(kind.as_str(), &[kind.extension()])
-					.set_can_create_directories(true)
-					.set_directory(dst.parent().unwrap_or_else(|| Path::new(".")))
-					.set_file_name(dst.file_name().map_or(Cow::Borrowed(""), OsStr::to_string_lossy))
-					.set_title(format!("Save the {kind}"))
-					.save_file()
-				{
-					dst = crate::with_ng_extension(p, kind);
-					confirmed = true;
-				}
-			}
-
-			// Save it and record the results!
-			if (confirmed || ! confirm) && write_atomic::write_file(&dst, &best).is_ok() {
-				let quality = best.quality();
-
-				cli_log(&dst, Some(quality));
-				self.dst.push((kind, ImageResult {
-					src: dst,
-					len: Some(len),
-					quality: Some(quality),
-					time,
-				}));
-				return;
-			}
-		}
-
-		cli_log_sad(&dst);
-		self.dst.push((kind, ImageResult {
-			src: dst,
-			len: None,
-			quality: None,
-			time,
-		}));
-	}
-}
 
 /// # (Best) Image Encoding Result.
 ///
@@ -1677,6 +1643,109 @@ struct ImageResult {
 
 	/// # Computational Time (seconds).
 	time: NiceFloat,
+}
+
+
+
+#[derive(Debug, Clone)]
+/// # Image Result Wrapper.
+///
+/// This struct temporarily holds the results of an encoding run, making it
+/// easier to split up the various save/log-type finishing tasks.
+pub(super) struct ImageResultWrapper {
+	/// # Source Path (Sanity Check).
+	src: PathBuf,
+
+	/// # Output Path.
+	dst: PathBuf,
+
+	/// # Output Kind.
+	kind: ImageKind,
+
+	/// # Computational Time (seconds).
+	time: NiceFloat,
+
+	/// # Output Image.
+	best: Option<Output>,
+}
+
+impl ImageResultWrapper {
+	/// # Into Result.
+	///
+	/// Reformat the data for final storage in `ImageResults`, and log the
+	/// results to CLI.
+	fn into_result(self) -> (ImageKind, ImageResult) {
+		if let Some(best) = self.best {
+			if let Some(len) = best.size() {
+				let quality = best.quality();
+				cli_log(&self.dst, Some(quality));
+				return (self.kind, ImageResult {
+					src: self.dst,
+					len: Some(len),
+					quality: Some(quality),
+					time: self.time,
+				});
+			}
+		}
+
+		cli_log_sad(&self.dst);
+		(self.kind, ImageResult {
+			src: self.dst,
+			len: None,
+			quality: None,
+			time: self.time,
+		})
+	}
+
+	/// # Save File.
+	///
+	/// Permanently save the best candidate, if any, to disk. If this fails,
+	/// the candidate will be deleted.
+	fn save(&mut self) {
+		if let Some(best) = &self.best {
+			// If saving fails, pretend there was no best.
+			if write_atomic::write_file(&self.dst, best).is_err() {
+				let _res = self.best.take();
+			}
+		}
+	}
+
+	/// # Set Output Path.
+	///
+	/// Pop an async file dialogue so the user can override the output path
+	/// or cancel the operation entirely, returning a `Future<Message>` with
+	/// the result.
+	///
+	/// If there is no best candidate image, this returns immediately so we can
+	/// get on with it.
+	fn open_fd(mut self) -> Task<Message> {
+		// Only appropriate if we're saving something.
+		if self.best.is_none() { return Task::done(Message::SaveImage(self)); }
+
+		// Get the path.
+		Task::future(async {
+			let dst = AsyncFileDialog::new()
+				.add_filter(self.kind.as_str(), &[self.kind.extension()])
+				.set_can_create_directories(true)
+				.set_directory(self.dst.parent().unwrap_or_else(|| Path::new(".")))
+				.set_file_name(self.dst.file_name().map_or(Cow::Borrowed(""), OsStr::to_string_lossy))
+				.set_title(format!("Save the {}!", self.kind))
+				.save_file()
+				.await;
+
+			// Update the path if they picked one.
+			if let Some(dst) = dst {
+				self.dst = crate::with_ng_extension(dst.path().to_path_buf(), self.kind);
+			}
+			// Or nuke the result.
+			else {
+				let _res = self.best.take();
+			}
+
+			// Return for saving.
+			Message::SaveImage(self)
+		})
+	}
 }
 
 
@@ -1706,6 +1775,9 @@ pub(super) enum Message {
 
 	/// # Finish Next Step.
 	NextStepDone(EncodeWrapper),
+
+	/// # Save Image (and Continue).
+	SaveImage(ImageResultWrapper),
 
 	/// # Open File Dialogue.
 	OpenFd(bool),
