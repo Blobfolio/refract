@@ -71,7 +71,10 @@ use refract_core::{
 	QualityValueFmt,
 	RefractError,
 };
-use rfd::FileDialog;
+use rfd::{
+	AsyncFileDialog,
+	FileDialog,
+};
 use std::{
 	borrow::Cow,
 	collections::BTreeSet,
@@ -336,43 +339,18 @@ impl App {
 
 		match message {
 			// Add File(s) or Directory.
-			Message::AddPaths(dir) => {
-				// Try to set a sane starting directory for ourselves.
-				let mut fd = FileDialog::new();
-				if let Some(p) = self.last_dir.as_ref() { fd = fd.set_directory(p); }
-				else if let Ok(p) = std::env::current_dir() {
-					fd = fd.set_directory(p);
+			Message::AddPaths(paths) => {
+				self.add_paths(paths);
+
+				// If none of the path(s) were valid, record the "error"
+				// so we can explain why nothing is happening.
+				if self.paths.is_empty() {
+					return Task::done(Message::Error(MessageError::NoImages));
 				}
-
-				// Pop a (native) dialog for the user and block until they make
-				// a selection or cancel.
-				let paths =
-					if dir {
-						fd.set_title("Choose Directory")
-							.pick_folder()
-							.map(Dowser::from)
-					}
-					else {
-						fd.add_filter("Images", &["jpg", "jpeg", "png"])
-							.set_title("Choose Image(s)")
-							.pick_files()
-							.map(Dowser::from)
-					};
-
-				// Parse and enqueue the result, if any.
-				if let Some(paths) = paths {
-					self.add_paths(paths);
-
-					// If none of the path(s) were valid, record the "error"
-					// so we can explain why nothing is happening.
-					if self.paths.is_empty() {
-						return Task::done(Message::Error(MessageError::NoImages));
-					}
-					// Otherwise we probably want to load up the first image,
-					// but only if we aren't already processing something else.
-					else if self.current.is_none() {
-						return Task::done(Message::NextImage);
-					}
+				// Otherwise we probably want to load up the first image,
+				// but only if we aren't already processing something else.
+				else if self.current.is_none() {
+					return Task::done(Message::NextImage);
 				}
 			},
 
@@ -446,6 +424,9 @@ impl App {
 				self.current = None;
 				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 			},
+
+			// Open File Dialogue (Files).
+			Message::OpenFd(dir) => return self.open_fd(dir),
 
 			// Open a local image path using whatever (external) program the
 			// desktop environment would normally use to open that file type.
@@ -593,14 +574,14 @@ impl App {
 					button(text("File(s)").size(18).font(FONT_BOLD))
 						.style(|_, status| button_style(status, NiceColors::PURPLE))
 						.padding(BTN_PADDING)
-						.on_press(Message::AddPaths(false)),
+						.on_press(Message::OpenFd(false)),
 
 					text("or").size(18),
 
 					button(text("Directory").size(18).font(FONT_BOLD))
 						.style(|_, status| button_style(status, NiceColors::PINK))
 						.padding(BTN_PADDING)
-						.on_press(Message::AddPaths(true)),
+						.on_press(Message::OpenFd(true)),
 				)
 					.align_y(Vertical::Center)
 					.spacing(10)
@@ -1159,6 +1140,51 @@ impl App {
 	}
 }
 
+/// # Other.
+impl App {
+	/// # Open File Dialogue.
+	///
+	/// Synchronous file dialogues have a habit of making GNOME think the
+	/// program is "stuck", so this spawns one asynchronously so the user can
+	/// take however long they want to make a selection.
+	///
+	/// If and when a selection is made, a separate `Message::AddPaths` task
+	/// will be spawned to handle the details.
+	fn open_fd(&self, dir: bool) -> Task<Message> {
+		// Try to set a sane starting directory for ourselves.
+		let mut fd = AsyncFileDialog::new();
+		if let Some(p) = self.last_dir.as_ref() { fd = fd.set_directory(p); }
+		else if let Ok(p) = std::env::current_dir() { fd = fd.set_directory(p); }
+
+		// Directory version.
+		if dir {
+			return Task::future(async {
+				fd.set_title("Choose Directory")
+					.pick_folder()
+					.await
+					.map(|p| Task::done(
+						Message::AddPaths(Dowser::from(p.path()))
+					))
+			}).and_then(|t| t);
+		}
+
+		// File version.
+		Task::future(async {
+			fd.add_filter("Images", &["jpg", "jpeg", "png"])
+				.set_title("Choose Image(s)")
+				.pick_files()
+				.await
+				.map(|paths| Task::done(
+					Message::AddPaths(
+						Dowser::default().with_paths(
+							paths.iter().map(rfd::FileHandle::path)
+						)
+					)
+				))
+		}).and_then(|t| t)
+	}
+}
+
 
 
 /// # Activity Table.
@@ -1569,7 +1595,7 @@ struct ImageResult {
 /// They're signals, basically.
 pub(super) enum Message {
 	/// # File Open Dialog.
-	AddPaths(bool),
+	AddPaths(Dowser),
 
 	/// # An Error.
 	Error(MessageError),
@@ -1582,6 +1608,9 @@ pub(super) enum Message {
 
 	/// # Next Step.
 	NextStep,
+
+	/// # Open File Dialogue.
+	OpenFd(bool),
 
 	/// # Open File.
 	OpenFile(PathBuf),
@@ -1701,7 +1730,7 @@ fn subscribe_whenever(key: Key, modifiers: Modifiers) -> Option<Message> {
 	if modifiers.command() && ! modifiers.alt() {
 		if let Key::Character(c) = key {
 			if c == "n" { return Some(Message::ToggleFlag(OTHER_NIGHT)); }
-			if c == "o" { return Some(Message::AddPaths(modifiers.shift())); }
+			if c == "o" { return Some(Message::OpenFd(modifiers.shift())); }
 		}
 	}
 
