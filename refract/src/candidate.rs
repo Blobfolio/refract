@@ -14,7 +14,7 @@ use std::num::NonZeroU32;
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// # Candidate.
 ///
 /// This holds the decoded pixels and basic details for a newly-converted image

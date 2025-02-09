@@ -393,15 +393,41 @@ impl App {
 				}
 			},
 
-			// Crunch the next candidate image for the current source or, if
-			// it's done, save the best version (if any) and move onto the
-			// next format.
+			// Spawn a thread to get the next candidate image crunching or, if
+			// there is none, save the best and move on.
 			Message::NextStep => {
 				self.flags &= ! OTHER_BSIDE;
 				let confirm = ! self.has_flag(OTHER_SAVE_AUTO);
 				if let Some(current) = &mut self.current {
 					// Advance iterator and wait for feedback.
-					if current.next_candidate() {
+					if let Some(m) = current.next_candidate() { return m; }
+
+					// Save it!
+					if let Some((_, iter)) = current.finish() {
+						if let Some(last) = self.done.last_mut() {
+							last.push(iter, confirm);
+						}
+					}
+
+					// Advance the encoder.
+					if current.next_encoder() {
+						return Task::done(Message::NextStep);
+					}
+				}
+
+				// We've exhausted the current source; move onto the next image
+				// (if any).
+				self.current = None;
+				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
+			},
+
+			// Reabsorb the encoder (stolen above) and either display the
+			// candidate for feedback or, if none, save the best and move on.
+			Message::NextStepDone(wrapper) => {
+				let confirm = ! self.has_flag(OTHER_SAVE_AUTO);
+				if let Some(current) = &mut self.current {
+					// Advance iterator and wait for feedback.
+					if current.next_candidate_done(wrapper) {
 						self.flags |= OTHER_BSIDE;
 						return Task::none();
 					}
@@ -1111,14 +1137,15 @@ impl App {
 	/// shortcuts that can be used in lieu of the button widgets.
 	fn view_keyboard_shortcuts(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
-		let Some(dst_kind) = current.output_kind() else { return Column::new(); };
 		column!(
 			rich_text!(
 				span("   [space]").font(FONT_BOLD),
 				span(" Toggle image view (").color(NiceColors::GREY),
 				span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD),
 				span(" vs ").color(NiceColors::GREY),
-				span(dst_kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD),
+				span(current.output_kind().map_or_else(|| String::from("Xyz"), |k| k.to_string()))
+					.color(NiceColors::PINK)
+					.font(FONT_BOLD),
 				span(").").color(NiceColors::GREY),
 			),
 			rich_text!(
@@ -1350,6 +1377,9 @@ struct CurrentImage {
 
 	/// # Encoding Count and Iterator.
 	iter: Option<(u8, EncodeIter)>,
+
+	/// # Output Kind (Redundant).
+	output_kind: Option<ImageKind>,
 }
 
 impl CurrentImage {
@@ -1375,13 +1405,14 @@ impl CurrentImage {
 			flags,
 			candidate: None,
 			iter: None,
+			output_kind: None,
 		})
 	}
 
 	/// # Is Active?
 	///
 	/// Returns `true` if an encoder has been set up.
-	const fn active(&self) -> bool { self.iter.is_some() }
+	const fn active(&self) -> bool { self.output_kind.is_some() }
 
 	/// # Provide Feedback.
 	fn feedback(&mut self, keep: bool) -> bool {
@@ -1401,27 +1432,50 @@ impl CurrentImage {
 	/// Remove and return the current encoding count and iterator, if any, so
 	/// the appropriate actions can be taken based on the results, and a new
 	/// iterator can be loaded for the next format, if any.
-	fn finish(&mut self) -> Option<(u8, EncodeIter)> { self.iter.take() }
+	fn finish(&mut self) -> Option<(u8, EncodeIter)> {
+		self.output_kind = None;
+		self.iter.take()
+	}
 
 	/// # Has Candidate?
 	///
 	/// Returns `true` if a candidate has been generated.
 	const fn has_candidate(&self) -> bool { self.candidate.is_some() }
 
-	/// # Next Candidate.
+	/// # Next Candidate (Start).
 	///
-	/// Advance the guide, returning `true` if a new candidate was generated.
-	fn next_candidate(&mut self) -> bool {
+	/// This method clears the current candidate and advances the guided
+	/// encoder (assuming there is one; `None` is returned otherwise).
+	///
+	/// The actual execution is a bit more convoluted: in order to keep the
+	/// time-consuming work _off_ the main thread, we have to temporarily send
+	/// the encoder abroad and return it in a `Future<Message>` so it can be
+	/// reabsorbed (via `Self::next_candidate_done`).
+	///
+	/// The workflow isn't ideal, but it all works out.
+	fn next_candidate(&mut self) -> Option<Task<Message>> {
 		self.candidate = None;
-		if let Some((count, iter)) = &mut self.iter {
-			if let Some(candidate) = iter.advance().and_then(|out| Candidate::try_from(out).ok()) {
-				*count += 1;
-				self.candidate = Some(candidate.with_count(*count));
-				return true;
-			}
-		}
+		let borrow = self.iter.take()?;
+		Some(Task::future(async {
+			let enc = async_std::task::spawn_blocking(||
+				EncodeWrapper::from(borrow).advance()
+			).await;
 
-		false
+			Message::NextStepDone(enc)
+		}))
+	}
+
+	/// # Next Candidate (Done).
+	///
+	/// This method reabsorbs the active encoder (that was temporarily sent
+	/// to another thread) and updates the candidate image, if any.
+	///
+	/// Returns `true` if there is now a candidate.
+	fn next_candidate_done(&mut self, enc: EncodeWrapper) -> bool {
+		let EncodeWrapper { count, iter, output } = enc;
+		self.iter.replace((count, iter));
+		self.candidate = output;
+		self.candidate.is_some()
 	}
 
 	/// # Next Encoder.
@@ -1432,6 +1486,7 @@ impl CurrentImage {
 	/// Returns `true` if successful.
 	fn next_encoder(&mut self) -> bool {
 		self.candidate = None;
+		self.output_kind = None;
 		let encoder =
 			if FMT_WEBP == self.flags & FMT_WEBP {
 				self.flags &= ! FMT_WEBP;
@@ -1464,14 +1519,54 @@ impl CurrentImage {
 			.map(|e| (0, e));
 
 		// It worked if it worked.
-		self.iter.is_some()
+		if self.iter.is_some() {
+			self.output_kind.replace(encoder);
+			true
+		}
+		else { false }
 	}
 
 	/// # Output Kind.
 	///
 	/// Return the output format that is currently being crunched, if any.
-	fn output_kind(&self) -> Option<ImageKind> {
-		self.iter.as_ref().map(|(_, iter)| iter.output_kind())
+	const fn output_kind(&self) -> Option<ImageKind> { self.output_kind }
+}
+
+
+
+#[derive(Debug, Clone)]
+/// # Encode Wrapper.
+///
+/// This struct holds a temporarily "borrowed" `EncodeIter` instance, allowing
+/// the data and encoding workload to run _off_ the main thread.
+///
+/// It must be passed back to `CurrentImage` afterwards for post-processing.
+pub(super) struct EncodeWrapper {
+	/// # Iteration Count.
+	count: u8,
+
+	/// # Iterator.
+	iter: EncodeIter,
+
+	/// # The Result.
+	output: Option<Candidate>
+}
+
+impl From<(u8, EncodeIter)> for EncodeWrapper {
+	#[inline]
+	fn from((count, iter): (u8, EncodeIter)) -> Self {
+		Self { count, iter, output: None }
+	}
+}
+
+impl EncodeWrapper {
+	/// # Advance.
+	fn advance(mut self) -> Self {
+		if let Some(can) = self.iter.advance().and_then(|out| Candidate::try_from(out).ok()) {
+			self.count += 1;
+			self.output.replace(can.with_count(self.count));
+		}
+		self
 	}
 }
 
@@ -1608,6 +1703,9 @@ pub(super) enum Message {
 
 	/// # Next Step.
 	NextStep,
+
+	/// # Finish Next Step.
+	NextStepDone(EncodeWrapper),
 
 	/// # Open File Dialogue.
 	OpenFd(bool),

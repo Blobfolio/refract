@@ -11,7 +11,7 @@ use std::{
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// # Quality Range.
 pub struct QualityRange {
 	/// # Low End.

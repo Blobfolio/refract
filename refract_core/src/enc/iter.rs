@@ -30,7 +30,7 @@ use std::{
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// # Encoding Iterator.
 ///
 /// This is a guided encoding "iterator" produced by providing an [`Input`]
