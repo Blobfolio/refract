@@ -73,7 +73,7 @@ description = "Skip AVIF YCbCr encoding passes."
 
 [[package.metadata.bashman.switches]]
 long = "--save-auto"
-description = "Always use the (automatically) derived output paths when saving images instead of popping a file dialogue."
+description = "Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation."
 
 [[package.metadata.bashman.switches]]
 short = "-V"

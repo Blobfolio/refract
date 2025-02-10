@@ -846,7 +846,7 @@ impl App {
 					.on_toggle(|_| Message::ToggleFlag(OTHER_SAVE_AUTO))
 					.size(CHK_SIZE),
 				container(
-					text("Always use the (automatically) derived output paths when saving images instead of popping a file dialogue.")
+					text("Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation.")
 						.size(12)
 				)
 					.padding(20)

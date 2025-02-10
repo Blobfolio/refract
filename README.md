@@ -87,7 +87,7 @@ refract [FLAGS] [OPTIONS] <PATH(S)>...
 | `--no-lossless` | Skip lossless encoding passes. |
 | `--no-lossy` | Skip lossy encoding passes. |
 | `--no-ycbcr` | Skip AVIF YCbCr encoding passes. |
-| `--save-auto` | Use the (automatically) derived output paths when saving images instead of popping a file dialogue. |
+| `--save-auto` | Automatically save successful conversions to their source paths — with new extensions appended — instead of popping a file dialogue for confirmation. |
 
 | Option | Description |
 | ------ | ----------- |
