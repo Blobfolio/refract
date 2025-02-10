@@ -84,6 +84,7 @@ use std::{
 		Path,
 		PathBuf,
 	},
+	time::Duration,
 };
 use utc2k::FmtUtc2k;
 
@@ -117,6 +118,9 @@ const OTHER_NIGHT: u16 =      0b0000_1000_0000;
 
 /// # Save w/o Prompt.
 const OTHER_SAVE_AUTO: u16 =  0b0001_0000_0000;
+
+/// # New Encoder.
+const SWITCHED_ENCODER: u16 = 0b0010_0000_0000;
 
 /// # All Formats.
 const FMT_FLAGS: u16 =
@@ -258,6 +262,13 @@ impl App {
 		! self.has_flag(MODE_LOSSY) && self.has_flag(OTHER_SAVE_AUTO)
 	}
 
+	/// # Count Encoders.
+	const fn count_encoders(&self) -> u8 {
+		(self.has_flag(FMT_AVIF) as u8) +
+		(self.has_flag(FMT_JXL) as u8) +
+		(self.has_flag(FMT_WEBP) as u8)
+	}
+
 	/// # Has Candidate?
 	fn has_candidate(&self) -> bool {
 		self.current.as_ref().is_some_and(CurrentImage::has_candidate)
@@ -375,6 +386,17 @@ impl App {
 					}
 				},
 
+			// Switch to the next encoder.
+			Message::NextEncoder =>
+				if self.current.as_mut().is_some_and(CurrentImage::next_encoder) {
+					return self.update_switch_encoder__();
+				}
+				// This image is done; move onto the next!
+				else {
+					self.current = None;
+					if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
+				},
+
 			// If there are images in the queue, pull the first and start up
 			// the conversion process for it.
 			Message::NextImage => {
@@ -391,9 +413,11 @@ impl App {
 							dst: Vec::new(),
 						});
 
+						// Make sure the encoder can be set before accepting
+						// the result.
 						if current.next_encoder() {
 							self.current = Some(current);
-							return Task::done(Message::NextStep);
+							return self.update_switch_encoder__();
 						}
 					}
 				}
@@ -408,19 +432,17 @@ impl App {
 					// Advance iterator and wait for feedback.
 					if let Some(m) = current.next_candidate() { return m; }
 
-					// Save it!
+					// Log and save the results, if any.
 					if let Some(res) = current.finish_encoder() {
 						if confirm { return res.open_fd(); }
 						return Task::done(Message::SaveImage(res));
 					}
 
 					// Advance the encoder.
-					if current.next_encoder() { return Task::done(Message::NextStep); }
+					return Task::done(Message::NextEncoder);
 				}
-
 				// This image is done; move onto the next!
-				self.current = None;
-				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
+				else if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 			},
 
 			// Reabsorb the encoder (stolen above) and either display the
@@ -434,25 +456,23 @@ impl App {
 						return Task::none();
 					}
 
-					// Save it!
+					// Log and save the results, if any.
 					if let Some(res) = current.finish_encoder() {
 						if confirm { return res.open_fd(); }
 						return Task::done(Message::SaveImage(res));
 					}
 
 					// Advance the encoder.
-					if current.next_encoder() { return Task::done(Message::NextStep); }
+					return Task::done(Message::NextEncoder);
 				}
-
 				// This image is done; move onto the next!
-				self.current = None;
-				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
+				else if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
 			},
 
 			// Save the image and continue.
-			Message::SaveImage(mut wrapper) => {
-				if let Some(current) = &mut self.current {
-					// Actually save the image.
+			Message::SaveImage(mut wrapper) =>
+				if self.current.is_some() {
+					// Actually save the image, if any.
 					wrapper.save();
 
 					// Log the results.
@@ -463,41 +483,63 @@ impl App {
 					}
 
 					// Advance the encoder.
-					if current.next_encoder() { return Task::done(Message::NextStep); }
+					return Task::done(Message::NextEncoder);
 				}
-
 				// This image is done; move onto the next!
-				self.current = None;
-				if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
-			},
+				else if ! self.paths.is_empty() { return Task::done(Message::NextImage); },
 
-			// Open File Dialogue (Files).
+			// Open File/Dir Dialogue.
 			Message::OpenFd(dir) => return self.open_fd(dir),
 
 			// Open a local image path using whatever (external) program the
 			// desktop environment would normally use to open that file type.
-			Message::OpenFile(src) => {
+			Message::OpenFile(src) =>
 				// If this fails, note the problem so we can let the user
 				// know that we aren't just ignoring them.
 				if open::that_detached(src).is_err() {
 					return Task::done(Message::Error(MessageError::NoOpen));
-				}
-			},
+				},
 
 			// Open a URL in e.g. the system's default web browser.
-			Message::OpenUrl(url) => {
+			Message::OpenUrl(url) =>
 				// If this fails, note the problem so we can let the user
 				// know that we aren't just ignoring them.
 				if open::that_detached(url).is_err() {
 					return Task::done(Message::Error(MessageError::NoOpen));
-				}
-			},
+				},
 
 			// Toggle a flag.
 			Message::ToggleFlag(flag) => { self.toggle_flag(flag); },
+
+			// Unset a flag.
+			Message::UnsetFlag(flag) => { self.flags &= ! flag; },
 		}
 
 		Task::none()
+	}
+
+	/// # Update Helper: Switch Encoder.
+	///
+	/// Toggle the `SWITCHED_ENCODER` flag and return a chain of messages to
+	/// get it up and running.
+	///
+	/// Note: this does not actually _select_ the encoder; that has to be
+	/// handled beforehand by the caller as there is some contextual nuance.
+	fn update_switch_encoder__(&mut self) -> Task<Message> {
+		// If the user isn't involved or is only using one encoder, there's
+		// no need to promote the change.
+		if self.automatic() || self.count_encoders() < 2 {
+			Task::done(Message::NextStep)
+		}
+		// Otherwise let's give them a quick heads up!
+		else {
+			self.flags |= SWITCHED_ENCODER;
+			Task::future(async {
+				async_std::task::sleep(Duration::from_millis(1500)).await;
+				Message::UnsetFlag(SWITCHED_ENCODER)
+			})
+				.chain(Task::done(Message::NextStep))
+		}
 	}
 
 	/// # Subscription.
@@ -521,12 +563,18 @@ impl App {
 	///
 	/// This method returns everything `iced` needs to draw the screen.
 	///
-	/// Under the hood, this defers to either `view_home` or `view_ab`
-	/// depending on whether or not an image source is actively being worked
-	/// on.
+	/// Under the hood, this defers to either `view_home`, `view_encoder`, or
+	/// `view_ab` depending on the state of things.
 	pub(super) fn view(&self) -> Container<Message> {
 		// If we're processing an image, return the A/B screen.
 		if self.current.as_ref().is_some_and(CurrentImage::active) {
+			// Unless we _just_ switched encoders, in which case we should
+			// announce it real quick.
+			if self.has_flag(SWITCHED_ENCODER) {
+				if let Some(kind) = self.current.as_ref().and_then(CurrentImage::output_kind) {
+					return self.view_encoder(kind);
+				}
+			}
 			self.view_ab()
 		}
 		// Otherwise the home screen.
@@ -894,6 +942,60 @@ impl App {
 				.size(CHK_SIZE),
 		)
 			.spacing(5)
+	}
+}
+
+/// # View: Encoder.
+impl App {
+	#[expect(clippy::unused_self, reason = "Required by API.")]
+	/// # View: Encoder.
+	///
+	/// The constant format changes can get confusing. This screen is used to
+	/// (very briefly) announce the changes.
+	fn view_encoder(&self, kind: ImageKind) -> Container<Message> {
+		use iced::widget::container::Style;
+
+		container(
+			column!(
+				text("Up Next…")
+					.size(18)
+					.font(FONT_BOLD),
+				match kind {
+					ImageKind::Avif => rich_text!(
+						span("A").color(NiceColors::PURPLE),
+						span("v").color(NiceColors::TEAL),
+						span("i").color(NiceColors::BLUE),
+						span("f").color(NiceColors::YELLOW),
+					),
+					ImageKind::Jxl => rich_text!(
+						span("J").color(NiceColors::BLUE),
+						span("P").color(NiceColors::GREEN),
+						span("E").color(NiceColors::PINK),
+						span("G").color(NiceColors::YELLOW),
+						span("X").color(NiceColors::PURPLE),
+						span("L").color(NiceColors::RED),
+					),
+					ImageKind::Webp => rich_text!(
+						span("W").color(NiceColors::RED),
+						span("e").color(NiceColors::PURPLE),
+						span("b").color(NiceColors::BLUE),
+						span("P").color(NiceColors::GREEN),
+					),
+					_ => rich_text!(span("???")),
+				}
+					.size(72)
+					.font(FONT_BOLD),
+			)
+				.align_x(Horizontal::Left)
+				.width(Shrink)
+		)
+			.padding(20)
+			.center(Fill)
+			.style(move |_| Style {
+				text_color: Some(NiceColors::WHITE),
+				background: Some(Background::Color(NiceColors::BLACK)),
+				..Style::default()
+			})
 	}
 }
 
@@ -1904,38 +2006,93 @@ impl ImageResultWrapper {
 ///
 /// They're signals, basically.
 pub(super) enum Message {
-	/// # File Open Dialog.
+	/// # Add Image Source Path(s) to the Queue.
+	///
+	/// This signal processes the results from `OpenFd`. It will trigger
+	/// `NextImage` if paths are found and encoding is not already underway.
 	AddPaths(Dowser),
 
 	/// # An Error.
+	///
+	/// See `MessageError` for details.
 	Error(MessageError),
 
 	/// # Encoding Feedback.
+	///
+	/// This signal processes user feedback, rejecting a candidate if `false`,
+	/// accepting it if `true`. It will trigger `NextStep` afterwards to set
+	/// the next candidate crunching.
 	Feedback(bool),
 
+	/// # Next Encoder.
+	///
+	/// This signal is used to quickly announce a change in encoders (if the
+	/// context warrants it). It triggers a `NextStep` when done.
+	NextEncoder,
+
 	/// # Next Image.
+	///
+	/// This is essentially the outermost image-related signal. It moves the
+	/// first next queued path to `current` and triggers `NextEncoder`.
 	NextImage,
 
 	/// # Next Step.
+	///
+	/// This signal generates the next candidate image in a separate thread,
+	/// triggering a `NextStepDone` once everything is ready.
+	///
+	/// It is repeated after each round of `Feedback` until no more qualities
+	/// remain to be tested.
 	NextStep,
 
 	/// # Finish Next Step.
+	///
+	/// This signal consumes the data produced by `NextStep`. (The two always
+	/// go together.)
+	///
+	/// In most contexts the program will idle after this, waiting for user
+	/// feedback, but if we're out of candidates to generate, it'll move onto
+	/// `SaveImage`, or `NextEncoder` depending on the state of things.
 	NextStepDone(EncodeWrapper),
 
 	/// # Save Image (and Continue).
+	///
+	/// This signal is used to save the "best" image candidate to disk (if any)
+	/// and log the results.
+	///
+	/// Output paths are either pre-generated or confirmed via file dialogue
+	/// beforehand.
+	///
+	/// When done it triggers `NextEncoder`.
 	SaveImage(ImageResultWrapper),
 
 	/// # Open File Dialogue.
+	///
+	/// This signal pops a file picker if `false` or directory picker if `true`.
+	/// Unless canceled, the results will be consumed via an `AddPaths` signal.
 	OpenFd(bool),
 
 	/// # Open File.
+	///
+	/// Poor man's link; ask the DE to open the thing with whatever program
+	/// it thinks appropriate.
 	OpenFile(PathBuf),
 
 	/// # Open URL.
+	///
+	/// Poor man's link; ask the DE to open the thing with whatever program
+	/// it thinks appropriate.
 	OpenUrl(&'static str),
 
 	/// # Toggle Flag.
+	///
+	/// This signal is used to toggle program settings like Night Mode.
 	ToggleFlag(u16),
+
+	/// # Unset Flag.
+	///
+	/// Like `ToggleFlag`, but only for removal.
+	UnsetFlag(u16),
 }
 
 
