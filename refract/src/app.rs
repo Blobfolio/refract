@@ -27,6 +27,7 @@ use iced::{
 		Vertical,
 	},
 	Background,
+	Color,
 	ContentFit,
 	Element,
 	Fill,
@@ -295,6 +296,12 @@ impl App {
 		// Add the first and the rest.
 		self.paths.insert(first);
 		self.paths.extend(paths);
+	}
+
+	/// # Current Foreground Color.
+	const fn fg(&self) -> Color {
+		if self.has_flag(OTHER_NIGHT) { DARK_PALETTE.text }
+		else { LIGHT_PALETTE.text }
 	}
 
 	/// # Toggle Flag.
@@ -641,6 +648,7 @@ impl App {
 			.width(Fill)
 	}
 
+	#[expect(clippy::too_many_lines, reason = "There's lots to do!")]
 	/// # View: Activity Log.
 	///
 	/// This returns a table containing detailed information about each of the
@@ -653,9 +661,7 @@ impl App {
 		if self.done.is_empty() { return self.view_logo(); }
 
 		// Follow the theme for coloration pointers.
-		let fg =
-			if self.has_flag(OTHER_NIGHT) { DARK_PALETTE.text }
-			else { LIGHT_PALETTE.text };
+		let fg = self.fg();
 
 		// Reformat the data.
 		let table = ActivityTable::from(self.done.as_slice());
@@ -681,53 +687,82 @@ impl App {
 		));
 
 		// The rows, interspersed with dividers for each new source.
-		for ActivityTableRow { src, kind, quality, len, ratio, time } in table.0 {
+		let mut last_dir = OsStr::new("");
+		for ActivityTableRow { src, kind, quality, len, ratio, time } in &table.0 {
 			let Some(dir) = src.parent().map(Path::as_os_str) else { continue; };
 			let Some(file) = src.file_name() else { continue; };
 			let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
+			let skipped = is_src && time.is_some();
 			let color =
-				if is_src { fg }
+				if is_src {
+					if skipped { NiceColors::RED } else { fg }
+				}
 				else if len.is_some() { NiceColors::GREEN }
 				else { NiceColors::RED };
 
-			let link =
-				if len.is_some() && src.is_file() { Some(Message::OpenFile(src.to_path_buf())) }
-				else { None };
-
 			if is_src {
+				last_dir = OsStr::new("");
 				lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
 			}
 
 			lines = lines.push(rich_text!(
-				span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
-				span(file.to_string_lossy().into_owned()).color(color).link_maybe(link),
-				span(format!("{} | ", " ".repeat(widths[0].saturating_sub(src.to_string_lossy().width())))).color(NiceColors::PINK),
+				// Path, pretty-formatted.
+				span(format!("{}/", dir.to_string_lossy()))
+					.color(
+						if dir == last_dir { NiceColors::TRANSPARENT }
+						else { NiceColors::GREY }
+					),
+				span(file.to_string_lossy().into_owned())
+					.color(color)
+					.link_maybe((len.is_some() && src.is_file()).then(|| Message::OpenFile(src.to_path_buf()))),
+				span(format!(
+					"{:<w$} | ",
+					"",
+					w=widths[0].saturating_sub(src.to_string_lossy().width())
+				))
+					.color(NiceColors::PINK),
+
+				// Kind.
 				span(format!("{kind:<w$}", w=widths[1])),
 				span(" | ").color(NiceColors::PINK),
+
+				// Quality.
 				span(format!("{:>w$}", quality.as_str(), w=widths[2])),
 				span(" | ").color(NiceColors::PINK),
+
+				// Size.
 				span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
 				span(" | ").color(NiceColors::PINK),
+
+				// Ratio.
 				ratio.as_ref().map_or_else(
-					|| span(""),
+					|| span(" ".repeat(widths[4])),
 					|n| {
 						let nice = n.precise_str(4);
-						let tmp = span(format!("{nice:>w$}", w=widths[4]));
-						if nice == "1.0000" { tmp.color(NiceColors::GREY) }
-						else { tmp }
+						span(format!("{nice:>w$}", w=widths[4]))
+							.color_maybe((nice == "1.0000").then_some(NiceColors::GREY))
 					},
 				),
 				span(" | ").color(NiceColors::PINK),
+
+				// Time.
 				time.as_ref().map_or_else(
 					|| span(""),
-					|n| {
-						let nice = n.precise_str(3);
-						let tmp = span(format!("{nice:>w$}s", w=widths[5] - 1));
-						if nice == "0.000" { tmp.color(NiceColors::GREY) }
-						else { tmp }
-					},
+					|n|
+						if skipped {
+							span(format!("{:>w$}", "skipped", w=widths[5]))
+								.color(NiceColors::RED)
+						}
+						else {
+							let nice = n.precise_str(3);
+							span(format!("{nice:>w$}s", w=widths[5] - 1))
+								.color_maybe((nice == "0.000").then_some(NiceColors::GREY))
+						},
 				),
 			));
+
+			// Update the last directory before leaving.
+			last_dir = dir;
 		}
 
 		// Add footnotes.
@@ -744,7 +779,7 @@ impl App {
 			))
 			.push(rich_text!(
 				span("**").color(NiceColors::PURPLE),
-				span(" Total encoding time.").color(NiceColors::GREY),
+				span(" Total encoding time, rejects and all.").color(NiceColors::GREY),
 			));
 
 		scrollable(container(lines).width(Fill).padding(10))
@@ -1073,7 +1108,9 @@ impl App {
 
 		let active = current.candidate.is_some();
 		let new_kind = current.output_kind().unwrap_or(ImageKind::Png);
-		let mut formats = Vec::new();
+		let fg = self.fg();
+
+		let mut formats = Vec::with_capacity(5);
 		for (flag, kind) in [
 			(FMT_WEBP, ImageKind::Webp),
 			(FMT_AVIF, ImageKind::Avif),
@@ -1096,18 +1133,35 @@ impl App {
 
 		column!(
 			// Path.
-			text(current.src.to_string_lossy()).color(NiceColors::GREY),
+			rich_text!(
+				span(format!(
+					"{}/",
+					current.src.parent().map_or(Cow::Borrowed(""), Path::to_string_lossy)
+				))
+					.color(NiceColors::GREY),
+				span(
+					current.src.file_name().map_or(Cow::Borrowed(""), |o| o.to_string_lossy()).into_owned()
+				)
+					.color(fg),
+			),
 
 			// Formats.
 			Rich::with_spans(formats),
 
 			// Cancel.
 			text(""),
-
 			rich_text!(
-				span("Not feeling it? "),
-				span("Skip this image.")
-					.color(NiceColors::ORANGE)
+				span("Ready for bed? ")
+					.color(
+						if active { fg }
+						else { fg.scale_alpha(0.5) }
+					),
+				span("Skip ahead!")
+					.color(
+						if active { NiceColors::ORANGE }
+						else { NiceColors::ORANGE.scale_alpha(0.5) }
+					)
+					.font(FONT_BOLD)
 					.link_maybe(active.then_some(Message::NextImage)),
 			)
 		)
@@ -1336,7 +1390,10 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 				quality: QualityValueFmt::None,
 				len: Some(NiceU64::from(job.src_len)),
 				ratio: Some(NiceFloat::from(1.0)),
-				time: None,
+
+				// Sources never have times; we can use this to signal when
+				// an image was skipped.
+				time: job.dst.is_empty().then_some(&NiceFloat::ZERO),
 			});
 
 			// Push the conversions.
@@ -1437,7 +1494,12 @@ impl ActivityTableRow<'_> {
 			self.quality.len(),
 			self.len.as_ref().map_or(0, NiceU64::len),
 			self.ratio.as_ref().map_or(0, |n| n.precise_str(4).len()),
-			self.time.as_ref().map_or(0, |n| n.precise_str(3).len() + 1),
+			self.time.as_ref().map_or(0, |n|
+				// Sources never have times; if there's a value here, it'll
+				// get printed as "skipped".
+				if matches!(self.kind, ImageKind::Jpeg | ImageKind::Png) { 7 }
+				else { n.precise_str(3).len() + 1 }
+			),
 		]
 	}
 }
