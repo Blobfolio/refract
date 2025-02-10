@@ -61,8 +61,8 @@ File sizes are taken into account as well; refract will only suggest/save conver
 
 Refract is pretty straightforward:
 
-1. Choose the output formats and compression strategies;
-2. Choose one or more source files to crunch;
+1. Choose the output formats (and other settings);
+2. Choose one or more JPEG/PNG source files to crunch;
 3. Sit back and wait for the feedback prompts;
 
 For best results, be sure to optimize your input sources _before_ re-encoding them with refract. (The CLI tool [flaca](https://github.com/Blobfolio/flaca) is great for this, and fully automatic.)

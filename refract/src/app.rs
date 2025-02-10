@@ -58,6 +58,7 @@ use iced::{
 		text,
 		text::Rich,
 		tooltip,
+		toggler,
 	},
 };
 use refract_core::{
@@ -628,7 +629,7 @@ impl App {
 				rich_text!(
 					span("Choose one or more "),
 					span("JPEG").font(FONT_BOLD),
-					span(" or "),
+					span("/"),
 					span("PNG").font(FONT_BOLD),
 					span(" images."),
 				),
@@ -646,6 +647,8 @@ impl App {
 	/// source images and next-gen conversions that have been processed,
 	/// successfully or otherwise.
 	fn view_log(&self) -> Element<'_, Message> {
+		use unicode_width::UnicodeWidthStr;
+
 		// If there's no activity, display our logo instead.
 		if self.done.is_empty() { return self.view_logo(); }
 
@@ -678,63 +681,53 @@ impl App {
 		));
 
 		// The rows, interspersed with dividers for each new source.
-		for row in table.0 {
-			match row {
-				Err(path) => {
-					let Some(dir) = path.parent() else { continue; };
-					let Some(file) = path.file_name() else { continue; };
-					lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
-					lines = lines.push(rich_text!(
-						span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
-						span(file.to_string_lossy()).color(NiceColors::RED),
-						span(": Nothing doing.").color(NiceColors::GREY),
-					));
-				},
-				Ok(ActivityTableRow { src, kind, quality, len, ratio, time }) => {
-					use unicode_width::UnicodeWidthStr;
+		for ActivityTableRow { src, kind, quality, len, ratio, time } in table.0 {
+			let Some(dir) = src.parent().map(Path::as_os_str) else { continue; };
+			let Some(file) = src.file_name() else { continue; };
+			let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
+			let color =
+				if is_src { fg }
+				else if len.is_some() { NiceColors::GREEN }
+				else { NiceColors::RED };
 
-					let Some(dir) = src.parent().map(Path::as_os_str) else { continue; };
-					let Some(file) = src.file_name() else { continue; };
-					let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
-					let color =
-						if is_src { fg }
-						else if len.is_some() { NiceColors::GREEN }
-						else { NiceColors::RED };
+			let link =
+				if len.is_some() && src.is_file() { Some(Message::OpenFile(src.to_path_buf())) }
+				else { None };
 
-					let link =
-						if len.is_some() && src.is_file() { Some(Message::OpenFile(src.to_path_buf())) }
-						else { None };
-
-					if is_src {
-						lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
-					}
-
-					lines = lines.push(rich_text!(
-						span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
-						span(file.to_string_lossy().into_owned()).color(color).link_maybe(link),
-						span(format!("{} | ", " ".repeat(widths[0].saturating_sub(src.to_string_lossy().width())))).color(NiceColors::PINK),
-						span(format!("{kind:<w$}", w=widths[1])),
-						span(" | ").color(NiceColors::PINK),
-						span(format!("{:>w$}", quality.as_str(), w=widths[2])),
-						span(" | ").color(NiceColors::PINK),
-						span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
-						span(" | ").color(NiceColors::PINK),
-						span(format!("{:>w$}", ratio.as_ref().map_or("", |n| n.precise_str(4)), w=widths[4])),
-						span(" | ").color(NiceColors::PINK),
-						time.as_ref().map_or_else(
-							|| span(""),
-							|n| {
-								let nice = n.precise_str(3);
-								let tmp = span(format!("{:>w$}s", n.precise_str(3), w=widths[5] - 1));
-								if nice.bytes().all(|b| matches!(b, b'0' | b'.')) {
-									tmp.color(NiceColors::GREY)
-								}
-								else { tmp }
-							},
-						),
-					));
-				},
+			if is_src {
+				lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
 			}
+
+			lines = lines.push(rich_text!(
+				span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
+				span(file.to_string_lossy().into_owned()).color(color).link_maybe(link),
+				span(format!("{} | ", " ".repeat(widths[0].saturating_sub(src.to_string_lossy().width())))).color(NiceColors::PINK),
+				span(format!("{kind:<w$}", w=widths[1])),
+				span(" | ").color(NiceColors::PINK),
+				span(format!("{:>w$}", quality.as_str(), w=widths[2])),
+				span(" | ").color(NiceColors::PINK),
+				span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
+				span(" | ").color(NiceColors::PINK),
+				ratio.as_ref().map_or_else(
+					|| span(""),
+					|n| {
+						let nice = n.precise_str(4);
+						let tmp = span(format!("{nice:>w$}", w=widths[4]));
+						if nice == "1.0000" { tmp.color(NiceColors::GREY) }
+						else { tmp }
+					},
+				),
+				span(" | ").color(NiceColors::PINK),
+				time.as_ref().map_or_else(
+					|| span(""),
+					|n| {
+						let nice = n.precise_str(3);
+						let tmp = span(format!("{nice:>w$}s", w=widths[5] - 1));
+						if nice == "0.000" { tmp.color(NiceColors::GREY) }
+						else { tmp }
+					},
+				),
+			));
 		}
 
 		// Add footnotes.
@@ -904,22 +897,80 @@ impl App {
 	/// This returns the "Accept" and "Reject" buttons used for candidate image
 	/// feedback, though they'll only be enabled if the program is ready to
 	/// receive said feedback.
-	fn view_ab_feedback(&self) -> Row<Message> {
-		let active = self.has_candidate();
+	fn view_ab_feedback(&self) -> Column<Message> {
+		let Some(current) = &self.current else { return Column::new(); };
+		let active = current.candidate.is_some();
+		let b_side = active && self.has_flag(OTHER_BSIDE);
+		let src_kind = current.input.kind();
+		let dst_kind = current.output_kind();
 
-		// Keep and discard buttons.
-		let btn_no = button(text("Reject").size(18).font(FONT_BOLD))
-			.style(|_, status| button_style(status, NiceColors::RED))
-			.padding(BTN_PADDING)
-			.on_press_maybe(active.then_some(Message::Feedback(false)));
-		let btn_yes = button(text("Accept").size(18).font(FONT_BOLD))
-			.style(|_, status| button_style(status, NiceColors::GREEN))
-			.padding(BTN_PADDING)
-			.on_press_maybe(active.then_some(Message::Feedback(true)));
+		column!(
+			// Buttons.
+			row!(
+				button(text("Reject").size(18).font(FONT_BOLD))
+					.style(|_, status| button_style(status, NiceColors::RED))
+					.padding(BTN_PADDING)
+					.on_press_maybe(active.then_some(Message::Feedback(false))),
 
-		row!(btn_no, btn_yes)
-			.width(Shrink)
+				button(text("Accept").size(18).font(FONT_BOLD))
+					.style(|_, status| button_style(status, NiceColors::GREEN))
+					.padding(BTN_PADDING)
+					.on_press_maybe(active.then_some(Message::Feedback(true))),
+
+				tooltip(
+					button(text("?").size(18).font(FONT_BOLD))
+						.style(|_, status| button_style(status, NiceColors::GREY))
+						.padding(Padding {
+							top: 10.0,
+							right: 15.0,
+							bottom: 10.0,
+							left: 15.0,
+						}),
+					container(
+						rich_text!(
+							span("Forget about images past. Are you happy with "),
+							span("this").underline(true),
+							span(" one? If yes, "),
+							span("accept").color(NiceColors::GREEN).font(FONT_BOLD),
+							span(" it. The best of the best will be saved at the very end."),
+						)
+							.size(12)
+					)
+						.padding(20)
+						.max_width(300_u16)
+						.style(|_| tooltip_style(! self.has_flag(OTHER_NIGHT))),
+					tooltip::Position::Top,
+				)
+			)
+				.width(Shrink)
+				.align_y(Vertical::Center)
+				.spacing(10),
+
+			// A/B toggle.
+			row!(
+				rich_text!(
+					span(src_kind.as_str())
+						.color(if b_side { NiceColors::GREY } else { NiceColors::PURPLE })
+						.link_maybe(b_side.then_some(Message::ToggleFlag(OTHER_BSIDE)))
+						.font(FONT_BOLD)
+				),
+
+				toggler(b_side)
+					.spacing(0)
+					.on_toggle_maybe(active.then_some(|_| Message::ToggleFlag(OTHER_BSIDE))),
+
+				rich_text!(
+					span(dst_kind.map_or("New", ImageKind::as_str))
+						.color(if b_side { NiceColors::PINK } else { NiceColors::GREY })
+						.link_maybe((active && ! b_side).then_some(Message::ToggleFlag(OTHER_BSIDE)))
+						.font(FONT_BOLD)
+				),
+			)
+				.spacing(5)
+				.align_y(Vertical::Center)
+		)
 			.spacing(10)
+			.align_x(Horizontal::Center)
 	}
 
 	/// # View: Image Header.
@@ -1020,6 +1071,7 @@ impl App {
 	fn view_ab_progress(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 
+		let active = current.candidate.is_some();
 		let new_kind = current.output_kind().unwrap_or(ImageKind::Png);
 		let mut formats = Vec::new();
 		for (flag, kind) in [
@@ -1043,8 +1095,21 @@ impl App {
 		formats.insert(0, span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD));
 
 		column!(
+			// Path.
 			text(current.src.to_string_lossy()).color(NiceColors::GREY),
+
+			// Formats.
 			Rich::with_spans(formats),
+
+			// Cancel.
+			text(""),
+
+			rich_text!(
+				span("Not feeling it? "),
+				span("Skip this image.")
+					.color(NiceColors::ORANGE)
+					.link_maybe(active.then_some(Message::NextImage)),
+			)
 		)
 			.spacing(5)
 			.align_x(Horizontal::Center)
@@ -1258,52 +1323,47 @@ impl App {
 /// It holds the path, kind, quality, file size, and compression ratio for each
 /// source and output, whether saved or not, though owing to the variety, most
 /// fields are optional.
-struct ActivityTable<'a>(Vec<Result<ActivityTableRow<'a>, &'a Path>>);
+struct ActivityTable<'a>(Vec<ActivityTableRow<'a>>);
 
 impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 	fn from(src: &'a [ImageResults]) -> Self {
 		let mut out = Vec::with_capacity(src.len() * 5);
 		for job in src {
-			// Nothing?
-			if job.dst.is_empty() { out.push(Err(job.src.as_path())); }
-			// Something!
-			else {
-				// Push the source.
-				out.push(Ok(ActivityTableRow {
-					src: Cow::Borrowed(&job.src),
-					kind: job.src_kind,
-					quality: QualityValueFmt::None,
-					len: Some(NiceU64::from(job.src_len)),
-					ratio: Some(NiceFloat::from(1.0)),
-					time: None,
-				}));
+			// Push the source.
+			out.push(ActivityTableRow {
+				src: Cow::Borrowed(&job.src),
+				kind: job.src_kind,
+				quality: QualityValueFmt::None,
+				len: Some(NiceU64::from(job.src_len)),
+				ratio: Some(NiceFloat::from(1.0)),
+				time: None,
+			});
 
-				// Push the conversions.
-				for (kind, res) in &job.dst {
-					if let Some((len, quality)) = res.len.zip(res.quality) {
-						out.push(Ok(ActivityTableRow {
-							src: Cow::Borrowed(&res.src),
-							kind: *kind,
-							quality: quality.quality_fmt(),
-							len: Some(NiceU64::from(len)),
-							ratio: job.src_len.get().div_float(len.get()).map(NiceFloat::from),
-							time: Some(&res.time),
-						}));
-					}
-					else {
-						let mut dst = job.src.clone();
-						let v = dst.as_mut_os_string();
-						v.push(".");
-						v.push(kind.extension());
-						out.push(Ok(ActivityTableRow {
-							src: Cow::Owned(dst),
-							kind: *kind,
-							quality: QualityValueFmt::None,
-							len: None,
-							ratio: None,
-							time: Some(&res.time),
-						}));
-					}
+			// Push the conversions.
+			for (kind, res) in &job.dst {
+				if let Some((len, quality)) = res.len.zip(res.quality) {
+					out.push(ActivityTableRow {
+						src: Cow::Borrowed(&res.src),
+						kind: *kind,
+						quality: quality.quality_fmt(),
+						len: Some(NiceU64::from(len)),
+						ratio: job.src_len.get().div_float(len.get()).map(NiceFloat::from),
+						time: Some(&res.time),
+					});
+				}
+				else {
+					let mut dst = job.src.clone();
+					let v = dst.as_mut_os_string();
+					v.push(".");
+					v.push(kind.extension());
+					out.push(ActivityTableRow {
+						src: Cow::Owned(dst),
+						kind: *kind,
+						quality: QualityValueFmt::None,
+						len: None,
+						ratio: None,
+						time: Some(&res.time),
+					});
 				}
 			}
 		}
@@ -1330,7 +1390,7 @@ impl ActivityTable<'_> {
 	/// column, packed into a more serviceable array format.
 	fn widths(&self) -> [usize; 6] {
 		self.0.iter()
-			.filter_map(|r| r.as_ref().map(ActivityTableRow::widths).ok())
+			.map(ActivityTableRow::widths)
 			.fold(Self::HEADERS.map(str::len), |mut acc, v| {
 				for (w1, w2) in acc.iter_mut().zip(v) {
 					if *w1 < w2 { *w1 = w2; }
