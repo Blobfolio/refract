@@ -10,7 +10,6 @@ use std::{
 
 
 
-#[cfg(feature = "bin")]
 /// # Help Text.
 const HELP: &str = concat!(r"
        ..oFaa7l;'
@@ -95,35 +94,15 @@ pub enum RefractError {
 	/// # Image is too big.
 	TooBig,
 
-	#[cfg(feature = "bin")]
-	/// # GTK failed.
-	GtkInit,
-
-	#[cfg(feature = "bin")]
-	/// # No source image set.
-	MissingSource,
-
-	#[cfg(feature = "bin")]
-	/// # No encoders enabled.
-	NoEncoders,
-
-	#[cfg(feature = "bin")]
-	/// # Result was ont saved.
-	NoSave,
-
-	#[cfg(feature = "bin")]
 	/// # I/O read error.
 	Read,
 
-	#[cfg(feature = "bin")]
 	/// # I/O write error.
 	Write,
 
-	#[cfg(feature = "bin")]
 	/// # Print Help (Not an Error).
 	PrintHelp,
 
-	#[cfg(feature = "bin")]
 	/// # Print Version (Not an Error).
 	PrintVersion,
 }
@@ -173,29 +152,9 @@ impl RefractError {
 			Self::NothingDoing => "There is nothing else to do.",
 			Self::Overflow => "The image dimensions are out of range.",
 			Self::TooBig => "The encoded image was too big.",
-
-			#[cfg(feature = "bin")]
-			Self::GtkInit => "Failed to initialize GTK.",
-
-			#[cfg(feature = "bin")]
-			Self::MissingSource => "A source image must be set before a candidate image.",
-
-			#[cfg(feature = "bin")]
-			Self::NoEncoders => "At least one encoder must be enabled.",
-
-			#[cfg(feature = "bin")]
-			Self::NoSave => "The result was not saved.",
-
-			#[cfg(feature = "bin")]
 			Self::Read => "Unable to read the source file.",
-
-			#[cfg(feature = "bin")]
 			Self::Write => "Unable to save the file.",
-
-			#[cfg(feature = "bin")]
 			Self::PrintHelp => HELP,
-
-			#[cfg(feature = "bin")]
 			Self::PrintVersion => concat!("Refract v", env!("CARGO_PKG_VERSION")),
 		}
 	}

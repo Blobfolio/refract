@@ -53,10 +53,6 @@ optional = true
 [features]
 default = [ "images" ]
 
-# This feature adds a few generic RefractError types for the binary. It is not
-# something external crates implementing this library would really need to use.
-bin = []
-
 # Enable all image formats.
 images = [ "jpeg", "png", "avif", "jxl", "webp" ]
 

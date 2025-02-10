@@ -119,7 +119,7 @@ features = [ "async-std", "image-without-codecs" ]
 
 [dependencies.refract_core]
 path = "../refract_core"
-features = [ "bin", "images" ]
+features = [ "images" ]
 
 [dependencies.utc2k]
 version = "0.11.*"
