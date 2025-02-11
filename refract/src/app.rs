@@ -208,7 +208,7 @@ impl App {
 				Argument::Key("--no-lossless") => { flags &= ! MODE_LOSSLESS; },
 				Argument::Key("--no-lossy") => { flags &= ! MODE_LOSSY; },
 				Argument::Key("--no-ycbcr") => { flags &= ! MODE_LOSSY_YCBCR; },
-				Argument::Key("--save-auto") => { flags |= OTHER_SAVE_AUTO; },
+				Argument::Key("-s" | "--save-auto") => { flags |= OTHER_SAVE_AUTO; },
 				Argument::Key("-V" | "--version") => return Err(RefractError::PrintVersion),
 
 				Argument::KeyWithValue("-l" | "--list", s) => {

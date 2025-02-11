@@ -72,6 +72,7 @@ long = "--no-ycbcr"
 description = "Skip AVIF YCbCr encoding passes."
 
 [[package.metadata.bashman.switches]]
+short = "-s"
 long = "--save-auto"
 description = "Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation."
 

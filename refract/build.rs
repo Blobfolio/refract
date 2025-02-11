@@ -37,7 +37,7 @@ fn build_cli() {
 		"--no-lossless",
 		"--no-lossy",
 		"--no-ycbcr",
-		"--save-auto",
+		"-s", "--save-auto",
 		"-V", "--version",
 	]);
 	builder.push_keys_with_values(["-l", "--list"]);

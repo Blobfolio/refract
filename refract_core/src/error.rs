@@ -43,7 +43,7 @@ MODE FLAGS:
 
 MISC FLAGS:
     -h, --help        Print help information and exit.
-        --save-auto   Automatically save successful conversions to their source
+    -s, --save-auto   Automatically save successful conversions to their source
                       paths — with new extensions appended — instead of popping
                       file dialogues for confirmation.
     -V, --version     Print version information and exit.
