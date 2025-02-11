@@ -113,14 +113,17 @@ const MODE_LOSSY_YCBCR: u16 = 0b0000_0010_0000;
 /// # Show B (Candidate) Image.
 const OTHER_BSIDE: u16 =      0b0000_0100_0000;
 
+/// # Exit After.
+const OTHER_EXIT_AUTO: u16 =  0b0000_1000_0000;
+
 /// # Night Mode.
-const OTHER_NIGHT: u16 =      0b0000_1000_0000;
+const OTHER_NIGHT: u16 =      0b0001_0000_0000;
 
 /// # Save w/o Prompt.
-const OTHER_SAVE_AUTO: u16 =  0b0001_0000_0000;
+const OTHER_SAVE_AUTO: u16 =  0b0010_0000_0000;
 
 /// # New Encoder.
-const SWITCHED_ENCODER: u16 = 0b0010_0000_0000;
+const SWITCHED_ENCODER: u16 = 0b0100_0000_0000;
 
 /// # All Formats.
 const FMT_FLAGS: u16 =
@@ -201,6 +204,7 @@ impl App {
 			.with_keywords(include!(concat!(env!("OUT_DIR"), "/argyle.rs")));
 		for arg in args {
 			match arg {
+				Argument::Key("-e" | "--exit-auto") => { flags |= OTHER_EXIT_AUTO; },
 				Argument::Key("-h" | "--help") => return Err(RefractError::PrintHelp),
 				Argument::Key("--no-avif") => { flags &= ! FMT_AVIF; },
 				Argument::Key("--no-jxl") => { flags &= ! FMT_JXL; },
@@ -372,19 +376,21 @@ impl App {
 			},
 
 			// Record an "error" message so we can let the user know what's up.
-			Message::Error(err) => { self.error.replace(err); },
+			Message::Error(err) => {
+				self.error.replace(err);
+				cli_log_error(err);
+			},
 
 			// Process the user's yay/nay evaluation of a candidate image.
-			Message::Feedback(feedback) =>
-				if let Some(current) = &mut self.current {
-					if current.candidate.is_some() {
-						self.flags &= ! OTHER_BSIDE;
-						// Back around again!
-						if current.feedback(feedback) {
-							return Task::done(Message::NextStep);
-						}
+			Message::Feedback(feedback) => if let Some(current) = &mut self.current {
+				if current.candidate.is_some() {
+					self.flags &= ! OTHER_BSIDE;
+					// Back around again!
+					if current.feedback(feedback) {
+						return Task::done(Message::NextStep);
 					}
-				},
+				}
+			},
 
 			// Switch to the next encoder.
 			Message::NextEncoder =>
@@ -392,10 +398,7 @@ impl App {
 					return self.update_switch_encoder__();
 				}
 				// This image is done; move onto the next!
-				else {
-					self.current = None;
-					if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
-				},
+				else { return Task::done(Message::NextImage); },
 
 			// If there are images in the queue, pull the first and start up
 			// the conversion process for it.
@@ -421,6 +424,10 @@ impl App {
 						}
 					}
 				}
+
+				// If we're here, there are no more images. If --exit-auto,
+				// that means quittin' time!
+				if self.has_flag(OTHER_EXIT_AUTO) { return iced::exit(); }
 			},
 
 			// Spawn a thread to get the next candidate image crunching or, if
@@ -442,7 +449,7 @@ impl App {
 					return Task::done(Message::NextEncoder);
 				}
 				// This image is done; move onto the next!
-				else if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
+				return Task::done(Message::NextImage);
 			},
 
 			// Reabsorb the encoder (stolen above) and either display the
@@ -466,7 +473,7 @@ impl App {
 					return Task::done(Message::NextEncoder);
 				}
 				// This image is done; move onto the next!
-				else if ! self.paths.is_empty() { return Task::done(Message::NextImage); }
+				return Task::done(Message::NextImage);
 			},
 
 			// Save the image and continue.
@@ -486,27 +493,21 @@ impl App {
 					return Task::done(Message::NextEncoder);
 				}
 				// This image is done; move onto the next!
-				else if ! self.paths.is_empty() { return Task::done(Message::NextImage); },
+				else { return Task::done(Message::NextImage); },
 
 			// Open File/Dir Dialogue.
 			Message::OpenFd(dir) => return self.open_fd(dir),
 
 			// Open a local image path using whatever (external) program the
 			// desktop environment would normally use to open that file type.
-			Message::OpenFile(src) =>
-				// If this fails, note the problem so we can let the user
-				// know that we aren't just ignoring them.
-				if open::that_detached(src).is_err() {
-					return Task::done(Message::Error(MessageError::NoOpen));
-				},
+			Message::OpenFile(src) => if open::that_detached(src).is_err() {
+				return Task::done(Message::Error(MessageError::NoOpen));
+			},
 
 			// Open a URL in e.g. the system's default web browser.
-			Message::OpenUrl(url) =>
-				// If this fails, note the problem so we can let the user
-				// know that we aren't just ignoring them.
-				if open::that_detached(url).is_err() {
-					return Task::done(Message::Error(MessageError::NoOpen));
-				},
+			Message::OpenUrl(url) => if open::that_detached(url).is_err() {
+				return Task::done(Message::Error(MessageError::NoOpen));
+			},
 
 			// Toggle a flag.
 			Message::ToggleFlag(flag) => { self.toggle_flag(flag); },
@@ -922,20 +923,30 @@ impl App {
 	/// This returns checkboxes for the program's one-off settings, i.e.
 	/// night mode and automatic saving.
 	fn view_settings_other(&self) -> Column<Message> {
+		macro_rules! tip {
+			($label:literal, $flag:ident, $help:literal) => (
+				tooltip(
+					checkbox($label, self.has_flag($flag))
+						.on_toggle(|_| Message::ToggleFlag($flag))
+						.size(CHK_SIZE),
+					container(text($help).size(12))
+						.padding(20)
+						.max_width(300_u16)
+						.style(|_| tooltip_style(! self.has_flag(OTHER_NIGHT))),
+					tooltip::Position::Bottom,
+				)
+			);
+		}
+
 		column!(
 			text("Other").color(NiceColors::PINK).font(FONT_BOLD),
-			tooltip(
-				checkbox("Auto-Save", self.has_flag(OTHER_SAVE_AUTO))
-					.on_toggle(|_| Message::ToggleFlag(OTHER_SAVE_AUTO))
-					.size(CHK_SIZE),
-				container(
-					text("Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation.")
-						.size(12)
-				)
-					.padding(20)
-					.max_width(300_u16)
-					.style(|_| tooltip_style(! self.has_flag(OTHER_NIGHT))),
-				tooltip::Position::Bottom,
+			tip!(
+				"Auto-Save", OTHER_SAVE_AUTO,
+				"Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation."
+			),
+			tip!(
+				"Auto-Exit", OTHER_SAVE_AUTO,
+				"Close the program after the last image has been processed."
 			),
 			checkbox("Night Mode", self.has_flag(OTHER_NIGHT))
 				.on_toggle(|_| Message::ToggleFlag(OTHER_NIGHT))
@@ -2180,7 +2191,7 @@ fn cli_log(src: &Path, quality: Option<Quality>) {
 
 /// # Cli Log: Sad Conversion.
 ///
-/// Print a quick timestamped error message to STDERR.
+/// Print a quick timestamped summary of a failed conversion to STDERR.
 fn cli_log_sad(src: &Path) {
 	let Some(dir) = src.parent() else { return; };
 	let Some(name) = src.file_name() else { return; };
@@ -2191,6 +2202,18 @@ fn cli_log_sad(src: &Path) {
 		now.time(),
 		dir.display(),
 		name.to_string_lossy(),
+	);
+}
+
+/// # Cli Log: Error.
+///
+/// Print a quick timestamped error message to STDERR.
+fn cli_log_error(src: MessageError) {
+	let now = FmtUtc2k::now_local();
+	eprintln!(
+		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m]\x1b[0;93m Warning:\x1b[0m {}",
+		now.time(),
+		src.as_str(),
 	);
 }
 

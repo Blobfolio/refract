@@ -30,6 +30,7 @@ pub fn main() {
 fn build_cli() {
 	let mut builder = KeyWordsBuilder::default();
 	builder.push_keys([
+		"-e", "--exit-auto",
 		"-h", "--help",
 		"--no-avif",
 		"--no-jxl",

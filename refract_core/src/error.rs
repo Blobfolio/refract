@@ -42,6 +42,7 @@ MODE FLAGS:
         --no-ycbcr    Skip AVIF YCbCr encoding passes.
 
 MISC FLAGS:
+    -e, --exit-auto   Exit the program after the last image has been processed.
     -h, --help        Print help information and exit.
     -s, --save-auto   Automatically save successful conversions to their source
                       paths — with new extensions appended — instead of popping

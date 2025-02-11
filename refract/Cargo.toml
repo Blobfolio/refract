@@ -43,6 +43,11 @@ man-dir = "../release/man"
 credits-dir = "../"
 
 [[package.metadata.bashman.switches]]
+short = "-e"
+long = "--exit-auto"
+description = "Exit the program after the last image has been processed."
+
+[[package.metadata.bashman.switches]]
 short = "-h"
 long = "--help"
 description = "Print help information."
