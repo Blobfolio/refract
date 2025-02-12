@@ -150,6 +150,31 @@ const BTN_PADDING: Padding = Padding {
 
 
 
+/// # Helper: Refract Button.
+macro_rules! btn {
+	($label:literal, $color:ident) => (btn!($label, $color, BTN_PADDING));
+	($label:literal, $color:ident, $pad:expr) => (
+		button(text($label).size(18).font(FONT_BOLD))
+			.style(|_, status| button_style(status, NiceColors::$color))
+			.padding($pad)
+	);
+}
+
+/// # Helper: Colorize and Embolden.
+macro_rules! emphasize {
+	($el:expr) => ($el.font(FONT_BOLD));
+	($el:expr, $color:ident) => (emphasize!($el, NiceColors::$color));
+	($el:expr, $color:expr) => ($el.color($color).font(FONT_BOLD));
+}
+
+/// # Helper: Image Kind.
+macro_rules! kind {
+	($kind:expr, $color:ident) => (kind!($kind, NiceColors::$color));
+	($kind:expr, $color:expr) => (emphasize!(span($kind.as_str()), $color));
+}
+
+
+
 /// # Application.
 ///
 /// This struct serves as a sort of universal state for `refract`. The
@@ -613,17 +638,14 @@ impl App {
 	fn view_about(&self) -> Column<Message> {
 		column!(
 			rich_text!(
-				span("Refract ").color(NiceColors::PINK),
-				span(concat!("v", env!("CARGO_PKG_VERSION"))).color(NiceColors::PURPLE),
-			)
-				.font(FONT_BOLD),
+				emphasize!(span("Refract "), PINK),
+				emphasize!(span(concat!("v", env!("CARGO_PKG_VERSION"))), PURPLE),
+			),
 
 			rich_text!(
-				span(env!("CARGO_PKG_REPOSITORY"))
-					.color(NiceColors::GREEN)
+				emphasize!(span(env!("CARGO_PKG_REPOSITORY")), GREEN)
 					.link(Message::OpenUrl(env!("CARGO_PKG_REPOSITORY")))
-			)
-				.font(FONT_BOLD),
+			),
 		)
 			.align_x(Horizontal::Right)
 			.spacing(5)
@@ -641,7 +663,7 @@ impl App {
 		self.error.map(|err|
 			container(row!(
 				rich_text!(
-					span("Warning: ").font(FONT_BOLD),
+					emphasize!(span("Warning: ")),
 					span(err.as_str()),
 				)
 					.width(Shrink)
@@ -666,17 +688,9 @@ impl App {
 		container(
 			column!(
 				row!(
-					button(text("File(s)").size(18).font(FONT_BOLD))
-						.style(|_, status| button_style(status, NiceColors::PURPLE))
-						.padding(BTN_PADDING)
-						.on_press(Message::OpenFd(false)),
-
+					btn!("File(s)", PURPLE).on_press(Message::OpenFd(false)),
 					text("or").size(18),
-
-					button(text("Directory").size(18).font(FONT_BOLD))
-						.style(|_, status| button_style(status, NiceColors::PINK))
-						.padding(BTN_PADDING)
-						.on_press(Message::OpenFd(true)),
+					btn!("Directory", PINK).on_press(Message::OpenFd(true)),
 				)
 					.align_y(Vertical::Center)
 					.spacing(10)
@@ -684,9 +698,9 @@ impl App {
 
 				rich_text!(
 					span("Choose one or more "),
-					span("JPEG").font(FONT_BOLD),
+					emphasize!(span("JPEG")),
 					span("/"),
-					span("PNG").font(FONT_BOLD),
+					emphasize!(span("PNG")),
 					span(" images."),
 				),
 			)
@@ -708,9 +722,6 @@ impl App {
 		// If there's no activity, display our logo instead.
 		if self.done.is_empty() { return self.view_logo(); }
 
-		// Follow the theme for coloration pointers.
-		let fg = self.fg();
-
 		// Reformat the data.
 		let table = ActivityTable::from(self.done.as_slice());
 
@@ -721,17 +732,17 @@ impl App {
 
 		// Finally, add all the lines!
 		let mut lines = column!(rich_text!(
-			span(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])), PURPLE),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])), PURPLE),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])), PURPLE),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])), PURPLE),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])), PURPLE),
 			span(" | ").color(NiceColors::PINK),
-			span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])).color(NiceColors::PURPLE).font(FONT_BOLD),
+			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])), PURPLE),
 		));
 
 		// The rows, interspersed with dividers for each new source.
@@ -742,7 +753,7 @@ impl App {
 			let skipped = is_src && time.is_some();
 			let color =
 				if is_src {
-					if skipped { NiceColors::RED } else { fg }
+					if skipped { NiceColors::RED } else { self.fg() }
 				}
 				else if len.is_some() { NiceColors::GREEN }
 				else { NiceColors::RED };
@@ -819,9 +830,9 @@ impl App {
 			.push(rich_text!(
 				span(" *").color(NiceColors::PURPLE),
 				span(" Compression ratio is ").color(NiceColors::GREY),
-				span("src").color(NiceColors::PURPLE).font(FONT_BOLD),
-				span(":").color(NiceColors::GREY).font(FONT_BOLD),
-				span("dst").color(NiceColors::PINK).font(FONT_BOLD),
+				emphasize!(span("src"), PURPLE),
+				emphasize!(span(":"), GREY),
+				emphasize!(span("dst"), PINK),
 				span(".").color(NiceColors::GREY),
 			))
 			.push(rich_text!(
@@ -873,7 +884,7 @@ impl App {
 	/// next-gen image formats (the encoders that will be used).
 	fn view_settings_fmt(&self) -> Column<Message> {
 		column!(
-			text("Formats").color(NiceColors::PINK).font(FONT_BOLD),
+			emphasize!(text("Formats"), PINK),
 			checkbox("AVIF", self.has_flag(FMT_AVIF))
 				.on_toggle(|_| Message::ToggleFlag(FMT_AVIF))
 				.size(CHK_SIZE),
@@ -892,7 +903,7 @@ impl App {
 	/// This returns checkboxes for the various compression modes.
 	fn view_settings_mode(&self) -> Column<Message> {
 		column!(
-			text("Compression").color(NiceColors::PINK).font(FONT_BOLD),
+			emphasize!(text("Compression"), PINK),
 			checkbox("Lossless", self.has_flag(MODE_LOSSLESS))
 				.on_toggle(|_| Message::ToggleFlag(MODE_LOSSLESS))
 				.size(CHK_SIZE),
@@ -937,7 +948,7 @@ impl App {
 		}
 
 		column!(
-			text("Other").color(NiceColors::PINK).font(FONT_BOLD),
+			emphasize!(text("Other"), PINK),
 			tip!(
 				"Auto-Save", OTHER_SAVE_AUTO,
 				"Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation."
@@ -966,34 +977,31 @@ impl App {
 
 		container(
 			column!(
-				text("Up Next…")
-					.size(18)
-					.font(FONT_BOLD),
+				emphasize!(text("Up Next…").size(18)),
 				match kind {
 					ImageKind::Avif => rich_text!(
-						span("A").color(NiceColors::PURPLE),
-						span("v").color(NiceColors::TEAL),
-						span("i").color(NiceColors::BLUE),
-						span("f").color(NiceColors::YELLOW),
+						emphasize!(span("A"), PURPLE),
+						emphasize!(span("v"), TEAL),
+						emphasize!(span("i"), BLUE),
+						emphasize!(span("f"), YELLOW),
 					),
 					ImageKind::Jxl => rich_text!(
-						span("J").color(NiceColors::BLUE),
-						span("P").color(NiceColors::GREEN),
-						span("E").color(NiceColors::PINK),
-						span("G").color(NiceColors::YELLOW),
-						span("X").color(NiceColors::PURPLE),
-						span("L").color(NiceColors::RED),
+						emphasize!(span("J"), BLUE),
+						emphasize!(span("P"), GREEN),
+						emphasize!(span("E"), PINK),
+						emphasize!(span("G"), YELLOW),
+						emphasize!(span("X"), PURPLE),
+						emphasize!(span("L"), RED),
 					),
 					ImageKind::Webp => rich_text!(
-						span("W").color(NiceColors::RED),
-						span("e").color(NiceColors::PURPLE),
-						span("b").color(NiceColors::BLUE),
-						span("P").color(NiceColors::GREEN),
+						emphasize!(span("W"), RED),
+						emphasize!(span("e"), PURPLE),
+						emphasize!(span("b"), BLUE),
+						emphasize!(span("P"), GREEN),
 					),
-					_ => rich_text!(span("???")),
+					_ => rich_text!(emphasize!(span("???"))),
 				}
-					.size(72)
-					.font(FONT_BOLD),
+					.size(72),
 			)
 				.align_x(Horizontal::Left)
 				.width(Shrink)
@@ -1048,36 +1056,30 @@ impl App {
 		let active = current.candidate.is_some();
 		let b_side = active && self.has_flag(OTHER_BSIDE);
 		let src_kind = current.input.kind();
-		let dst_kind = current.output_kind();
+		let dst_kind = current.output_kind().unwrap_or(src_kind);
 
 		column!(
 			// Buttons.
 			row!(
-				button(text("Reject").size(18).font(FONT_BOLD))
-					.style(|_, status| button_style(status, NiceColors::RED))
-					.padding(BTN_PADDING)
+				btn!("Reject", RED)
 					.on_press_maybe(active.then_some(Message::Feedback(false))),
 
-				button(text("Accept").size(18).font(FONT_BOLD))
-					.style(|_, status| button_style(status, NiceColors::GREEN))
-					.padding(BTN_PADDING)
+				btn!("Accept", GREEN)
 					.on_press_maybe(active.then_some(Message::Feedback(true))),
 
 				tooltip(
-					button(text("?").size(18).font(FONT_BOLD))
-						.style(|_, status| button_style(status, NiceColors::GREY))
-						.padding(Padding {
-							top: 10.0,
-							right: 15.0,
-							bottom: 10.0,
-							left: 15.0,
-						}),
+					btn!("?", GREY, Padding {
+						top: 10.0,
+						right: 15.0,
+						bottom: 10.0,
+						left: 15.0,
+					}),
 					container(
 						rich_text!(
 							span("Forget about images past. Are you happy with "),
 							span("this").underline(true),
 							span(" one? If yes, "),
-							span("accept").color(NiceColors::GREEN).font(FONT_BOLD),
+							emphasize!(span("accept"), GREEN),
 							span(" it. The best of the best will be saved at the very end."),
 						)
 							.size(12)
@@ -1095,10 +1097,11 @@ impl App {
 			// A/B toggle.
 			row!(
 				rich_text!(
-					span(src_kind.as_str())
-						.color(if b_side { NiceColors::GREY } else { NiceColors::PURPLE })
+					kind!(
+						src_kind,
+						if b_side { NiceColors::GREY } else { NiceColors::PURPLE }
+					)
 						.link_maybe(b_side.then_some(Message::ToggleFlag(OTHER_BSIDE)))
-						.font(FONT_BOLD)
 				),
 
 				toggler(b_side)
@@ -1106,10 +1109,11 @@ impl App {
 					.on_toggle_maybe(active.then_some(|_| Message::ToggleFlag(OTHER_BSIDE))),
 
 				rich_text!(
-					span(dst_kind.map_or("New", ImageKind::as_str))
-						.color(if b_side { NiceColors::PINK } else { NiceColors::GREY })
+					kind!(
+						dst_kind,
+						if b_side { NiceColors::PINK } else { NiceColors::GREY }
+					)
 						.link_maybe((active && ! b_side).then_some(Message::ToggleFlag(OTHER_BSIDE)))
-						.font(FONT_BOLD)
 				),
 			)
 				.spacing(5)
@@ -1144,15 +1148,15 @@ impl App {
 			// Lossless/auto requires no feedback, so let's give a different
 			// message.
 			if self.automatic() {
-				row = row.push(text(
+				row = row.push(emphasize!(text(
 					"Lossless conversion is automatic. Just sit back and wait!"
-				).font(FONT_BOLD));
+				)));
 			}
 			else if let Some(kind) = current.output_kind() {
-				row = row.push(text(format!("Preparing the next {kind}; sit tight!")).font(FONT_BOLD));
+				row = row.push(emphasize!(text(format!("Preparing the next {kind}; sit tight!"))));
 			}
 			else {
-				row = row.push(text("Reticulating splines…").font(FONT_BOLD));
+				row = row.push(emphasize!(text("Reticulating splines…")));
 			}
 		}
 		else {
@@ -1170,30 +1174,25 @@ impl App {
 				}
 			}
 
-			row = row.push(rich_text!(
-				span("Viewing: "),
-				span(kind.to_string()).font(FONT_BOLD)
-			));
-
-			if count != 0 {
-				row = row.push(rich_text!(
-					span("Take: "),
-					span(format!("#{count}")).font(FONT_BOLD),
-				));
+			// Helper: key/value pair.
+			macro_rules! kv {
+				($k:expr, $v:expr) => (rich_text!(span($k), emphasize!(span($v))));
 			}
 
+			// Kind.
+			row = row.push(kv!("Viewing: ", kind.as_str()));
+
+			// Count.
+			if count != 0 { row = row.push(kv!("Take: ", format!("#{count}"))); }
+
+			// Quality.
 			if let Some(quality) = quality {
-				row = row.push(rich_text!(
-					span(format!("{}: ", quality.label_title())),
-					span(quality.quality().to_string()).font(FONT_BOLD),
+				row = row.push(kv!(
+					format!("{}: ", quality.label_title()),
+					quality.quality().to_string()
 				));
 			}
-			else {
-				row = row.push(rich_text!(
-					span("Quality: "),
-					span("Original").font(FONT_BOLD),
-				));
-			}
+			else { row = row.push(kv!("Quality: ", "Original")); }
 		}
 
 		container(row)
@@ -1215,11 +1214,20 @@ impl App {
 	/// It also includes a checkbox to toggle night mode, since visually it
 	/// fits better in this column than anywhere else.
 	fn view_ab_progress(&self) -> Column<Message> {
+		/// # Maybe Dim a Color.
+		///
+		/// Pass through the color if `cond`, otherwise dim it.
+		const fn maybe_dim(color: Color, cond: bool) -> Color {
+			if cond { color }
+			else {
+				Color { a: 0.5, ..color }
+			}
+		}
+
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 
 		let active = current.candidate.is_some();
 		let new_kind = current.output_kind().unwrap_or(ImageKind::Png);
-		let fg = self.fg();
 
 		let mut formats = Vec::with_capacity(5);
 		for (flag, kind) in [
@@ -1231,16 +1239,12 @@ impl App {
 				if ! formats.is_empty() {
 					formats.push(span(" + ").color(NiceColors::GREY));
 				}
-				if kind == new_kind {
-					formats.push(span(kind.to_string()).color(NiceColors::PINK).font(FONT_BOLD));
-				}
-				else {
-					formats.push(span(kind.to_string()).color(NiceColors::GREY).font(FONT_BOLD));
-				}
+				if kind == new_kind { formats.push(kind!(kind, PINK)); }
+				else { formats.push(kind!(kind, GREY)); }
 			}
 		}
 		formats.insert(0, span(" > ").color(NiceColors::GREY));
-		formats.insert(0, span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD));
+		formats.insert(0, kind!(current.input.kind(), PURPLE));
 
 		column!(
 			// Path.
@@ -1248,7 +1252,7 @@ impl App {
 				Rich::new,
 				|(dir, name)| rich_text!(
 					span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
-					span(name.to_string_lossy().into_owned()).color(fg),
+					span(name.to_string_lossy().into_owned()).color(self.fg()),
 				),
 			),
 
@@ -1258,17 +1262,11 @@ impl App {
 			// Cancel.
 			text(""),
 			rich_text!(
-				span("Ready for bed? ")
-					.color(
-						if active { fg }
-						else { fg.scale_alpha(0.5) }
-					),
-				span("Skip ahead!")
-					.color(
-						if active { NiceColors::ORANGE }
-						else { NiceColors::ORANGE.scale_alpha(0.5) }
-					)
-					.font(FONT_BOLD)
+				span("Ready for bed? ").color(maybe_dim(self.fg(), active)),
+				emphasize!(
+					span("Skip ahead!"),
+					maybe_dim(NiceColors::ORANGE, active)
+				)
 					.link_maybe(active.then_some(Message::NextImage)),
 			)
 		)
@@ -1371,11 +1369,11 @@ impl App {
 		Some(
 			container(
 				scrollable(
-						image(handle)
-							.content_fit(ContentFit::None)
-							.width(Shrink)
-							.height(Shrink)
-							.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 })
+					image(handle)
+						.content_fit(ContentFit::None)
+						.width(Shrink)
+						.height(Shrink)
+						.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 })
 				)
 					.width(Shrink)
 					.height(Shrink)
@@ -1399,29 +1397,29 @@ impl App {
 	/// shortcuts that can be used in lieu of the button widgets.
 	fn view_keyboard_shortcuts(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
+		let src_kind = current.input.kind();
+		let dst_kind = current.output_kind().unwrap_or(src_kind);
 		column!(
 			rich_text!(
-				span("   [space]").font(FONT_BOLD),
+				emphasize!(span("   [space]")),
 				span(" Toggle image view (").color(NiceColors::GREY),
-				span(current.input.kind().to_string()).color(NiceColors::PURPLE).font(FONT_BOLD),
+				kind!(src_kind, PURPLE),
 				span(" vs ").color(NiceColors::GREY),
-				span(current.output_kind().map_or_else(|| String::from("Xyz"), |k| k.to_string()))
-					.color(NiceColors::PINK)
-					.font(FONT_BOLD),
+				kind!(dst_kind, PINK),
 				span(").").color(NiceColors::GREY),
 			),
 			rich_text!(
-				span("       [d]").color(NiceColors::RED).font(FONT_BOLD),
+				emphasize!(span("       [d]"), RED),
 				span(" Reject candidate.").color(NiceColors::GREY),
 			),
 			rich_text!(
-				span("       [k]").color(NiceColors::GREEN).font(FONT_BOLD),
+				emphasize!(span("       [k]"), GREEN),
 				span(" Accept candidate.").color(NiceColors::GREY),
 			),
 			rich_text!(
-				span("[ctrl]").font(FONT_BOLD),
+				emphasize!(span("[ctrl]")),
 				span("+").color(NiceColors::GREY),
-				span("[n]").font(FONT_BOLD),
+				emphasize!(span("[n]")),
 				span(" Toggle night mode.").color(NiceColors::GREY),
 			),
 		)
