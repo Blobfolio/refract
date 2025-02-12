@@ -9,7 +9,7 @@ Refract is a cross-platform[\*](#installation) guided image conversion tool.
 
 It takes [JPEG](https://en.wikipedia.org/wiki/JPEG) and [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) image sources and produces [AVIF](https://en.wikipedia.org/wiki/AV1#AV1_Image_File_Format_(AVIF)), [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL), and [WebP](https://en.wikipedia.org/wiki/WebP) copies.
 
-<img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen0.png" width="45%" alt="Viewing a PNG source."></img> <img src="https://github.com/Blobfolio/refract/raw/master/skel/gallery/screen1.png" width="45%" alt="Viewing a (crappy) WebP copy."></img>
+![A tour of the program in action.](skel/gallery/refract.webp)
 
 The program is named for and works something like an optometrist's refraction test, presenting a series of feedback-driven candidate images — what looks better, this… or this? This… or this? — until the subjective "best" option is found (or found to be impossible).
 
