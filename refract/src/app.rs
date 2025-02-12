@@ -345,6 +345,7 @@ impl App {
 		else { Task::done(Message::NextImage) }
 	}
 
+	#[expect(clippy::too_many_lines, reason = "There's a lot to update. Haha.")]
 	/// # Update.
 	///
 	/// This method serves as the entrypoint for the application's
@@ -406,7 +407,7 @@ impl App {
 				self.flags &= ! OTHER_BSIDE;
 				self.current = None;
 				while let Some(src) = self.paths.pop_first() {
-					if let Some(mut current) = CurrentImage::new(src, self.flags) {
+					if let Some(mut current) = CurrentImage::new(src.clone(), self.flags) {
 						// Add an entry for it.
 						cli_log(&current.src, None);
 						self.done.push(ImageResults {
@@ -421,6 +422,13 @@ impl App {
 						if current.next_encoder() {
 							self.current = Some(current);
 							return self.update_switch_encoder__();
+						}
+					}
+					// Decode error?
+					else {
+						cli_log_sad(&src);
+						if self.paths.is_empty() {
+							return Task::done(Message::Error(MessageError::NoImages));
 						}
 					}
 				}
@@ -548,16 +556,8 @@ impl App {
 	/// This method sets up listeners for the program's keyboard shortcuts,
 	/// bubbling up `Message`s as needed.
 	pub(super) fn subscription(&self) -> Subscription<Message> {
-		let whenever = iced::keyboard::on_key_press(subscribe_whenever);
-
-		// Some actions are only applicable in A/B contexts.
-		if self.has_candidate() {
-			Subscription::batch(vec![
-				whenever,
-				iced::keyboard::on_key_press(subscribe_ab),
-			])
-		}
-		else { whenever }
+		if self.has_candidate() { iced::keyboard::on_key_press(subscribe_ab) }
+		else { iced::keyboard::on_key_press(subscribe_home) }
 	}
 
 	/// # View.
@@ -697,7 +697,6 @@ impl App {
 			.width(Fill)
 	}
 
-	#[expect(clippy::too_many_lines, reason = "There's lots to do!")]
 	/// # View: Activity Log.
 	///
 	/// This returns a table containing detailed information about each of the
@@ -738,8 +737,7 @@ impl App {
 		// The rows, interspersed with dividers for each new source.
 		let mut last_dir = OsStr::new("");
 		for ActivityTableRow { src, kind, quality, len, ratio, time } in &table.0 {
-			let Some(dir) = src.parent().map(Path::as_os_str) else { continue; };
-			let Some(file) = src.file_name() else { continue; };
+			let Some((dir, file)) = split_path(src) else { continue; };
 			let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
 			let skipped = is_src && time.is_some();
 			let color =
@@ -1246,16 +1244,12 @@ impl App {
 
 		column!(
 			// Path.
-			rich_text!(
-				span(format!(
-					"{}/",
-					current.src.parent().map_or(Cow::Borrowed(""), Path::to_string_lossy)
-				))
-					.color(NiceColors::GREY),
-				span(
-					current.src.file_name().map_or(Cow::Borrowed(""), |o| o.to_string_lossy()).into_owned()
-				)
-					.color(fg),
+			split_path(&current.src).map_or_else(
+				Rich::new,
+				|(dir, name)| rich_text!(
+					span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
+					span(name.to_string_lossy().into_owned()).color(fg),
+				),
 			),
 
 			// Formats.
@@ -1994,12 +1988,14 @@ impl ImageResultWrapper {
 
 			// Update the path if they picked one.
 			if let Some(dst) = dst {
-				self.dst = crate::with_ng_extension(dst.path().to_path_buf(), self.kind);
+				let dst = dst.path().to_path_buf();
+				if dst.parent().is_some_and(Path::is_dir) && dst.file_name().is_some() {
+					self.dst = crate::with_ng_extension(dst, self.kind);
+				}
+				else { self.best = None; }
 			}
 			// Or nuke the result.
-			else {
-				let _res = self.best.take();
-			}
+			else { self.best = None; }
 
 			// Return for saving.
 			Message::SaveImage(self)
@@ -2167,13 +2163,12 @@ impl Default for WidgetCache {
 ///
 /// Print a quick timestamped message to STDERR in case anybody's watching.
 fn cli_log(src: &Path, quality: Option<Quality>) {
-	let Some(dir) = src.parent() else { return; };
-	let Some(name) = src.file_name() else { return; };
+	let Some((dir, name)) = split_path(src) else { return; };
 	let now = FmtUtc2k::now_local();
 	let mut out = format!(
 		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m] {}/\x1b[0m{} \x1b[2m(",
 		now.time(),
-		dir.display(),
+		dir.to_string_lossy(),
 		name.to_string_lossy(),
 	);
 
@@ -2193,14 +2188,13 @@ fn cli_log(src: &Path, quality: Option<Quality>) {
 ///
 /// Print a quick timestamped summary of a failed conversion to STDERR.
 fn cli_log_sad(src: &Path) {
-	let Some(dir) = src.parent() else { return; };
-	let Some(name) = src.file_name() else { return; };
+	let Some((dir, name)) = split_path(src) else { return; };
 	let now = FmtUtc2k::now_local();
 
 	eprintln!(
 		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m]\x1b[91m {}/\x1b[0;91m{}\x1b[0m",
 		now.time(),
-		dir.display(),
+		dir.to_string_lossy(),
 		name.to_string_lossy(),
 	);
 }
@@ -2217,11 +2211,21 @@ fn cli_log_error(src: MessageError) {
 	);
 }
 
-/// # General Subscriptions.
+/// # Split Path.
 ///
-/// This callback for `on_key_press` binds listeners for the night mode
-/// and file dialogue titles, which can be triggered at any time.
-fn subscribe_whenever(key: Key, modifiers: Modifiers) -> Option<Message> {
+/// Split the `parent` and `file_name`, returning `None` if either fail for
+/// whatever reason.
+fn split_path(src: &Path) -> Option<(&OsStr, &OsStr)> {
+	let dir = src.parent()?;
+	let name = src.file_name()?;
+	Some((dir.as_os_str(), name))
+}
+
+/// # Home Subscriptions.
+///
+/// This callback for `on_key_press` binds listeners for events available on
+/// the home screen.
+fn subscribe_home(key: Key, modifiers: Modifiers) -> Option<Message> {
 	// These require CTRL and not ALT.
 	if modifiers.command() && ! modifiers.alt() {
 		if let Key::Character(c) = key {
@@ -2235,20 +2239,48 @@ fn subscribe_whenever(key: Key, modifiers: Modifiers) -> Option<Message> {
 
 /// # A/B Subscriptions.
 ///
-/// This callback for `on_key_press` binds listeners for A/B-related
-/// feedback, applicable only when a candidate image is available, though we
-/// can't actually guarantee that's when they'll be triggered.
+/// This callback for `on_key_press` binds listeners for events available on
+/// the A/B screen.
 fn subscribe_ab(key: Key, modifiers: Modifiers) -> Option<Message> {
-	// No modifiers required or expected.
-	if modifiers.command() || modifiers.alt() { None }
+	// Nothing needs ALT.
+	if modifiers.alt() { None }
+	// CTRL+N toggles Night Mode.
+	else if modifiers.command() {
+		if let Key::Character(c) = key {
+			if c == "n" { return Some(Message::ToggleFlag(OTHER_NIGHT)); }
+		}
+		None
+	}
 	else {
 		match key {
+			// Toggle A/B.
 			Key::Named(Named::Space) => Some(Message::ToggleFlag(OTHER_BSIDE)),
+			// Feedback.
 			Key::Character(c) =>
 				if c == "d" { Some(Message::Feedback(false)) }
 				else if c == "k" { Some(Message::Feedback(true)) }
 				else { None }
 			_ => None,
 		}
+	}
+}
+
+
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn t_flags() {
+		// Make sure the flags are actually unique.
+		let all = [
+			FMT_AVIF, FMT_JXL, FMT_WEBP,
+			MODE_LOSSLESS, MODE_LOSSY, MODE_LOSSY_YCBCR,
+			OTHER_BSIDE, OTHER_EXIT_AUTO, OTHER_NIGHT, OTHER_SAVE_AUTO,
+			SWITCHED_ENCODER,
+		];
+		let set = all.iter().copied().collect::<BTreeSet<u16>>();
+		assert_eq!(all.len(), set.len());
 	}
 }
