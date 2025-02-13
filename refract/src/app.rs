@@ -4,16 +4,8 @@
 
 use argyle::Argument;
 use crate::{
-	border_style,
-	button_style,
 	Candidate,
-	DARK_PALETTE,
-	DARK_THEME,
-	FONT_BOLD,
-	LIGHT_PALETTE,
-	LIGHT_THEME,
-	NiceColors,
-	tooltip_style,
+	Skin,
 };
 use dactyl::{
 	NiceFloat,
@@ -137,40 +129,65 @@ const MODE_FLAGS: u16 =
 const DEFAULT_FLAGS: u16 =
 	FMT_FLAGS | MODE_FLAGS | MODE_LOSSY_YCBCR;
 
-/// # Check Size.
-const CHK_SIZE: u16 = 12_u16;
-
-/// # Button Padding.
-const BTN_PADDING: Padding = Padding {
-	top: 10.0,
-	right: 20.0,
-	bottom: 10.0,
-	left: 20.0,
-};
 
 
-
-/// # Helper: Refract Button.
+/// # Helper: Button.
+///
+/// Generate a button with the given label, color, and padding.
 macro_rules! btn {
-	($label:literal, $color:ident) => (btn!($label, $color, BTN_PADDING));
-	($label:literal, $color:ident, $pad:expr) => (
-		button(text($label).size(18).font(FONT_BOLD))
-			.style(|_, status| button_style(status, NiceColors::$color))
+	($label:literal, $color:expr) => (btn!($label, $color, Skin::BTN_PADDING));
+	($label:literal, $color:expr, $pad:expr) => (
+		button(text($label).size(Skin::TEXT_LG).font(Skin::FONT_BOLD))
+			.style(|_, status| Skin::button_style(status, $color))
 			.padding($pad)
 	);
 }
 
-/// # Helper: Colorize and Embolden.
-macro_rules! emphasize {
-	($el:expr) => ($el.font(FONT_BOLD));
-	($el:expr, $color:ident) => (emphasize!($el, NiceColors::$color));
-	($el:expr, $color:expr) => ($el.color($color).font(FONT_BOLD));
+/// # Helper: Flag Checkbox.
+///
+/// Generate a flag-toggle checkbox with the given label and flag.
+macro_rules! chk {
+	($lhs:ident, $label:literal, $flag:ident) => (
+		checkbox($label, $lhs.has_flag($flag))
+			.on_toggle(|_| Message::ToggleFlag($flag))
+			.size(Skin::CHK_SIZE)
+	);
 }
 
-/// # Helper: Image Kind.
+/// # Helper: Colorize and Embolden.
+///
+/// Emphasize a (text-type) element by making it bold, and optionally colored.
+macro_rules! emphasize {
+	($el:expr) => ($el.font(Skin::FONT_BOLD));
+	($el:expr, $color:expr) => ($el.color($color).font(Skin::FONT_BOLD));
+}
+
+/// # Helper: Image Kind (span).
+///
+/// Image kinds are (almost) always displayed with emphasis; this reduces the
+/// code a little bit and ensures consistent formatting.
 macro_rules! kind {
-	($kind:expr, $color:ident) => (kind!($kind, NiceColors::$color));
 	($kind:expr, $color:expr) => (emphasize!(span($kind.as_str()), $color));
+}
+
+/// # Helper: Tooltip.
+///
+/// Set appropriate text properties for `$el`, wrap it in a padded container,
+/// and wrap that in a tooltip.
+macro_rules! tip {
+	($lhs:ident, $el:expr, $tip:literal) => (tip!($lhs, $el, text($tip)));
+	($lhs:ident, $el:expr, $tip:literal, $align:ident) => (tip!($lhs, $el, text($tip), $align));
+	($lhs:ident, $el:expr, $tip:expr) => (tip!($lhs, $el, $tip, Bottom));
+	($lhs:ident, $el:expr, $tip:expr, $align:ident) => (
+		tooltip(
+			$el,
+			container($tip.size(Skin::TEXT_SM).line_height(1.5))
+				.padding(Skin::GAP)
+				.max_width(Skin::TOOLTIP_SIZE)
+				.style(|_| Skin::tooltip_style($lhs.has_flag(OTHER_NIGHT))),
+			tooltip::Position::$align,
+		)
+	);
 }
 
 
@@ -300,8 +317,8 @@ impl App {
 	///
 	/// Returns the current theme, i.e. light or dark.
 	pub(super) fn theme(&self) -> Theme {
-		if self.has_flag(OTHER_NIGHT) { DARK_THEME.clone() }
-		else { LIGHT_THEME.clone() }
+		if self.has_flag(OTHER_NIGHT) { self.cache.theme_b.clone() }
+		else { self.cache.theme_a.clone() }
 	}
 }
 
@@ -332,10 +349,7 @@ impl App {
 	}
 
 	/// # Current Foreground Color.
-	const fn fg(&self) -> Color {
-		if self.has_flag(OTHER_NIGHT) { DARK_PALETTE.text }
-		else { LIGHT_PALETTE.text }
-	}
+	const fn fg(&self) -> Color { Skin::fg(self.has_flag(OTHER_NIGHT)) }
 
 	/// # Toggle Flag.
 	///
@@ -618,9 +632,9 @@ impl App {
 				self.view_log(),
 			)
 				.push_maybe(self.view_error())
-				.spacing(10)
+				.spacing(Skin::GAP50)
 		)
-			.padding(10)
+			.padding(Skin::GAP50)
 			.width(Fill)
 	}
 
@@ -631,17 +645,17 @@ impl App {
 	fn view_about(&self) -> Column<Message> {
 		column!(
 			rich_text!(
-				emphasize!(span("Refract "), PINK),
-				emphasize!(span(concat!("v", env!("CARGO_PKG_VERSION"))), PURPLE),
+				emphasize!(span("Refract "), Skin::PINK),
+				emphasize!(span(concat!("v", env!("CARGO_PKG_VERSION"))), Skin::PURPLE),
 			),
 
 			rich_text!(
-				emphasize!(span(env!("CARGO_PKG_REPOSITORY")), GREEN)
+				emphasize!(span(env!("CARGO_PKG_REPOSITORY")), Skin::GREEN)
 					.link(Message::OpenUrl(env!("CARGO_PKG_REPOSITORY")))
 			),
 		)
 			.align_x(Horizontal::Right)
-			.spacing(5)
+			.spacing(Skin::GAP25)
 			.width(Shrink)
 	}
 
@@ -661,12 +675,12 @@ impl App {
 				)
 					.width(Shrink)
 			))
-				.padding(10.0)
+				.padding(Skin::GAP50)
 				.center(Fill)
 				.height(Shrink)
 				.style(|_| Style {
-					text_color: Some(NiceColors::WHITE),
-					background: Some(Background::Color(NiceColors::ORANGE)),
+					text_color: Some(Skin::WHITE),
+					background: Some(Background::Color(Skin::ORANGE)),
 					..Style::default()
 				})
 		)
@@ -681,12 +695,12 @@ impl App {
 		container(
 			column!(
 				row!(
-					btn!("File(s)", PURPLE).on_press(Message::OpenFd(false)),
-					text("or").size(18),
-					btn!("Directory", PINK).on_press(Message::OpenFd(true)),
+					btn!("File(s)", Skin::PURPLE).on_press(Message::OpenFd(false)),
+					text("or").size(Skin::TEXT_LG),
+					btn!("Directory", Skin::PINK).on_press(Message::OpenFd(true)),
 				)
 					.align_y(Vertical::Center)
-					.spacing(10)
+					.spacing(Skin::GAP50)
 					.width(Shrink),
 
 				rich_text!(
@@ -698,7 +712,7 @@ impl App {
 				),
 			)
 				.align_x(Horizontal::Center)
-				.spacing(10)
+				.spacing(Skin::GAP50)
 		)
 			.center_x(Fill)
 			.width(Fill)
@@ -725,17 +739,17 @@ impl App {
 
 		// Finally, add all the lines!
 		let mut lines = column!(rich_text!(
-			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])), PURPLE),
-			span(" | ").color(NiceColors::PINK),
-			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])), PURPLE),
-			span(" | ").color(NiceColors::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])), PURPLE),
-			span(" | ").color(NiceColors::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])), PURPLE),
-			span(" | ").color(NiceColors::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])), PURPLE),
-			span(" | ").color(NiceColors::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])), PURPLE),
+			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])), Skin::PURPLE),
+			span(" | ").color(Skin::PINK),
+			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])), Skin::PURPLE),
+			span(" | ").color(Skin::PINK),
+			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])), Skin::PURPLE),
+			span(" | ").color(Skin::PINK),
+			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])), Skin::PURPLE),
+			span(" | ").color(Skin::PINK),
+			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])), Skin::PURPLE),
+			span(" | ").color(Skin::PINK),
+			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])), Skin::PURPLE),
 		));
 
 		// The rows, interspersed with dividers for each new source.
@@ -746,22 +760,22 @@ impl App {
 			let skipped = is_src && time.is_some();
 			let color =
 				if is_src {
-					if skipped { NiceColors::RED } else { self.fg() }
+					if skipped { Skin::RED } else { self.fg() }
 				}
-				else if len.is_some() { NiceColors::GREEN }
-				else { NiceColors::RED };
+				else if len.is_some() { Skin::GREEN }
+				else { Skin::RED };
 
 			if is_src {
 				last_dir = OsStr::new("");
-				lines = lines.push(text(divider.clone()).color(NiceColors::PINK));
+				lines = lines.push(text(divider.clone()).color(Skin::PINK));
 			}
 
 			lines = lines.push(rich_text!(
 				// Path, pretty-formatted.
 				span(format!("{}/", dir.to_string_lossy()))
 					.color(
-						if dir == last_dir { NiceColors::TRANSPARENT }
-						else { NiceColors::GREY }
+						if dir == last_dir { Skin::TRANSPARENT }
+						else { Skin::GREY }
 					),
 				span(file.to_string_lossy().into_owned())
 					.color(color)
@@ -771,30 +785,30 @@ impl App {
 					"",
 					w=widths[0].saturating_sub(src.to_string_lossy().width())
 				))
-					.color(NiceColors::PINK),
+					.color(Skin::PINK),
 
 				// Kind.
 				span(format!("{kind:<w$}", w=widths[1])),
-				span(" | ").color(NiceColors::PINK),
+				span(" | ").color(Skin::PINK),
 
 				// Quality.
 				span(format!("{:>w$}", quality.as_str(), w=widths[2])),
-				span(" | ").color(NiceColors::PINK),
+				span(" | ").color(Skin::PINK),
 
 				// Size.
 				span(format!("{:>w$}", len.as_ref().map_or("", NiceU64::as_str), w=widths[3])),
-				span(" | ").color(NiceColors::PINK),
+				span(" | ").color(Skin::PINK),
 
 				// Ratio.
 				ratio.as_ref().map_or_else(
 					|| span(" ".repeat(widths[4])),
 					|n| {
-						let nice = n.precise_str(4);
+						let nice = n.precise_str(ActivityTableRow::RATIO_SIZE);
 						span(format!("{nice:>w$}", w=widths[4]))
-							.color_maybe((nice == "1.0000").then_some(NiceColors::GREY))
+							.color_maybe((nice == "1.0000").then_some(Skin::GREY))
 					},
 				),
-				span(" | ").color(NiceColors::PINK),
+				span(" | ").color(Skin::PINK),
 
 				// Time.
 				time.as_ref().map_or_else(
@@ -802,12 +816,12 @@ impl App {
 					|n|
 						if skipped {
 							span(format!("{:>w$}", "skipped", w=widths[5]))
-								.color(NiceColors::RED)
+								.color(Skin::RED)
 						}
 						else {
-							let nice = n.precise_str(3);
+							let nice = n.precise_str(ActivityTableRow::TIME_SIZE);
 							span(format!("{nice:>w$}s", w=widths[5] - 1))
-								.color_maybe((nice == "0.000").then_some(NiceColors::GREY))
+								.color_maybe((nice == "0.000").then_some(Skin::GREY))
 						},
 				),
 			));
@@ -817,23 +831,23 @@ impl App {
 		}
 
 		// Add footnotes.
-		lines = lines.push(text(divider).color(NiceColors::PINK))
+		lines = lines.push(text(divider).color(Skin::PINK))
 			.push(text(""))
 			.push(text(""))
 			.push(rich_text!(
-				span(" *").color(NiceColors::PURPLE),
-				span(" Compression ratio is ").color(NiceColors::GREY),
-				emphasize!(span("src"), PURPLE),
-				emphasize!(span(":"), GREY),
-				emphasize!(span("dst"), PINK),
-				span(".").color(NiceColors::GREY),
+				span(" *").color(Skin::PURPLE),
+				span(" Compression ratio is ").color(Skin::GREY),
+				emphasize!(span("src"), Skin::PURPLE),
+				emphasize!(span(":"), Skin::GREY),
+				emphasize!(span("dst"), Skin::PINK),
+				span(".").color(Skin::GREY),
 			))
 			.push(rich_text!(
-				span("**").color(NiceColors::PURPLE),
-				span(" Total encoding time, rejects and all.").color(NiceColors::GREY),
+				span("**").color(Skin::PURPLE),
+				span(" Total encoding time, rejects and all.").color(Skin::GREY),
 			));
 
-		scrollable(container(lines).width(Fill).padding(10))
+		scrollable(container(lines).width(Fill).padding(Skin::GAP50))
 			.height(Fill)
 			.anchor_bottom()
 			.into()
@@ -860,8 +874,8 @@ impl App {
 				self.view_enqueue_buttons(),
 				self.view_about(),
 			)
-				.padding(20)
-				.spacing(20)
+				.padding(Skin::GAP)
+				.spacing(Skin::GAP)
 		)
 			.style(|_| {
 				let mut style = bordered_box(&self.theme());
@@ -877,18 +891,12 @@ impl App {
 	/// next-gen image formats (the encoders that will be used).
 	fn view_settings_fmt(&self) -> Column<Message> {
 		column!(
-			emphasize!(text("Formats"), PINK),
-			checkbox("AVIF", self.has_flag(FMT_AVIF))
-				.on_toggle(|_| Message::ToggleFlag(FMT_AVIF))
-				.size(CHK_SIZE),
-			checkbox("JPEG XL", self.has_flag(FMT_JXL))
-				.on_toggle(|_| Message::ToggleFlag(FMT_JXL))
-				.size(CHK_SIZE),
-			checkbox("WebP", self.has_flag(FMT_WEBP))
-				.on_toggle(|_| Message::ToggleFlag(FMT_WEBP))
-				.size(CHK_SIZE),
+			emphasize!(text("Formats"), Skin::PINK),
+			chk!(self, "AVIF", FMT_AVIF),
+			chk!(self, "JPEG XL", FMT_JXL),
+			chk!(self, "WebP", FMT_WEBP),
 		)
-			.spacing(5)
+			.spacing(Skin::GAP25)
 	}
 
 	/// # View: Mode Checkboxes.
@@ -896,28 +904,18 @@ impl App {
 	/// This returns checkboxes for the various compression modes.
 	fn view_settings_mode(&self) -> Column<Message> {
 		column!(
-			emphasize!(text("Compression"), PINK),
-			checkbox("Lossless", self.has_flag(MODE_LOSSLESS))
-				.on_toggle(|_| Message::ToggleFlag(MODE_LOSSLESS))
-				.size(CHK_SIZE),
-			checkbox("Lossy", self.has_flag(MODE_LOSSY))
-				.on_toggle(|_| Message::ToggleFlag(MODE_LOSSY))
-				.size(CHK_SIZE),
-			tooltip(
+			emphasize!(text("Compression"), Skin::PINK),
+			chk!(self, "Lossless", MODE_LOSSLESS),
+			chk!(self, "Lossy", MODE_LOSSY),
+			tip!(
+				self,
 				checkbox("Lossy YCbCr", self.has_flag(MODE_LOSSY_YCBCR))
 					.on_toggle_maybe(self.has_flag(FMT_AVIF | MODE_LOSSY).then_some(|_| Message::ToggleFlag(MODE_LOSSY_YCBCR)))
-					.size(CHK_SIZE),
-				container(
-					text("Repeat AVIF A/B tests in YCbCr colorspace to look for additional savings.")
-						.size(12)
-				)
-					.padding(20)
-					.max_width(300_u16)
-					.style(|_| tooltip_style(! self.has_flag(OTHER_NIGHT))),
-				tooltip::Position::Bottom,
+					.size(Skin::CHK_SIZE),
+				"Repeat AVIF A/B tests in YCbCr colorspace to look for additional savings."
 			),
 		)
-			.spacing(5)
+			.spacing(Skin::GAP25)
 	}
 
 	/// # View: Other Checkboxes.
@@ -925,36 +923,21 @@ impl App {
 	/// This returns checkboxes for the program's one-off settings, i.e.
 	/// night mode and automatic saving.
 	fn view_settings_other(&self) -> Column<Message> {
-		macro_rules! tip {
-			($label:literal, $flag:ident, $help:literal) => (
-				tooltip(
-					checkbox($label, self.has_flag($flag))
-						.on_toggle(|_| Message::ToggleFlag($flag))
-						.size(CHK_SIZE),
-					container(text($help).size(12))
-						.padding(20)
-						.max_width(300_u16)
-						.style(|_| tooltip_style(! self.has_flag(OTHER_NIGHT))),
-					tooltip::Position::Bottom,
-				)
-			);
-		}
-
 		column!(
-			emphasize!(text("Other"), PINK),
+			emphasize!(text("Other"), Skin::PINK),
 			tip!(
-				"Auto-Save", OTHER_SAVE_AUTO,
+				self,
+				chk!(self, "Auto-Save", OTHER_SAVE_AUTO),
 				"Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation."
 			),
 			tip!(
-				"Auto-Exit", OTHER_SAVE_AUTO,
+				self,
+				chk!(self, "Auto-Exit", OTHER_SAVE_AUTO),
 				"Close the program after the last image has been processed."
 			),
-			checkbox("Night Mode", self.has_flag(OTHER_NIGHT))
-				.on_toggle(|_| Message::ToggleFlag(OTHER_NIGHT))
-				.size(CHK_SIZE),
+			chk!(self, "Night Mode", OTHER_NIGHT),
 		)
-			.spacing(5)
+			.spacing(Skin::GAP25)
 	}
 }
 
@@ -970,27 +953,27 @@ impl App {
 
 		container(
 			column!(
-				emphasize!(text("Up Next…").size(18)),
+				emphasize!(text("Up Next…").size(Skin::TEXT_LG)),
 				match kind {
 					ImageKind::Avif => rich_text!(
-						emphasize!(span("A"), PURPLE),
-						emphasize!(span("v"), TEAL),
-						emphasize!(span("i"), BLUE),
-						emphasize!(span("f"), YELLOW),
+						emphasize!(span("A"), Skin::PURPLE),
+						emphasize!(span("v"), Skin::TEAL),
+						emphasize!(span("i"), Skin::BLUE),
+						emphasize!(span("f"), Skin::YELLOW),
 					),
 					ImageKind::Jxl => rich_text!(
-						emphasize!(span("J"), BLUE),
-						emphasize!(span("P"), GREEN),
-						emphasize!(span("E"), PINK),
-						emphasize!(span("G"), YELLOW),
-						emphasize!(span("X"), PURPLE),
-						emphasize!(span("L"), RED),
+						emphasize!(span("J"), Skin::BLUE),
+						emphasize!(span("P"), Skin::GREEN),
+						emphasize!(span("E"), Skin::PINK),
+						emphasize!(span("G"), Skin::YELLOW),
+						emphasize!(span("X"), Skin::PURPLE),
+						emphasize!(span("L"), Skin::RED),
 					),
 					ImageKind::Webp => rich_text!(
-						emphasize!(span("W"), RED),
-						emphasize!(span("e"), PURPLE),
-						emphasize!(span("b"), BLUE),
-						emphasize!(span("P"), GREEN),
+						emphasize!(span("W"), Skin::RED),
+						emphasize!(span("e"), Skin::PURPLE),
+						emphasize!(span("b"), Skin::BLUE),
+						emphasize!(span("P"), Skin::GREEN),
 					),
 					_ => rich_text!(emphasize!(span("???"))),
 				}
@@ -999,11 +982,11 @@ impl App {
 				.align_x(Horizontal::Left)
 				.width(Shrink)
 		)
-			.padding(20)
+			.padding(Skin::GAP)
 			.center(Fill)
 			.style(move |_| Style {
-				text_color: Some(NiceColors::WHITE),
-				background: Some(Background::Color(NiceColors::BLACK)),
+				text_color: Some(Skin::WHITE),
+				background: Some(Background::Color(Skin::BLACK)),
 				..Style::default()
 			})
 	}
@@ -1030,8 +1013,8 @@ impl App {
 						self.view_ab_feedback(),
 					)
 						.align_y(Vertical::Center)
-						.padding(20)
-						.spacing(20)
+						.padding(Skin::GAP)
+						.spacing(Skin::GAP)
 				)
 					.width(Fill)
 			)
@@ -1054,45 +1037,40 @@ impl App {
 		column!(
 			// Buttons.
 			row!(
-				btn!("Reject", RED)
+				btn!("Reject", Skin::RED)
 					.on_press_maybe(active.then_some(Message::Feedback(false))),
 
-				btn!("Accept", GREEN)
+				btn!("Accept", Skin::GREEN)
 					.on_press_maybe(active.then_some(Message::Feedback(true))),
 
-				tooltip(
-					btn!("?", GREY, Padding {
-						top: 10.0,
-						right: 15.0,
-						bottom: 10.0,
-						left: 15.0,
+				tip!(
+					self,
+					btn!("?", Skin::GREY, Padding {
+						top: Skin::GAP50,
+						right: Skin::GAP75,
+						bottom: Skin::GAP50,
+						left: Skin::GAP75,
 					}),
-					container(
-						rich_text!(
-							span("Forget about images past. Are you happy with "),
-							span("this").underline(true),
-							span(" one? If yes, "),
-							emphasize!(span("accept"), GREEN),
-							span(" it. The best of the best will be saved at the very end."),
-						)
-							.size(12)
-					)
-						.padding(20)
-						.max_width(300_u16)
-						.style(|_| tooltip_style(! self.has_flag(OTHER_NIGHT))),
-					tooltip::Position::Top,
+					rich_text!(
+						span("Forget about images past. Are you happy with "),
+						span("this").underline(true),
+						span(" one? If yes, "),
+						emphasize!(span("accept"), Skin::GREEN),
+						span(" it. The best of the best will be saved at the very end."),
+					),
+					Top
 				)
 			)
 				.width(Shrink)
 				.align_y(Vertical::Center)
-				.spacing(10),
+				.spacing(Skin::GAP50),
 
 			// A/B toggle.
 			row!(
 				rich_text!(
 					kind!(
 						src_kind,
-						if b_side { NiceColors::GREY } else { NiceColors::PURPLE }
+						if b_side { Skin::GREY } else { Skin::PURPLE }
 					)
 						.link_maybe(b_side.then_some(Message::ToggleFlag(OTHER_BSIDE)))
 				),
@@ -1104,15 +1082,15 @@ impl App {
 				rich_text!(
 					kind!(
 						dst_kind,
-						if b_side { NiceColors::PINK } else { NiceColors::GREY }
+						if b_side { Skin::PINK } else { Skin::GREY }
 					)
 						.link_maybe((active && ! b_side).then_some(Message::ToggleFlag(OTHER_BSIDE)))
 				),
 			)
-				.spacing(5)
+				.spacing(Skin::GAP25)
 				.align_y(Vertical::Center)
 		)
-			.spacing(10)
+			.spacing(Skin::GAP50)
 			.align_x(Horizontal::Center)
 	}
 
@@ -1128,16 +1106,16 @@ impl App {
 		use iced::widget::container::Style;
 
 		let mut row = Row::new()
-			.spacing(20)
+			.spacing(Skin::GAP)
 			.align_y(Vertical::Center)
 			.width(Shrink);
 
 		let Some(current) = self.current.as_ref() else { return container(row); };
-		let mut color = NiceColors::PURPLE;
+		let mut color = Skin::PURPLE;
 
 		// If there's no candidate, print a stock message.
 		if current.candidate.is_none() {
-			color = NiceColors::BLUE;
+			color = Skin::BLUE;
 			// Lossless/auto requires no feedback, so let's give a different
 			// message.
 			if self.automatic() {
@@ -1162,7 +1140,7 @@ impl App {
 				if let Some(can) = current.candidate.as_ref() {
 					kind = can.kind;
 					count = can.count;
-					color = NiceColors::PINK;
+					color = Skin::PINK;
 					quality.replace(can.quality);
 				}
 			}
@@ -1189,11 +1167,11 @@ impl App {
 		}
 
 		container(row)
-			.padding(10.0)
+			.padding(Skin::GAP50)
 			.center(Fill)
 			.height(Shrink)
 			.style(move |_| Style {
-				text_color: Some(NiceColors::WHITE),
+				text_color: Some(Skin::WHITE),
 				background: Some(Background::Color(color)),
 				..Style::default()
 			})
@@ -1207,16 +1185,6 @@ impl App {
 	/// It also includes a checkbox to toggle night mode, since visually it
 	/// fits better in this column than anywhere else.
 	fn view_ab_progress(&self) -> Column<Message> {
-		/// # Maybe Dim a Color.
-		///
-		/// Pass through the color if `cond`, otherwise dim it.
-		const fn maybe_dim(color: Color, cond: bool) -> Color {
-			if cond { color }
-			else {
-				Color { a: 0.5, ..color }
-			}
-		}
-
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 
 		let active = current.candidate.is_some();
@@ -1226,8 +1194,8 @@ impl App {
 		let mut formats = Vec::with_capacity(6);
 		if let Some((stem, ext)) = split_ext(&current.src) {
 			formats.push(emphasize!(span(stem)));
-			formats.push(emphasize!(span(format!(".{ext}")), PURPLE));
-			formats.push(span(" > ").color(NiceColors::GREY));
+			formats.push(emphasize!(span(format!(".{ext}")), Skin::PURPLE));
+			formats.push(span(" > ").color(Skin::GREY));
 		}
 		let mut any = false;
 		for (flag, kind) in [
@@ -1236,17 +1204,17 @@ impl App {
 			(FMT_JXL, ImageKind::Jxl),
 		] {
 			if self.has_flag(flag) {
-				if any { formats.push(span(" + ").color(NiceColors::GREY)); }
+				if any { formats.push(span(" + ").color(Skin::GREY)); }
 				else { any = true; }
 
-				if kind == new_kind { formats.push(kind!(kind, PINK)); }
-				else { formats.push(kind!(kind, GREY)); }
+				if kind == new_kind { formats.push(kind!(kind, Skin::PINK)); }
+				else { formats.push(kind!(kind, Skin::GREY)); }
 			}
 		}
 
 		column!(
 			// Formats.
-			container(container(Rich::with_spans(formats)).padding(10))
+			container(container(Rich::with_spans(formats)).padding(Skin::GAP50))
 				.style(|_| {
 					let mut style = bordered_box(&self.theme());
 					style.background = None;
@@ -1255,15 +1223,15 @@ impl App {
 
 			// Cancel.
 			rich_text!(
-				span("Ready for bed? ").color(maybe_dim(self.fg(), active)),
+				span("Ready for bed? ").color(Skin::maybe_dim(self.fg(), active)),
 				emphasize!(
 					span("Skip ahead!"),
-					maybe_dim(NiceColors::ORANGE, active)
+					Skin::maybe_dim(Skin::ORANGE, active)
 				)
 					.link_maybe(active.then_some(Message::NextImage)),
 			)
 		)
-			.spacing(15)
+			.spacing(Skin::GAP75)
 			.align_x(Horizontal::Center)
 			.width(Fill)
 	}
@@ -1338,11 +1306,11 @@ impl App {
 
 		/// # Scroll paddle thingy.
 		const RAIL: Rail = Rail {
-			background: Some(Background::Color(NiceColors::YELLUCK)),
-			border: border_style(NiceColors::TRANSPARENT, 0.0, 0.0),
+			background: Some(Background::Color(Skin::YELLUCK)),
+			border: Skin::border_style(Skin::TRANSPARENT, 0.0, 0.0),
 			scroller: Scroller {
-				color: NiceColors::YELLOW,
-				border: border_style(NiceColors::BABYFOOD, 2.0, 0.0),
+				color: Skin::YELLOW,
+				border: Skin::border_style(Skin::BABYFOOD, 2.0, 0.0),
 			},
 		};
 
@@ -1395,28 +1363,28 @@ impl App {
 		column!(
 			rich_text!(
 				emphasize!(span("   [space]")),
-				span(" Toggle image view (").color(NiceColors::GREY),
-				kind!(src_kind, PURPLE),
-				span(" vs ").color(NiceColors::GREY),
-				kind!(dst_kind, PINK),
-				span(").").color(NiceColors::GREY),
+				span(" Toggle image view (").color(Skin::GREY),
+				kind!(src_kind, Skin::PURPLE),
+				span(" vs ").color(Skin::GREY),
+				kind!(dst_kind, Skin::PINK),
+				span(").").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span("       [d]"), RED),
-				span(" Reject candidate.").color(NiceColors::GREY),
+				emphasize!(span("       [d]"), Skin::RED),
+				span(" Reject candidate.").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span("       [k]"), GREEN),
-				span(" Accept candidate.").color(NiceColors::GREY),
+				emphasize!(span("       [k]"), Skin::GREEN),
+				span(" Accept candidate.").color(Skin::GREY),
 			),
 			rich_text!(
 				emphasize!(span("[ctrl]")),
-				span("+").color(NiceColors::GREY),
+				span("+").color(Skin::GREY),
 				emphasize!(span("[n]")),
-				span(" Toggle night mode.").color(NiceColors::GREY),
+				span(" Toggle night mode.").color(Skin::GREY),
 			),
 		)
-			.spacing(5)
+			.spacing(Skin::GAP25)
 	}
 }
 
@@ -1579,6 +1547,12 @@ struct ActivityTableRow<'a> {
 }
 
 impl ActivityTableRow<'_> {
+	/// # Ratio Precision.
+	const RATIO_SIZE: usize = 4;
+
+	/// # Time Precision.
+	const TIME_SIZE: usize = 3;
+
 	/// # Column Widths.
 	///
 	/// Calculate and return the (approximate) display width for each field,
@@ -1591,12 +1565,12 @@ impl ActivityTableRow<'_> {
 			self.kind.len(),
 			self.quality.len(),
 			self.len.as_ref().map_or(0, NiceU64::len),
-			self.ratio.as_ref().map_or(0, |n| n.precise_str(4).len()),
+			self.ratio.as_ref().map_or(0, |n| n.precise_str(Self::RATIO_SIZE).len()),
 			self.time.as_ref().map_or(0, |n|
 				// Sources never have times; if there's a value here, it'll
 				// get printed as "skipped".
 				if matches!(self.kind, ImageKind::Jpeg | ImageKind::Png) { 7 }
-				else { n.precise_str(3).len() + 1 }
+				else { n.precise_str(Self::TIME_SIZE).len() + 1 }
 			),
 		]
 	}
@@ -2123,9 +2097,9 @@ impl MessageError {
 
 /// # Widget Cache.
 ///
-/// This struct holds image handles for our embedded and unchanging assets,
-/// i.e. the A/B checkerboard backgrounds and program logo, to speed up tree
-/// render.
+/// This struct holds elements that are never going to change — embedded
+/// images and themes — so that they can be generated once and simply cloned
+/// thereafter.
 struct WidgetCache {
 	/// # Checkerboard Underlay (A).
 	checkers_a: image::Handle,
@@ -2135,6 +2109,12 @@ struct WidgetCache {
 
 	/// # Program Logo.
 	logo: image::Handle,
+
+	/// # Light Theme.
+	theme_a: Theme,
+
+	/// # Dark Theme.
+	theme_b: Theme,
 }
 
 impl Default for WidgetCache {
@@ -2144,6 +2124,8 @@ impl Default for WidgetCache {
 			checkers_a,
 			checkers_b,
 			logo: crate::logo(),
+			theme_a: Theme::custom("RefractLight".to_owned(), Skin::LIGHT_PALETTE),
+			theme_b: Theme::custom("RefractDark".to_owned(), Skin::DARK_PALETTE),
 		}
 	}
 }

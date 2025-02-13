@@ -69,18 +69,7 @@ use img::{
 	with_ng_extension,
 };
 use refract_core::RefractError;
-use styles::{
-	border_style,
-	button_style,
-	DARK_PALETTE,
-	DARK_THEME,
-	FONT_BOLD,
-	FONT_REGULAR,
-	LIGHT_PALETTE,
-	LIGHT_THEME,
-	NiceColors,
-	tooltip_style,
-};
+use styles::Skin;
 
 
 
@@ -116,8 +105,8 @@ fn main__() -> Result<(), RefractError> {
 	let app = App::new()?;
 	iced::application("Refract", App::update, App::view)
 		.settings(Settings {
-			default_font: FONT_REGULAR,
-			default_text_size: 14_u16.into(),
+			default_font: Skin::FONT_REGULAR,
+			default_text_size: Skin::TEXT_MD,
 			..Settings::default()
 		})
 		.window(WindowSettings {

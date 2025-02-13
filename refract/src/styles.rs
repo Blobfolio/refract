@@ -12,8 +12,9 @@ use iced::{
 	Color,
 	Font,
 	font,
+	Padding,
+	Pixels,
 	Shadow,
-	Theme,
 	theme::Palette,
 	Vector,
 	widget::{
@@ -21,26 +22,14 @@ use iced::{
 		container,
 	},
 };
-use std::sync::LazyLock;
 
-/// # Fira Mono: Regular.
-pub(super) const FONT_REGULAR: Font = Font {
-	family:  font::Family::Name("Fira Mono"),
-	weight:  font::Weight::Normal,
-	stretch: font::Stretch::Normal,
-	style:   font::Style::Normal,
-};
 
-/// # Fira Mono: Bold.
-pub(super) const FONT_BOLD: Font = Font {
-	family:  font::Family::Name("Fira Mono"),
-	weight:  font::Weight::Bold,
-	stretch: font::Stretch::Normal,
-	style:   font::Style::Normal,
-};
 
-/// # Named Colors.
-pub(super) struct NiceColors;
+/// # Skin.
+///
+/// This struct holds style-related helpers and constants, taking some of the
+/// ~~load~~ code off `App`.
+pub(super) struct Skin;
 
 /// # Helper: Color Constants.
 macro_rules! nice_color {
@@ -50,7 +39,8 @@ macro_rules! nice_color {
 	)+)
 }
 
-impl NiceColors {
+/// # Colors.
+impl Skin {
 	nice_color!(
 		BABYFOOD:    color!(0xa49c00),
 		BLACK:       color!(0x333333),
@@ -69,88 +59,156 @@ impl NiceColors {
 		YELLUCK:     color!(0xebe577),
 		TRANSPARENT: Color::TRANSPARENT,
 	);
-}
 
-/// # Light Theme.
-pub(super) static LIGHT_THEME: LazyLock<Theme> = LazyLock::new(|| Theme::custom("RefractLight".to_owned(), LIGHT_PALETTE));
+	/// # Light Color Palette.
+	pub(super) const LIGHT_PALETTE: Palette = Palette {
+		background: Self::WHITE,
+		text:       Self::BLACK,
+		primary: 	Self::BLUE,
+		success: 	Self::GREEN,
+		// TODO: coming soon?
+		// warning: Self::ORANGE,
+		danger:     Self::RED,
+	};
 
-/// # Light Color Palette.
-pub(super) const LIGHT_PALETTE: Palette = Palette {
-	background: NiceColors::WHITE,
-	text:       NiceColors::BLACK,
-	primary: 	NiceColors::BLUE,
-	success: 	NiceColors::GREEN,
-	// TODO: coming soon?
-	// warning: NiceColors::ORANGE,
-	danger:     NiceColors::RED,
-};
+	/// # Dark Color Palette.
+	pub(super) const DARK_PALETTE: Palette = Palette {
+		background: Self::BLACK,
+		text:       Self::WHITE,
+		primary: 	Self::BLUE,
+		success: 	Self::GREEN,
+		// TODO: coming soon?
+		// warning: Self::ORANGE,
+		danger:     Self::RED,
+	};
 
-/// # Dark Theme.
-pub(super) static DARK_THEME: LazyLock<Theme> = LazyLock::new(|| Theme::custom("RefractDark".to_owned(), DARK_PALETTE));
+	/// # Foreground Color.
+	pub(super) const fn fg(dark: bool) -> Color {
+		if dark { Self::DARK_PALETTE.text }
+		else { Self::LIGHT_PALETTE.text }
+	}
 
-/// # Dark Color Palette.
-pub(super) const DARK_PALETTE: Palette = Palette {
-	background: NiceColors::BLACK,
-	text:       NiceColors::WHITE,
-	primary: 	NiceColors::BLUE,
-	success: 	NiceColors::GREEN,
-	// TODO: coming soon?
-	// warning: NiceColors::ORANGE,
-	danger:     NiceColors::RED,
-};
-
-/// # Non-Shadow Shadow.
-pub(super) const NO_SHADOW: Shadow = Shadow {
-	color: NiceColors::TRANSPARENT,
-	offset: Vector { x: 0.0, y: 0.0 },
-	blur_radius: 0.0,
-};
-
-
-
-/// # Border Style.
-pub(super) const fn border_style(color: Color, width: f32, radius: f32) -> Border {
-	Border {
-		color,
-		width,
-		radius: Radius {
-			top_left: radius,
-			top_right: radius,
-			bottom_right: radius,
-			bottom_left: radius,
-		},
+	/// # Maybe Dim a Color.
+	///
+	/// Pass through the color if `cond`, otherwise dim it to 50% opacity.
+	pub(super) const fn maybe_dim(color: Color, cond: bool) -> Color {
+		if cond { color }
+		else {
+			Color { a: 0.5, ..color }
+		}
 	}
 }
 
-/// # Button Style.
-///
-/// Produce a decent-looking button with the given base (background) color.
-/// Note that for our purposes, the text is always white.
-pub(super) const fn button_style(status: button::Status, base: Color) -> button::Style {
-	button::Style {
-		background: Some(Background::Color(match status {
-			button::Status::Active => base,
-			button::Status::Hovered | button::Status::Pressed => Color { a: 0.9, ..base },
-			button::Status::Disabled => Color { a: 0.5, ..base },
-		})),
-		text_color: NiceColors::WHITE,
-		border: border_style(NiceColors::TRANSPARENT, 0.0, 8.0),
-		shadow: NO_SHADOW,
-	}
+/// # Fonts and Text.
+impl Skin {
+	/// # Fira Mono: Regular.
+	pub(super) const FONT_REGULAR: Font = Font {
+		family:  font::Family::Name("Fira Mono"),
+		weight:  font::Weight::Normal,
+		stretch: font::Stretch::Normal,
+		style:   font::Style::Normal,
+	};
+
+	/// # Fira Mono: Bold.
+	pub(super) const FONT_BOLD: Font = Font {
+		family:  font::Family::Name("Fira Mono"),
+		weight:  font::Weight::Bold,
+		stretch: font::Stretch::Normal,
+		style:   font::Style::Normal,
+	};
+
+	/// # Tiny Font Size.
+	pub(super) const TEXT_SM: Pixels = Pixels(12.0);
+
+	/// # Normal Font Size.
+	pub(super) const TEXT_MD: Pixels = Pixels(14.0);
+
+	/// # Big Font Size.
+	pub(super) const TEXT_LG: Pixels = Pixels(18.0);
 }
 
-/// # Tooltip Style.
-///
-/// Light and dark variants for fun.
-pub(super) const fn tooltip_style(light: bool) -> container::Style {
-	let (bg, fg) =
-		if light { (NiceColors::OFF_WHITE, NiceColors::BLACK) }
-		else     { (NiceColors::OFF_BLACK, NiceColors::WHITE) };
+/// # General Spacing.
+impl Skin {
+	/// # Quarter Gap.
+	pub(super) const GAP25: f32 = 5.0;
 
-	container::Style {
-		text_color: Some(fg),
-		background: Some(Background::Color(bg)),
-		border: border_style(NiceColors::TEAL, 2.0, 0.0),
-		shadow: NO_SHADOW,
+	/// # Half Gap.
+	pub(super) const GAP50: f32 = 10.0;
+
+	/// # Three-Quarter Gap.
+	pub(super) const GAP75: f32 = 15.0;
+
+	/// # Normal/Full Gap.
+	pub(super) const GAP: f32 = 20.0;
+}
+
+/// # Widgets.
+impl Skin {
+	/// # Button Padding.
+	pub(super) const BTN_PADDING: Padding = Padding {
+		top: 10.0,
+		right: 20.0,
+		bottom: 10.0,
+		left: 20.0,
+	};
+
+	/// # Check Size.
+	pub(super) const CHK_SIZE: Pixels = Pixels(12.0);
+
+	/// # Non-Shadow Shadow.
+	pub(super) const NO_SHADOW: Shadow = Shadow {
+		color: Self::TRANSPARENT,
+		offset: Vector { x: 0.0, y: 0.0 },
+		blur_radius: 0.0,
+	};
+
+	/// # Tooltip Width.
+	pub(super) const TOOLTIP_SIZE: Pixels = Pixels(300.0);
+
+	/// # Border Style.
+	pub(super) const fn border_style(color: Color, width: f32, radius: f32) -> Border {
+		Border {
+			color,
+			width,
+			radius: Radius {
+				top_left: radius,
+				top_right: radius,
+				bottom_right: radius,
+				bottom_left: radius,
+			},
+		}
+	}
+
+	/// # Button Style.
+	///
+	/// Produce a decent-looking button with the given base (background) color.
+	/// Note that for our purposes, the text is always white.
+	pub(super) const fn button_style(status: button::Status, base: Color) -> button::Style {
+		button::Style {
+			background: Some(Background::Color(match status {
+				button::Status::Active => base,
+				button::Status::Hovered | button::Status::Pressed => Color { a: 0.9, ..base },
+				button::Status::Disabled => Color { a: 0.5, ..base },
+			})),
+			text_color: Self::WHITE,
+			border: Self::border_style(Self::TRANSPARENT, 0.0, 8.0),
+			shadow: Self::NO_SHADOW,
+		}
+	}
+
+	/// # Tooltip Style.
+	///
+	/// Light and dark variants for fun.
+	pub(super) const fn tooltip_style(dark: bool) -> container::Style {
+		let (bg, fg) =
+			if dark { (Self::OFF_BLACK, Self::WHITE) }
+			else    { (Self::OFF_WHITE, Self::BLACK) };
+
+		container::Style {
+			text_color: Some(fg),
+			background: Some(Background::Color(bg)),
+			border: Self::border_style(Self::TEAL, 2.0, 0.0),
+			shadow: Self::NO_SHADOW,
+		}
 	}
 }
