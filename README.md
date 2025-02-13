@@ -84,6 +84,16 @@ The smallest of the accepted candidates, if any, will be saved to disk at the en
 
 Then it's back around again for the next input/output pair!
 
+### Pro Tip
+
+JPEG and PNG are actually quite _good_ and, properly encoded, can provide _better_ compression than some — or all — of the possible next-gen alternatives.
+
+(This is especially true for lossless conversions; a well-optimized PNG is _not_ something you'd want to meet in a dark alley!)
+
+For best — or at least more honest — results, take some time to optimize your sources with a tool like [flaca](https://github.com/Blobfolio/flaca/) _before_ feeding them to refract.
+
+Two things are twice as many things as one thing,<sup>\[citation needed\]</sup> but being the obsessive person you are — normal people wouldn't be doing _either_ — you'll sleep better knowing no bytes have gone unsaved.
+
 
 
 ## CLI Usage
