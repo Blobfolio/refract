@@ -1222,38 +1222,38 @@ impl App {
 		let active = current.candidate.is_some();
 		let new_kind = current.output_kind().unwrap_or(ImageKind::Png);
 
-		let mut formats = Vec::with_capacity(5);
+		// Image.Ext > Ext1 Ext2 Ext3.
+		let mut formats = Vec::with_capacity(6);
+		if let Some((stem, ext)) = split_ext(&current.src) {
+			formats.push(emphasize!(span(stem)));
+			formats.push(emphasize!(span(format!(".{ext}")), PURPLE));
+			formats.push(span(" > ").color(NiceColors::GREY));
+		}
+		let mut any = false;
 		for (flag, kind) in [
 			(FMT_WEBP, ImageKind::Webp),
 			(FMT_AVIF, ImageKind::Avif),
 			(FMT_JXL, ImageKind::Jxl),
 		] {
 			if self.has_flag(flag) {
-				if ! formats.is_empty() {
-					formats.push(span(" + ").color(NiceColors::GREY));
-				}
+				if any { formats.push(span(" + ").color(NiceColors::GREY)); }
+				else { any = true; }
+
 				if kind == new_kind { formats.push(kind!(kind, PINK)); }
 				else { formats.push(kind!(kind, GREY)); }
 			}
 		}
-		formats.insert(0, span(" > ").color(NiceColors::GREY));
-		formats.insert(0, kind!(current.input.kind(), PURPLE));
 
 		column!(
-			// Path.
-			split_path(&current.src).map_or_else(
-				Rich::new,
-				|(dir, name)| rich_text!(
-					span(format!("{}/", dir.to_string_lossy())).color(NiceColors::GREY),
-					span(name.to_string_lossy().into_owned()).color(self.fg()),
-				),
-			),
-
 			// Formats.
-			Rich::with_spans(formats),
+			container(container(Rich::with_spans(formats)).padding(10))
+				.style(|_| {
+					let mut style = bordered_box(&self.theme());
+					style.background = None;
+					style
+				}),
 
 			// Cancel.
-			text(""),
 			rich_text!(
 				span("Ready for bed? ").color(maybe_dim(self.fg(), active)),
 				emphasize!(
@@ -1263,7 +1263,7 @@ impl App {
 					.link_maybe(active.then_some(Message::NextImage)),
 			)
 		)
-			.spacing(5)
+			.spacing(15)
 			.align_x(Horizontal::Center)
 			.width(Fill)
 	}
@@ -2200,6 +2200,25 @@ fn cli_log_error(src: MessageError) {
 		now.time(),
 		src.as_str(),
 	);
+}
+
+/// # Split Extension.
+///
+/// Split the file name into stem and extension parts, trimming the stem if
+/// too long, and checking that the extension is appropriate for JPEG/PNG.
+fn split_ext(src: &Path) -> Option<(Cow<str>, &str)> {
+	use unicode_width::UnicodeWidthStr;
+
+	let ext = src.extension().and_then(OsStr::to_str)?;
+	let stem = src.file_stem()?.to_string_lossy();
+
+	// Don't let _really_ long file names ruin the party.
+	let len = stem.width() + ext.len();
+	if let Some(diff) = len.checked_sub(50) {
+		let tmp: String = std::iter::once('…').chain(stem.chars().skip(diff)).collect();
+		Some((Cow::Owned(tmp), ext))
+	}
+	else { Some((stem, ext)) }
 }
 
 /// # Split Path.
