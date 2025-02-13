@@ -291,13 +291,6 @@ impl App {
 		! self.has_flag(MODE_LOSSY) && self.has_flag(OTHER_SAVE_AUTO)
 	}
 
-	/// # Count Encoders.
-	const fn count_encoders(&self) -> u8 {
-		(self.has_flag(FMT_AVIF) as u8) +
-		(self.has_flag(FMT_JXL) as u8) +
-		(self.has_flag(FMT_WEBP) as u8)
-	}
-
 	/// # Has Candidate?
 	fn has_candidate(&self) -> bool {
 		self.current.as_ref().is_some_and(CurrentImage::has_candidate)
@@ -382,7 +375,7 @@ impl App {
 	/// back to itself.
 	pub(super) fn update(&mut self, message: Message) -> Task<Message> {
 		// Clear the last error, if any.
-		let _res = self.error.take();
+		self.error = None;
 
 		match message {
 			// Add File(s) or Directory.
@@ -562,7 +555,7 @@ impl App {
 	fn update_switch_encoder__(&mut self) -> Task<Message> {
 		// If the user isn't involved or is only using one encoder, there's
 		// no need to promote the change.
-		if self.automatic() || self.count_encoders() < 2 {
+		if self.automatic() || (self.flags & FMT_FLAGS).count_ones() < 2 {
 			Task::done(Message::NextStep)
 		}
 		// Otherwise let's give them a quick heads up!
@@ -872,7 +865,7 @@ impl App {
 		)
 			.style(|_| {
 				let mut style = bordered_box(&self.theme());
-				let _res = style.background.take();
+				style.background = None;
 				style
 			})
 			.width(Fill)
@@ -1956,7 +1949,7 @@ impl ImageResultWrapper {
 		if let Some(best) = &self.best {
 			// If saving fails, pretend there was no best.
 			if write_atomic::write_file(&self.dst, best).is_err() {
-				let _res = self.best.take();
+				self.best = None;
 			}
 		}
 	}
