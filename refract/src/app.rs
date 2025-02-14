@@ -927,7 +927,7 @@ impl App {
 			),
 			tip!(
 				self,
-				chk!(self, "Auto-Exit", OTHER_SAVE_AUTO),
+				chk!(self, "Auto-Exit", OTHER_EXIT_AUTO),
 				"Close the program after the last image has been processed."
 			),
 			chk!(self, "Night Mode", OTHER_NIGHT),
