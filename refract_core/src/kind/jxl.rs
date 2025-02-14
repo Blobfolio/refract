@@ -3,15 +3,42 @@
 */
 
 use crate::{
+	ColorKind,
 	Input,
 	NZ_150,
 	Output,
 	RefractError,
-	traits::Encoder,
+	traits::{
+		Decoder,
+		DecoderResult,
+		Encoder,
+	},
 };
 use jpegxl_sys::{
-	metadata::codestream_header::JxlBasicInfo,
 	color::color_encoding::JxlColorEncoding,
+	common::types::{
+		JxlBool,
+		JxlEndianness,
+		JxlDataType,
+		JxlPixelFormat,
+	},
+	decode::{
+		JxlColorProfileTarget,
+		JxlDecoder,
+		JxlDecoderCreate,
+		JxlDecoderDestroy,
+		JxlDecoderGetBasicInfo,
+		JxlDecoderGetColorAsICCProfile,
+		JxlDecoderGetICCProfileSize,
+		JxlDecoderImageOutBufferSize,
+		JxlDecoderProcessInput,
+		JxlDecoderReset,
+		JxlDecoderSetImageOutBuffer,
+		JxlDecoderSetInput,
+		JxlDecoderSetKeepOrientation,
+		JxlDecoderStatus,
+		JxlDecoderSubscribeEvents,
+	},
 	encoder::encode::{
 		JxlColorEncodingSetToSRGB,
 		JxlEncoder,
@@ -34,12 +61,7 @@ use jpegxl_sys::{
 		JxlEncoderStatus,
 		JxlEncoderUseContainer,
 	},
-	common::types::{
-		JxlBool,
-		JxlEndianness,
-		JxlDataType,
-		JxlPixelFormat,
-	},
+	metadata::codestream_header::JxlBasicInfo,
 	threads::thread_parallel_runner::{
 		JxlThreadParallelRunner,
 		JxlThreadParallelRunnerCreate,
@@ -55,40 +77,11 @@ use std::{
 	},
 };
 
-#[cfg(feature = "decode_ng")]
-use crate::{
-	ColorKind,
-	traits::{
-		Decoder,
-		DecoderResult,
-	},
-};
-
-#[cfg(feature = "decode_ng")]
-use jpegxl_sys::decode::{
-	JxlColorProfileTarget,
-	JxlDecoder,
-	JxlDecoderCreate,
-	JxlDecoderDestroy,
-	JxlDecoderGetBasicInfo,
-	JxlDecoderGetColorAsICCProfile,
-	JxlDecoderGetICCProfileSize,
-	JxlDecoderImageOutBufferSize,
-	JxlDecoderProcessInput,
-	JxlDecoderReset,
-	JxlDecoderSetImageOutBuffer,
-	JxlDecoderSetInput,
-	JxlDecoderSetKeepOrientation,
-	JxlDecoderStatus,
-	JxlDecoderSubscribeEvents,
-};
-
 
 
 /// # JPEG XL Image.
 pub(crate) struct ImageJxl;
 
-#[cfg(feature = "decode_ng")]
 impl Decoder for ImageJxl {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
@@ -172,13 +165,11 @@ impl Encoder for ImageJxl {
 
 
 
-#[cfg(feature = "decode_ng")]
 /// # Hold the Decoder.
 ///
 /// This wrapper exists solely to help with drop cleanup.
 struct LibJxlDecoder(*mut JxlDecoder);
 
-#[cfg(feature = "decode_ng")]
 impl LibJxlDecoder {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New Decoder.
@@ -295,7 +286,6 @@ impl LibJxlDecoder {
 	}
 }
 
-#[cfg(feature = "decode_ng")]
 impl Drop for LibJxlDecoder {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
@@ -561,7 +551,6 @@ const fn maybe_die(res: JxlEncoderStatus) -> Result<(), RefractError> {
 	}
 }
 
-#[cfg(feature = "decode_ng")]
 /// # Verify Decoder Status.
 const fn maybe_die_dec(res: JxlDecoderStatus) -> Result<(), RefractError> {
 	match res {

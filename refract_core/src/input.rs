@@ -8,10 +8,7 @@ use crate::{
 	RefractError,
 };
 use std::{
-	borrow::{
-		Borrow,
-		Cow,
-	},
+	borrow::Cow,
 	fmt,
 	num::{
 		NonZeroU32,
@@ -34,15 +31,6 @@ use std::{
 /// Other attributes, like dimension and color/depth information, have
 /// dedicated getters.
 ///
-/// Similar to `ImgRef`, an [`Input`] can be efficiently borrowed without
-/// reallocating the buffers, albeit with lifetime constraints. For a straight
-/// copy, use [`Input::borrow`]. To obtain a copy of the image in a different
-/// format — RGBA or reduced to only used channels — use [`Input::as_rgba`] or
-/// [`Input::as_native`] respectively.
-///
-/// The latter borrows will require additional allocations if different than
-/// the underlying storage, otherwise they are equivalent to [`Input::borrow`].
-///
 /// Instantiation uses `TryFrom<&[u8]>`, which expects the raw (undecoded) file
 /// bytes. At the moment, only `JPEG` and `PNG` image sources can be decoded,
 /// but this will likely change with a future release.
@@ -55,9 +43,9 @@ use std::{
 /// let raw = std::fs::read("/path/to/my.jpg").unwrap();
 /// let input = Input::try_from(raw.as_slice()).unwrap();
 /// ```
-pub struct Input<'a> {
+pub struct Input {
 	/// # Image Pixels.
-	pixels: Cow<'a, [u8]>,
+	pixels: Vec<u8>,
 
 	/// # Image Width.
 	width: NonZeroU32,
@@ -68,22 +56,26 @@ pub struct Input<'a> {
 	/// # Original File Size.
 	size: NonZeroUsize,
 
-	/// # Color Kind.
+	/// # (Native) Color Kind.
+	///
+	/// Or: the colors the image needs.
 	color: ColorKind,
 
-	/// Color Depth.
+	/// # (Stored) Color Depth.
+	///
+	/// This can be larger than `color` if upsampled to RGBA, for example.
 	depth: ColorKind,
 
 	/// # Image Kind.
 	kind: ImageKind,
 }
 
-impl AsRef<[u8]> for Input<'_> {
+impl AsRef<[u8]> for Input {
 	#[inline]
 	fn as_ref(&self) -> &[u8] { self }
 }
 
-impl fmt::Debug for Input<'_> {
+impl fmt::Debug for Input {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		f.debug_struct("Input")
 		.field("width", &self.width)
@@ -92,18 +84,18 @@ impl fmt::Debug for Input<'_> {
 		.field("color", &self.color)
 		.field("depth", &self.depth)
 		.field("kind", &self.kind)
-		.finish()
+		.finish_non_exhaustive()
 	}
 }
 
-impl Deref for Input<'_> {
+impl Deref for Input {
 	type Target = [u8];
 
 	#[inline]
-	fn deref(&self) -> &Self::Target { self.pixels.as_ref() }
+	fn deref(&self) -> &Self::Target { self.pixels.as_slice() }
 }
 
-impl TryFrom<&[u8]> for Input<'_> {
+impl TryFrom<&[u8]> for Input {
 	type Error = RefractError;
 
 	fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
@@ -123,7 +115,7 @@ impl TryFrom<&[u8]> for Input<'_> {
 		let size = NonZeroUsize::new(src.len()).ok_or(RefractError::Image)?;
 
 		Ok(Self {
-			pixels: Cow::Owned(buf),
+			pixels: buf,
 			width,
 			height,
 			size,
@@ -135,7 +127,7 @@ impl TryFrom<&[u8]> for Input<'_> {
 }
 
 /// ## Getters.
-impl Input<'_> {
+impl Input {
 	#[inline]
 	#[must_use]
 	/// # Color Kind.
@@ -215,7 +207,7 @@ impl Input<'_> {
 	/// # Take Pixels.
 	///
 	/// Consume the instance, stealing the pixels as an owned buffer.
-	pub fn take_pixels(self) -> Vec<u8> { self.pixels.into_owned() }
+	pub fn take_pixels(self) -> Vec<u8> { self.pixels }
 
 	#[inline]
 	#[must_use]
@@ -227,7 +219,7 @@ impl Input<'_> {
 ///
 /// These are convenience methods for returning dimensions in `i32` format,
 /// which is required by some of the encoders.
-impl Input<'_> {
+impl Input {
 	#[inline]
 	/// # Height.
 	///
@@ -275,7 +267,7 @@ impl Input<'_> {
 ///
 /// These are convenience methods for returning dimensions in `u32` format,
 /// which is required by some of the encoders.
-impl Input<'_> {
+impl Input {
 	#[inline]
 	#[must_use]
 	/// # Height.
@@ -296,7 +288,44 @@ impl Input<'_> {
 }
 
 /// ## Copying and Mutation.
-impl<'a> Input<'a> {
+impl Input {
+	#[must_use]
+	/// # RGBA Pixels.
+	///
+	/// Return the pixels as 4-byte RGBA, upsampling the colorspace as
+	/// necessary.
+	pub fn pixels_rgba(&self) -> Cow<[u8]> {
+		// The expected size.
+		let size = self.width() * self.height() * 4;
+
+		match self.depth {
+			ColorKind::Rgba => Cow::Borrowed(&self.pixels),
+			ColorKind::Rgb => Cow::Owned(
+				self.pixels.chunks_exact(3)
+					.fold(Vec::with_capacity(size), |mut acc, px| {
+						acc.extend_from_slice(px); // Push RGB.
+						acc.push(255);             // Push Alpha.
+						acc
+					})
+			),
+			ColorKind::GreyAlpha => Cow::Owned(
+				self.pixels.chunks_exact(2)
+					.fold(Vec::with_capacity(size), |mut acc, px| {
+						acc.extend_from_slice(&[px[0], px[0], px[0], px[1]]);
+						acc
+					})
+			),
+			ColorKind::Grey => Cow::Owned(
+				self.pixels.iter()
+					.copied()
+					.fold(Vec::with_capacity(size), |mut acc, px| {
+						acc.extend_from_slice(&[px, px, px, 255]);
+						acc
+					})
+			),
+		}
+	}
+
 	#[must_use]
 	/// ## To Native Channels.
 	///
@@ -314,40 +343,34 @@ impl<'a> Input<'a> {
 	/// the proper native format or if we don't end up with a buffer of the
 	/// correct size. Neither of these should be able to happen in practice,
 	/// but there is an assertion to make sure.
-	pub fn as_native(&'a self) -> Self {
-		if self.color == self.depth { return self.borrow(); }
+	pub fn into_native(self) -> Self {
+		if self.color == self.depth { return self; }
 		assert!(self.depth == ColorKind::Rgba, "BUG: expected RGBA color.");
 
-		let (buf, depth): (Cow<[u8]>, ColorKind) = match self.color {
+		let (buf, depth): (Vec<u8>, ColorKind) = match self.color {
 			ColorKind::Grey => (
-				Cow::Owned(
-					self.pixels.chunks_exact(4).map(|px| px[0]).collect()
-				),
+				self.pixels.chunks_exact(4).map(|px| px[0]).collect(),
 				ColorKind::Grey,
 			),
 			ColorKind::GreyAlpha => (
-				Cow::Owned(
-					self.pixels.chunks_exact(4)
+				self.pixels.chunks_exact(4)
 					.fold(Vec::with_capacity(self.width() * self.height() * 2), |mut acc, px| {
 						acc.push(px[0]); // Keep one color.
 						acc.push(px[3]); // Keep alpha.
 						acc
-					})
-				),
+					}),
 				ColorKind::GreyAlpha,
 			),
 			ColorKind::Rgb => (
-				Cow::Owned(
-					self.pixels.chunks_exact(4)
+				self.pixels.chunks_exact(4)
 					.fold(Vec::with_capacity(self.width() * self.height() * 3), |mut acc, px| {
 						acc.extend_from_slice(&px[..3]); // Keep RGB.
 						acc
-					})
-				),
+					}),
 				ColorKind::Rgb,
 			),
-			// This shouldn't be reachable, but is painless enough to include.
-			ColorKind::Rgba => (Cow::Borrowed(self.pixels.borrow()), ColorKind::Rgba),
+			// We already handled color == depth.
+			ColorKind::Rgba => unreachable!(),
 		};
 
 		assert!(
@@ -379,66 +402,11 @@ impl<'a> Input<'a> {
 	///
 	/// This will panic if a 4-byte RGBA slice cannot be created. This
 	/// shouldn't happen in practice, but there is an assertion to make sure.
-	pub fn as_rgba(&'a self) -> Self {
-		// The expected size.
-		let size = self.width() * self.height() * 4;
-
-		let buf: Cow<[u8]> = match self.depth {
-			ColorKind::Rgba => Cow::Borrowed(self.pixels.borrow()),
-			ColorKind::Rgb => Cow::Owned(
-				self.pixels.chunks_exact(3)
-				.fold(Vec::with_capacity(size), |mut acc, px| {
-					acc.extend_from_slice(px); // Push RGB.
-					acc.push(255); // Push Alpha.
-					acc
-				})
-			),
-			ColorKind::GreyAlpha => Cow::Owned(
-				self.pixels.chunks_exact(2)
-				.fold(Vec::with_capacity(size), |mut acc, px| {
-					acc.extend_from_slice(&[px[0], px[0], px[0], px[1]]);
-					acc
-				})
-			),
-			ColorKind::Grey => Cow::Owned(
-				self.pixels.iter()
-				.copied()
-				.fold(Vec::with_capacity(size), |mut acc, px| {
-					acc.extend_from_slice(&[px, px, px, 255]);
-					acc
-				})
-			),
-		};
-
-		// Make sure we actually filled the buffer appropriately.
-		assert!(buf.len() == size, "BUG: buffer length does not match size.");
-
-		Self {
-			pixels: buf,
-			width: self.width,
-			height: self.height,
-			size: self.size,
-			color: self.color,
-			depth: ColorKind::Rgba,
-			kind: self.kind,
+	pub fn into_rgba(mut self) -> Self {
+		if ! matches!(self.depth, ColorKind::Rgba) {
+			self.pixels = self.pixels_rgba().into_owned();
+			self.depth = ColorKind::Rgba;
 		}
-	}
-
-	#[inline]
-	#[must_use]
-	/// ## Borrow a Copy.
-	///
-	/// This will return a new instance using a borrowed pixel buffer (in the
-	/// same format as the original), avoiding unnecessary reallocation.
-	pub fn borrow(&'a self) -> Self {
-		Self {
-			pixels: Cow::Borrowed(self.pixels.borrow()),
-			width: self.width,
-			height: self.height,
-			size: self.size,
-			color: self.color,
-			depth: self.depth,
-			kind: self.kind,
-		}
+		self
 	}
 }

@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "0.12.0"
+version = "1.0.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2021"
@@ -14,13 +14,13 @@ maintainer = "Josh Stoik <josh@blobfolio.com>"
 copyright = "2025, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
 revision = "1"
-depends = "$auto"
+depends = "$auto, xdg-desktop-portal-gnome | xdg-desktop-portal-gtk | xdg-desktop-portal-kde | zenity"
 replaces = "refract-gtk"
 conflicts = "refract-gtk"
 section = "graphics"
 extended-description = """\
 .\n\
-Refract GTK is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality."""
+Refract is a guided AVIF/JPEG XL/WebP conversion utility for JPEG and PNG sources, simplifying the task of finding the smallest acceptable quality."""
 assets = [
     ["../target/release/refract", "usr/bin/", "755"],
     ["./skel/deb/applications/refract.desktop", "/usr/share/applications/", "644"],
@@ -41,6 +41,11 @@ name = "Refract"
 bash-dir = "../release/completions"
 man-dir = "../release/man"
 credits-dir = "../"
+
+[[package.metadata.bashman.switches]]
+short = "-e"
+long = "--exit-auto"
+description = "Exit the program after the last image has been processed."
 
 [[package.metadata.bashman.switches]]
 short = "-h"
@@ -72,6 +77,11 @@ long = "--no-ycbcr"
 description = "Skip AVIF YCbCr encoding passes."
 
 [[package.metadata.bashman.switches]]
+short = "-s"
+long = "--save-auto"
+description = "Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation."
+
+[[package.metadata.bashman.switches]]
 short = "-V"
 long = "--version"
 description = "Print program version."
@@ -90,19 +100,33 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 [build-dependencies]
 argyle = "0.10.*"
 dowser = "0.11.*"
-oxford_join = "0.4.*"
-toml = "0.8.14"
-version-compare = "0.2.*"
+
+[build-dependencies.refract_core]
+path = "../refract_core"
+default-features = false
+features = [ "png" ]
 
 [dependencies]
 argyle = "0.10.*"
-crossbeam-channel = "0.5.*"
 dactyl = "0.9.*"
 dowser = "0.11.*"
-gtk = "=0.18.2"
-oxford_join = "0.4.*"
+open = "=5.3.2"
+rfd = "=0.15.2"
+unicode-width = "0.2.*"
 write_atomic = "0.5.*"
+
+[dependencies.async-std]
+version = "=1.13.*"
+default-features = false
+
+[dependencies.iced]
+version = "=0.13.1"
+features = [ "async-std", "image-without-codecs" ]
 
 [dependencies.refract_core]
 path = "../refract_core"
-features = [ "bin", "decode_ng" ]
+features = [ "images" ]
+
+[dependencies.utc2k]
+version = "0.11.*"
+features = [ "local" ]

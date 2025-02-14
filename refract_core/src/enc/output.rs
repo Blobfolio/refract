@@ -117,6 +117,7 @@ impl Output {
 
 /// ## Getters.
 impl Output {
+	#[cfg(feature = "jxl")]
 	#[inline]
 	/// # As Mut Vec.
 	///
@@ -217,6 +218,7 @@ impl Output {
 		self.quality = quality;
 	}
 
+	#[cfg(any(feature = "avif", feature = "webp"))]
 	/// # Set Data From Slice.
 	///
 	/// This method shoves the raw byte slice returned by the `WebP` and `AVIF`

@@ -3,12 +3,17 @@
 */
 
 use crate::{
+	ColorKind,
 	FLAG_AVIF_RGB,
 	Input,
 	NZ_063,
 	Output,
 	RefractError,
-	traits::Encoder,
+	traits::{
+		Decoder,
+		DecoderResult,
+		Encoder,
+	},
 };
 use libavif_sys::{
 	AVIF_CHROMA_DOWNSAMPLING_BEST_QUALITY,
@@ -25,49 +30,35 @@ use libavif_sys::{
 	AVIF_RESULT_OK,
 	AVIF_RGB_FORMAT_RGBA,
 	AVIF_TRANSFER_CHARACTERISTICS_SRGB,
+	avifDecoder,
+	avifDecoderCreate,
+	avifDecoderDestroy,
+	avifDecoderReadMemory,
 	avifEncoder,
 	avifEncoderCreate,
 	avifEncoderDestroy,
 	avifEncoderWrite,
 	avifImage,
 	avifImageCreate,
+	avifImageCreateEmpty,
 	avifImageDestroy,
 	avifImageRGBToYUV,
+	avifImageYUVToRGB,
 	avifResult,
 	avifRGBImage,
+	avifRGBImageAllocatePixels,
+	avifRGBImageFreePixels,
+	avifRGBImageSetDefaults,
 	avifRWData,
 	avifRWDataFree,
 };
 use std::num::NonZeroU8;
-
-#[cfg(feature = "decode_ng")]
-use crate::{
-	ColorKind,
-	traits::{
-		Decoder,
-		DecoderResult,
-	},
-};
-
-#[cfg(feature = "decode_ng")]
-use libavif_sys::{
-	avifDecoder,
-	avifDecoderCreate,
-	avifDecoderDestroy,
-	avifDecoderReadMemory,
-	avifImageCreateEmpty,
-	avifImageYUVToRGB,
-	avifRGBImageAllocatePixels,
-	avifRGBImageFreePixels,
-	avifRGBImageSetDefaults,
-};
 
 
 
 /// # AVIF Image.
 pub(crate) struct ImageAvif;
 
-#[cfg(feature = "decode_ng")]
 impl Decoder for ImageAvif {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn decode(raw: &[u8]) -> Result<DecoderResult, RefractError> {
@@ -176,13 +167,11 @@ impl Encoder for ImageAvif {
 
 
 
-#[cfg(feature = "decode_ng")]
 /// # AVIF Decoder.
 ///
 /// This wraps the AVIF decoder. It exists solely for garbage cleanup.
 struct LibAvifDecoder(*mut avifDecoder);
 
-#[cfg(feature = "decode_ng")]
 impl LibAvifDecoder {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # New.
@@ -210,7 +199,6 @@ impl LibAvifDecoder {
 	}
 }
 
-#[cfg(feature = "decode_ng")]
 impl Drop for LibAvifDecoder {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	#[inline]
@@ -355,7 +343,6 @@ impl LibAvifImage {
 		Ok(Self(yuv))
 	}
 
-	#[cfg(feature = "decode_ng")]
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Empty.
 	fn empty() -> Result<Self, RefractError> {
@@ -377,7 +364,6 @@ impl Drop for LibAvifImage {
 
 
 
-#[cfg(feature = "decode_ng")]
 #[derive(Default)]
 /// # Avif RGB Image.
 ///
@@ -385,7 +371,6 @@ impl Drop for LibAvifImage {
 /// decoding.
 struct LibAvifRGBImage(avifRGBImage);
 
-#[cfg(feature = "decode_ng")]
 impl Drop for LibAvifRGBImage {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn drop(&mut self) {

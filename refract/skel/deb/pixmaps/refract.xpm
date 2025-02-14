@@ -1,5 +1,5 @@
 /* XPM */
-static char * refract_gtk_xpm[] = {
+static char * refract_xpm[] = {
 "32 32 256 2",
 "  	c #AF0000",
 ". 	c #AFFF03",

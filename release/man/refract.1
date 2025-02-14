@@ -1,12 +1,15 @@
-.TH "REFRACT" "1" "January 2025" "refract v0.12.0" "User Commands"
+.TH "REFRACT" "1" "February 2025" "refract v1.0.0" "User Commands"
 .SH NAME
-REFRACT \- Manual page for refract v0.12.0.
+REFRACT \- Manual page for refract v1.0.0.
 .SH DESCRIPTION
 Guided AVIF/JPEG XL/WebP conversion for JPEG and PNG sources.
 .SS USAGE:
 .TP
 refract [FLAGS] [OPTIONS] <PATH(s)…>
 .SS FLAGS:
+.TP
+\fB\-e\fR, \fB\-\-exit\-auto\fR
+Exit the program after the last image has been processed.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Print help information.
@@ -28,6 +31,9 @@ Skip WebP encoding.
 .TP
 \fB\-\-no\-ycbcr\fR
 Skip AVIF YCbCr encoding passes.
+.TP
+\fB\-s\fR, \fB\-\-save\-auto\fR
+Automatically save successful conversions to their source paths — with new extensions appended — instead of popping file dialogues for confirmation.
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print program version.

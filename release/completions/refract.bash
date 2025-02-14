@@ -4,6 +4,10 @@ _basher___refract() {
 	cur="${COMP_WORDS[COMP_CWORD]}"
 	prev="${COMP_WORDS[COMP_CWORD-1]}"
 	opts=()
+	if [[ ! " ${COMP_LINE} " =~ " -e " ]] && [[ ! " ${COMP_LINE} " =~ " --exit-auto " ]]; then
+		opts+=("-e")
+		opts+=("--exit-auto")
+	fi
 	if [[ ! " ${COMP_LINE} " =~ " -h " ]] && [[ ! " ${COMP_LINE} " =~ " --help " ]]; then
 		opts+=("-h")
 		opts+=("--help")
@@ -14,6 +18,10 @@ _basher___refract() {
 	[[ " ${COMP_LINE} " =~ " --no-lossy " ]] || opts+=("--no-lossy")
 	[[ " ${COMP_LINE} " =~ " --no-webp " ]] || opts+=("--no-webp")
 	[[ " ${COMP_LINE} " =~ " --no-ycbcr " ]] || opts+=("--no-ycbcr")
+	if [[ ! " ${COMP_LINE} " =~ " -s " ]] && [[ ! " ${COMP_LINE} " =~ " --save-auto " ]]; then
+		opts+=("-s")
+		opts+=("--save-auto")
+	fi
 	if [[ ! " ${COMP_LINE} " =~ " -V " ]] && [[ ! " ${COMP_LINE} " =~ " --version " ]]; then
 		opts+=("-V")
 		opts+=("--version")

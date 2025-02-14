@@ -54,10 +54,20 @@ This is the library powering [Refract](https://github.com/Blobfolio/refract), a 
 
 #![expect(clippy::redundant_pub_crate, reason = "Unresolvable.")]
 
+#[cfg(not(any(
+	feature = "jpeg",
+	feature = "png",
+	feature = "avif",
+	feature = "jxl",
+	feature = "webp",
+)))]
+compile_error!("At least one image format must be enabled.");
+
 #[expect(unused_extern_crates, reason = "This is needed for JXL.")]
+#[cfg(feature = "jxl")]
 extern crate link_cplusplus;
 
-mod enc;
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))] mod enc;
 mod error;
 mod input;
 mod kind;
@@ -65,12 +75,14 @@ pub(crate) mod traits;
 
 
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 pub use enc::{
 	iter::EncodeIter,
 	output::Output,
 	quality::{
 		Quality,
 		QualityValue,
+		QualityValueFmt,
 	},
 	range::QualityRange,
 };
@@ -80,13 +92,14 @@ pub use kind::{
 	color::ColorKind,
 	image::ImageKind,
 };
-pub(crate) use kind::{
-	avif::ImageAvif,
-	jpeg::ImageJpeg,
-	jxl::ImageJxl,
-	png::ImagePng,
-	webp::ImageWebp,
-};
+
+#[cfg(feature = "avif")] pub(crate) use kind::avif::ImageAvif;
+#[cfg(feature = "jpeg")] pub(crate) use kind::jpeg::ImageJpeg;
+#[cfg(feature = "jxl")]  pub(crate) use kind::jxl::ImageJxl;
+#[cfg(feature = "png")]  pub(crate) use kind::png::ImagePng;
+#[cfg(feature = "webp")] pub(crate) use kind::webp::ImageWebp;
+
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 use std::num::NonZeroU8;
 
 
@@ -110,40 +123,48 @@ pub const FLAG_NO_LOSSLESS: u8         = 0b0000_0010;
 /// When enabled, only full-range `RGB` encoding will be attempted.
 pub const FLAG_NO_AVIF_YCBCR: u8       = 0b0000_0100;
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// # (Internal) Encoder Flag: Public Flags Mask.
 ///
 /// These are flags that can be set externally.
 pub(crate) const PUBLIC_FLAGS: u8      = 0b0000_0111;
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// # (Internal) Encoder Flag: `AVIF` RGB.
 ///
 /// When set, `AVIF` encoding will use `RGB` colors. When not set, it will use
 /// `YCbCr`.
 pub(crate) const FLAG_AVIF_RGB: u8     = 0b0000_1000;
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// # (Internal) Encoder Flag: `AVIF` Round Two.
 ///
 /// The second `AVIF` encoding stage retries all quality ranges using `YCbCr`
 /// color compression.
 pub(crate) const FLAG_AVIF_ROUND_2: u8 = 0b0001_0000;
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// # (Internal) Encoder Flag: Valid Output.
 ///
 /// This is used by [`Output`] to determine whether or not the buffer has been
 /// validated.
 pub(crate) const FLAG_VALID:        u8 = 0b0010_0000;
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// # (Internal) Encoder Flag: Tried Lossless.
 ///
 /// This is used by [`EncodeIter`] to determine whether or not lossless
 /// encoding needs to be completed during iteration.
 pub(crate) const FLAG_DID_LOSSLESS: u8 = 0b0100_0000;
 
+#[cfg(feature = "avif")]
 /// # 63 is Non-Zero.
 pub(crate) const NZ_063: NonZeroU8 = NonZeroU8::new(63).unwrap();
 
+#[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// # 100 is Non-Zero.
 pub(crate) const NZ_100: NonZeroU8 = NonZeroU8::new(100).unwrap();
 
+#[cfg(feature = "jxl")]
 /// # 150 is Non-Zero.
 pub(crate) const NZ_150: NonZeroU8 = NonZeroU8::new(150).unwrap();
