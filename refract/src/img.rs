@@ -37,31 +37,38 @@ pub(super) fn is_jpeg_png(path: &Path) -> bool {
 }
 
 /// # Fix Path Extension.
-pub(super) fn with_ng_extension(mut path: PathBuf, kind: ImageKind) -> PathBuf {
+pub(super) fn with_ng_extension(path: &Path, kind: ImageKind) -> Option<PathBuf> {
+	// The path can't be gibberish; we need a valid parent directory and a
+	// file name.
+	let mut out = path.parent().and_then(|p| std::fs::canonicalize(p).ok())?;
+	out.push(path.file_name()?);
+
+	// Check the extension, though; we may need to add our own on top.
 	let ext = match kind {
 		ImageKind::Avif =>
-			if Extension::try_from4(&path) == Some(E_AVIF) { return path; }
+			if Extension::try_from4(&out) == Some(E_AVIF) { return Some(out); }
 			else { ".avif" },
 		ImageKind::Jxl =>
-			if Extension::try_from3(&path) == Some(E_JXL) { return path; }
+			if Extension::try_from3(&out) == Some(E_JXL) { return Some(out); }
 			else { ".jxl" },
 		ImageKind::Webp =>
-			if Extension::try_from4(&path) == Some(E_WEBP) { return path; }
+			if Extension::try_from4(&out) == Some(E_WEBP) { return Some(out); }
 			else { ".webp" },
 		ImageKind::Jpeg =>
-			if Extension::try_from3(&path).map_or_else(
-				|| Extension::try_from4(&path) == Some(E_JPEG),
+			if Extension::try_from3(&out).map_or_else(
+				|| Extension::try_from4(&out) == Some(E_JPEG),
 				|e| e == E_JPG
-			) { return path; }
+			) { return Some(out); }
 			else { ".jpg" },
 		ImageKind::Png =>
-			if Extension::try_from3(&path) == Some(E_PNG) { return path; }
+			if Extension::try_from3(&out) == Some(E_PNG) { return Some(out); }
 			else { ".png" },
+		ImageKind::Invalid => return None,
 	};
 
-	// Append and return.
-	path.as_mut_os_string().push(ext);
-	path
+	// Append and return!
+	out.as_mut_os_string().push(ext);
+	Some(out)
 }
 
 

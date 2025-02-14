@@ -45,6 +45,9 @@ pub enum ImageKind {
 
 	/// # WebP.
 	Webp,
+
+	/// # Invalid.
+	Invalid,
 }
 
 impl AsRef<str> for ImageKind {
@@ -129,7 +132,7 @@ impl ImageKind {
 			#[cfg(feature = "jxl")]  Self::Jxl => true,
 			#[cfg(feature = "png")]  Self::Png => true,
 			#[cfg(feature = "webp")] Self::Webp => true,
-			#[cfg(not(feature = "images"))] _ => false,
+			_ => false,
 		}
 	}
 
@@ -159,6 +162,7 @@ impl ImageKind {
 			Self::Jxl => "JPEG XL",
 			Self::Png => "PNG",
 			Self::Webp => "WebP",
+			Self::Invalid => "???",
 		}
 	}
 
@@ -174,7 +178,7 @@ impl ImageKind {
 		match self {
 			Self::Avif | Self::Jpeg | Self::Webp => 4,
 			Self::Jxl => 7,
-			Self::Png => 3,
+			Self::Png | Self::Invalid => 3,
 		}
 	}
 
@@ -187,6 +191,7 @@ impl ImageKind {
 			Self::Jxl => "jxl",
 			Self::Png => "png",
 			Self::Webp => "webp",
+			Self::Invalid => "xxx",
 		}
 	}
 
@@ -199,6 +204,7 @@ impl ImageKind {
 			Self::Jxl => "image/jxl",
 			Self::Png => "image/png",
 			Self::Webp => "image/webp",
+			Self::Invalid => "application/octet-stream",
 		}
 	}
 
@@ -248,7 +254,7 @@ impl ImageKind {
 			#[cfg(feature = "jxl")]  Self::Jxl => ImageJxl::decode(raw),
 			#[cfg(feature = "webp")] Self::Webp => ImageWebp::decode(raw),
 
-			#[cfg(not(feature = "images"))] _ => Err(RefractError::ImageDecode(self)),
+			_ => Err(RefractError::ImageDecode(self)),
 		}
 	}
 }

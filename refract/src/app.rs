@@ -458,7 +458,7 @@ impl App {
 					}
 					// Decode error?
 					else {
-						cli_log_sad(&src);
+						self.done.push(ImageResults::invalid(src));
 						if self.paths.is_empty() {
 							return Task::done(Message::Error(MessageError::NoImages));
 						}
@@ -751,7 +751,7 @@ impl App {
 		let mut last_dir = OsStr::new("");
 		for ActivityTableRow { src, kind, quality, len, ratio, time } in &table.0 {
 			let Some((dir, file)) = split_path(src) else { continue; };
-			let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg);
+			let is_src = matches!(kind, ImageKind::Png | ImageKind::Jpeg | ImageKind::Invalid);
 			let skipped = is_src && time.is_some();
 			let color =
 				if is_src {
@@ -783,7 +783,8 @@ impl App {
 					.color(Skin::PINK),
 
 				// Kind.
-				span(format!("{kind:<w$}", w=widths[1])),
+				span(format!("{kind:<w$}", w=widths[1]))
+					.color_maybe(matches!(kind, ImageKind::Invalid).then_some(Skin::RED)),
 				span(" | ").color(Skin::PINK),
 
 				// Quality.
@@ -1027,7 +1028,7 @@ impl App {
 		let active = current.candidate.is_some();
 		let b_side = active && self.has_flag(OTHER_BSIDE);
 		let src_kind = current.input_kind();
-		let dst_kind = current.output_kind().unwrap_or(src_kind);
+		let dst_kind = current.output_kind().unwrap_or(ImageKind::Invalid);
 
 		column!(
 			// Buttons.
@@ -1357,7 +1358,7 @@ impl App {
 	fn view_keyboard_shortcuts(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 		let src_kind = current.input_kind();
-		let dst_kind = current.output_kind().unwrap_or(src_kind);
+		let dst_kind = current.output_kind().unwrap_or(ImageKind::Invalid);
 		column!(
 			rich_text!(
 				emphasize!(span("   [space]")),
@@ -1457,7 +1458,8 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 
 				// Sources never have times; we can use this to signal when
 				// an image was skipped.
-				time: job.dst.is_empty().then_some(&NiceFloat::ZERO),
+				time: (matches!(job.src_kind, ImageKind::Invalid) || job.dst.is_empty())
+					.then_some(&NiceFloat::ZERO),
 			});
 
 			// Push the conversions.
@@ -1886,6 +1888,31 @@ struct ImageResults {
 	dst: Vec<(ImageKind, ImageResult)>,
 }
 
+impl ImageResults {
+	/// # Invalid Result.
+	///
+	/// This generates and returns an empty result set for an image that
+	/// couldn't be read or decoded.
+	fn invalid(src: PathBuf) -> Self {
+		// Log it.
+		cli_log_sad(&src);
+
+		// Try to fetch the size anyway.
+		let src_len = std::fs::metadata(&src)
+			.ok()
+			.and_then(|m| usize::try_from(m.len()).ok())
+			.and_then(NonZeroUsize::new)
+			.unwrap_or(NonZeroUsize::MIN);
+
+		Self {
+			src,
+			src_kind: ImageKind::Invalid,
+			src_len,
+			dst: Vec::new(),
+		}
+	}
+}
+
 
 
 /// # (Best) Image Encoding Result.
@@ -1993,16 +2020,11 @@ impl ImageResultWrapper {
 				.set_file_name(self.dst.file_name().map_or(Cow::Borrowed(""), OsStr::to_string_lossy))
 				.set_title(format!("Save the {}!", self.kind))
 				.save_file()
-				.await;
+				.await
+				.and_then(|dst| crate::with_ng_extension(dst.path(), self.kind));
 
 			// Update the path if they picked one.
-			if let Some(dst) = dst {
-				let dst = dst.path().to_path_buf();
-				if dst.parent().is_some_and(Path::is_dir) && dst.file_name().is_some() {
-					self.dst = crate::with_ng_extension(dst, self.kind);
-				}
-				else { self.best = None; }
-			}
+			if let Some(dst) = dst { self.dst = dst; }
 			// Or nuke the result.
 			else { self.best = None; }
 
