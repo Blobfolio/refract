@@ -377,7 +377,6 @@ impl App {
 		else { Task::done(Message::NextImage) }
 	}
 
-	#[expect(clippy::too_many_lines, reason = "There's a lot to update. Haha.")]
 	/// # Update.
 	///
 	/// This method serves as the entrypoint for the application's
@@ -437,24 +436,25 @@ impl App {
 			// the conversion process for it.
 			Message::NextImage => {
 				self.flags &= ! OTHER_BSIDE;
-				self.current = None;
+
+				// If there was a previous current, grab the results before
+				// letting it go.
+				if let Some(current) = self.current.take() {
+					self.done.push(current.take_done());
+				}
+
+				// Designate a new current!
 				while let Some(src) = self.paths.pop_first() {
 					if let Some(mut current) = CurrentImage::new(src.clone(), self.flags) {
-						// Add an entry for it.
-						cli_log(&current.src, None);
-						self.done.push(ImageResults {
-							src: current.src.clone(),
-							src_kind: current.input.kind(),
-							src_len: NonZeroUsize::new(current.input.size()).unwrap(),
-							dst: Vec::new(),
-						});
-
 						// Make sure the encoder can be set before accepting
 						// the result.
 						if current.next_encoder() {
 							self.current = Some(current);
 							return self.update_switch_encoder__();
 						}
+
+						// Otherwise make sure we grab the non-result results.
+						self.done.push(current.take_done());
 					}
 					// Decode error?
 					else {
@@ -518,16 +518,11 @@ impl App {
 
 			// Save the image and continue.
 			Message::SaveImage(mut wrapper) =>
-				if self.current.is_some() {
-					// Actually save the image, if any.
+				if let Some(current) = &mut self.current {
+					// Actually save the image, if any, and let current know
+					// how things shook out.
 					wrapper.save();
-
-					// Log the results.
-					if let Some(last) = self.done.last_mut() {
-						if last.src == wrapper.src {
-							last.dst.push(wrapper.into_result());
-						}
-					}
+					current.save_done(wrapper);
 
 					// Advance the encoder.
 					return Task::done(Message::NextEncoder);
@@ -1031,7 +1026,7 @@ impl App {
 		let Some(current) = &self.current else { return Column::new(); };
 		let active = current.candidate.is_some();
 		let b_side = active && self.has_flag(OTHER_BSIDE);
-		let src_kind = current.input.kind();
+		let src_kind = current.input_kind();
 		let dst_kind = current.output_kind().unwrap_or(src_kind);
 
 		column!(
@@ -1132,7 +1127,7 @@ impl App {
 		}
 		else {
 			let mut quality = None;
-			let mut kind = current.input.kind();
+			let mut kind = current.input_kind();
 			let mut count = 0;
 
 			// Pull the candidate info if we're looking at that.
@@ -1188,11 +1183,10 @@ impl App {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 
 		let active = current.candidate.is_some();
-		let new_kind = current.output_kind().unwrap_or(ImageKind::Png);
 
 		// Image.Ext > Ext1 Ext2 Ext3.
 		let mut formats = Vec::with_capacity(6);
-		if let Some((stem, ext)) = split_ext(&current.src) {
+		if let Some((stem, ext)) = split_ext(current.src()) {
 			formats.push(emphasize!(span(stem)));
 			formats.push(emphasize!(span(format!(".{ext}")), Skin::PURPLE));
 			formats.push(span(" > ").color(Skin::GREY));
@@ -1207,8 +1201,12 @@ impl App {
 				if any { formats.push(span(" + ").color(Skin::GREY)); }
 				else { any = true; }
 
-				if kind == new_kind { formats.push(kind!(kind, Skin::PINK)); }
-				else { formats.push(kind!(kind, Skin::GREY)); }
+				let color = current.encoder_status_color(kind);
+				let mut tmp = kind!(kind, color);
+				if matches!(color, Skin::GREEN | Skin::RED) {
+					tmp = tmp.strikethrough(true);
+				}
+				formats.push(tmp);
 			}
 		}
 
@@ -1358,7 +1356,7 @@ impl App {
 	/// shortcuts that can be used in lieu of the button widgets.
 	fn view_keyboard_shortcuts(&self) -> Column<Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
-		let src_kind = current.input.kind();
+		let src_kind = current.input_kind();
 		let dst_kind = current.output_kind().unwrap_or(src_kind);
 		column!(
 			rich_text!(
@@ -1587,8 +1585,8 @@ impl ActivityTableRow<'_> {
 /// Because there is only ever one of these at a time, its existence (or lack
 /// thereof) is used to tell which screen to display.
 struct CurrentImage {
-	/// # Source Path.
-	src: PathBuf,
+	/// # Results.
+	done: ImageResults,
 
 	/// # Decoded Source.
 	input: Input,
@@ -1628,8 +1626,19 @@ impl CurrentImage {
 			u32::try_from(input.height()).ok()?,
 			input.pixels_rgba().into_owned(),
 		);
+		let src_len = NonZeroUsize::new(input.size())?;
+
+		// Log it.
+		cli_log(&src, None);
+
+		// Done!
 		Some(Self {
-			src,
+			done: ImageResults {
+				src,
+				src_kind: input.kind(),
+				src_len,
+				dst: Vec::new(),
+			},
 			input,
 			img,
 			flags,
@@ -1638,11 +1647,6 @@ impl CurrentImage {
 			output_kind: None,
 		})
 	}
-
-	/// # Is Active?
-	///
-	/// Returns `true` if an encoder has been set up.
-	const fn active(&self) -> bool { self.output_kind.is_some() }
 
 	/// # Provide Feedback.
 	fn feedback(&mut self, keep: bool) -> bool {
@@ -1672,7 +1676,7 @@ impl CurrentImage {
 		let kind = kind.or_else(|| best.as_ref().map(Output::kind))?;
 
 		// Copy the source.
-		let src = self.src.clone();
+		let src = self.done.src.clone();
 
 		// Come up with a suitable default destination path.
 		let mut dst = src.clone();
@@ -1682,11 +1686,6 @@ impl CurrentImage {
 
 		Some(ImageResultWrapper { src, dst, kind, time, best })
 	}
-
-	/// # Has Candidate?
-	///
-	/// Returns `true` if a candidate has been generated.
-	const fn has_candidate(&self) -> bool { self.candidate.is_some() }
 
 	/// # Next Candidate (Start).
 	///
@@ -1772,10 +1771,55 @@ impl CurrentImage {
 		else { false }
 	}
 
+	/// # Record Results.
+	///
+	/// This method consumes the wrapper, recording the results either way for
+	/// posterity.
+	fn save_done(&mut self, wrapper: ImageResultWrapper) {
+		// These should never not match, but it doesn't hurt to verify.
+		if wrapper.src == self.done.src {
+			self.done.dst.push(wrapper.into_result());
+		}
+	}
+
+	/// # Take Results.
+	///
+	/// Consume `self`, returning the results so they can be added to `App`'s
+	/// running list.
+	fn take_done(self) -> ImageResults { self.done }
+}
+
+impl CurrentImage {
+	/// # Is Active?
+	///
+	/// Returns `true` if an encoder has been set up.
+	const fn active(&self) -> bool { self.output_kind.is_some() }
+
+	/// # Encoder Status Color.
+	fn encoder_status_color(&self, kind: ImageKind) -> Color {
+		if self.output_kind.is_some_and(|k| k == kind) { Skin::PINK }
+		else if let Some(res) = self.done.dst.iter().find_map(|(k, v)| (*k == kind).then_some(v)) {
+			if res.len.is_some() { Skin::GREEN }
+			else { Skin::RED }
+		}
+		else { Skin::GREY }
+	}
+
+	/// # Has Candidate?
+	///
+	/// Returns `true` if a candidate has been generated.
+	const fn has_candidate(&self) -> bool { self.candidate.is_some() }
+
+	/// # Input Kind.
+	const fn input_kind(&self) -> ImageKind { self.done.src_kind }
+
 	/// # Output Kind.
 	///
 	/// Return the output format that is currently being crunched, if any.
 	const fn output_kind(&self) -> Option<ImageKind> { self.output_kind }
+
+	/// # Source Path.
+	fn src(&self) -> &Path { &self.done.src }
 }
 
 
