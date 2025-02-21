@@ -1671,7 +1671,7 @@ impl CurrentImage {
 	/// Post-processing of said data is an exercise left up to the caller.
 	fn finish_encoder(&mut self) -> Option<ImageResultWrapper> {
 		// Extract a bunch of data.
-		let kind = self.output_kind().take();
+		let kind = self.output_kind.take();
 		let (_, iter) = self.iter.take()?;
 		let time = NiceFloat::from(iter.time().as_secs_f32());
 		let best = iter.take().ok();
