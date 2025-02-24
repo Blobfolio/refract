@@ -69,6 +69,7 @@ use img::{
 	with_ng_extension,
 };
 use refract_core::RefractError;
+use std::process::ExitCode;
 use styles::Skin;
 
 
@@ -76,15 +77,16 @@ use styles::Skin;
 /// # Main.
 ///
 /// This lets us bubble up startup errors so they can be pretty-printed.
-fn main() {
+fn main() -> ExitCode {
 	match main__() {
-		Ok(()) => {},
+		Ok(()) => ExitCode::SUCCESS,
 		Err(e @ (RefractError::PrintHelp | RefractError::PrintVersion)) => {
 			println!("{e}");
+			ExitCode::SUCCESS
 		},
 		Err(e) => {
 			eprintln!("Error: {e}");
-			std::process::exit(1);
+			ExitCode::FAILURE
 		},
 	}
 }
