@@ -40,8 +40,8 @@ features = [ "codec-aom" ]
 optional = true
 
 [dependencies.libwebp-sys2]
-version = "=0.1.10"
-features = [ "1_1", "static" ]
+version = "=0.2.0"
+features = [ "static" ]
 optional = true
 
 [dependencies.rgb] # Match lodepng's dependency listing.
