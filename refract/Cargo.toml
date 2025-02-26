@@ -131,5 +131,5 @@ path = "../refract_core"
 features = [ "images" ]
 
 [dependencies.utc2k]
-version = "0.11.*"
+version = "0.12.*"
 features = [ "local" ]
