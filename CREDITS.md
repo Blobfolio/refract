@@ -1,8 +1,8 @@
 # Project Dependencies
     Package:   refract
-    Version:   1.0.1
+    Version:   1.0.2
     Target:    x86_64-unknown-linux-gnu
-    Generated: 2025-02-21 03:51:51 UTC
+    Generated: 2025-03-04 03:01:42 UTC
 
 | Package | Version | Author(s) | License |
 | ---- | ---- | ---- | ---- |
@@ -13,7 +13,7 @@
 | [ahash](https://github.com/tkaitchuck/ahash) | 0.8.11 | [Tom Kaitchuck](mailto:tom.kaitchuck@gmail.com) | MIT OR Apache-2.0 |
 | [allocator-api2](https://github.com/zakarumych/allocator-api2) | 0.2.21 | [Zakarum](mailto:zaq.dev@icloud.com) | MIT OR Apache-2.0 |
 | [approx](https://github.com/brendanzab/approx) | 0.5.1 | [Brendan Zabarauskas](mailto:bjzaba@yahoo.com.au) | Apache-2.0 |
-| [**argyle**](https://github.com/Blobfolio/argyle) | 0.10.1 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [**argyle**](https://github.com/Blobfolio/argyle) | 0.11.0 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [arrayref](https://github.com/droundy/arrayref) | 0.3.9 | [David Roundy](mailto:roundyd@physics.oregonstate.edu) | BSD-2-Clause |
 | [arrayvec](https://github.com/bluss/arrayvec) | 0.7.6 | bluss | MIT OR Apache-2.0 |
 | [as-raw-xcb-connection](https://github.com/psychon/as-raw-xcb-connection) | 1.0.1 |  | MIT OR Apache-2.0 |
@@ -32,23 +32,23 @@
 | [async-signal](https://github.com/smol-rs/async-signal) | 0.2.10 | [John Nunley](mailto:dev@notgull.net) | Apache-2.0 OR MIT |
 | [**async-std**](https://github.com/async-rs/async-std) | 1.13.0 | [Stjepan Glavina](mailto:stjepang@gmail.com), [Yoshua Wuyts](mailto:yoshuawuyts@gmail.com), [Friedel Ziegelmayer](mailto:me@dignifiedquire.com), and Contributors to async-std | Apache-2.0 OR MIT |
 | [async-task](https://github.com/smol-rs/async-task) | 4.7.1 | [Stjepan Glavina](mailto:stjepang@gmail.com) | Apache-2.0 OR MIT |
-| [async-trait](https://github.com/dtolnay/async-trait) | 0.1.86 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
+| [async-trait](https://github.com/dtolnay/async-trait) | 0.1.87 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
 | [atomic-waker](https://github.com/smol-rs/atomic-waker) | 1.1.2 | [Stjepan Glavina](mailto:stjepang@gmail.com) and Contributors to futures-rs | Apache-2.0 OR MIT |
 | [autocfg](https://github.com/cuviper/autocfg) ⚒️ | 1.4.0 | [Josh Stone](mailto:cuviper@gmail.com) | Apache-2.0 OR MIT |
 | [bit-set](https://github.com/contain-rs/bit-set) | 0.5.3 | [Alexis Beingessner](mailto:a.beingessner@gmail.com) | MIT OR Apache-2.0 |
 | [bit-vec](https://github.com/contain-rs/bit-vec) | 0.6.3 | [Alexis Beingessner](mailto:a.beingessner@gmail.com) | MIT OR Apache-2.0 |
 | [bitflags](https://github.com/bitflags/bitflags) | 1.3.2 | The Rust Project Developers | MIT OR Apache-2.0 |
-| [bitflags](https://github.com/bitflags/bitflags) | 2.8.0 | The Rust Project Developers | MIT OR Apache-2.0 |
+| [bitflags](https://github.com/bitflags/bitflags) | 2.9.0 | The Rust Project Developers | MIT OR Apache-2.0 |
 | [block-buffer](https://github.com/RustCrypto/utils) | 0.10.4 | RustCrypto Developers | MIT OR Apache-2.0 |
 | [blocking](https://github.com/smol-rs/blocking) | 1.6.1 | [Stjepan Glavina](mailto:stjepang@gmail.com) | Apache-2.0 OR MIT |
 | [by_address](https://github.com/mbrubeck/by_address) | 1.2.1 | [Matt Brubeck](mailto:mbrubeck@limpet.net) | MIT OR Apache-2.0 |
-| [bytemuck](https://github.com/Lokathor/bytemuck) | 1.21.0 | [Lokathor](mailto:zefria@gmail.com) | Zlib OR Apache-2.0 OR MIT |
+| [bytemuck](https://github.com/Lokathor/bytemuck) | 1.22.0 | [Lokathor](mailto:zefria@gmail.com) | Zlib OR Apache-2.0 OR MIT |
 | [bytemuck_derive](https://github.com/Lokathor/bytemuck) | 1.8.1 | [Lokathor](mailto:zefria@gmail.com) | Zlib OR Apache-2.0 OR MIT |
 | [byteorder](https://github.com/BurntSushi/byteorder) | 1.5.0 | [Andrew Gallant](mailto:jamslam@gmail.com) | Unlicense OR MIT |
 | [bytes](https://github.com/tokio-rs/bytes) | 1.10.0 | [Carl Lerche](mailto:me@carllerche.com) and [Sean McArthur](mailto:sean@seanmonstar.com) | MIT |
 | [calloop](https://github.com/Smithay/calloop) | 0.13.0 | [Elinor Berger](mailto:elinor@safaradeg.net) | MIT |
 | [calloop-wayland-source](https://github.com/smithay/calloop-wayland-source) | 0.3.0 | [Kirill Chibisov](mailto:contact@kchibisov.com) | MIT |
-| [cc](https://github.com/rust-lang/cc-rs) ⚒️ | 1.2.14 | [Alex Crichton](mailto:alex@alexcrichton.com) | MIT OR Apache-2.0 |
+| [cc](https://github.com/rust-lang/cc-rs) ⚒️ | 1.2.16 | [Alex Crichton](mailto:alex@alexcrichton.com) | MIT OR Apache-2.0 |
 | [cfg-if](https://github.com/alexcrichton/cfg-if) | 1.0.0 | [Alex Crichton](mailto:alex@alexcrichton.com) | MIT OR Apache-2.0 |
 | [cfg_aliases](https://github.com/katharostech/cfg_aliases) ⚒️ | 0.1.1 | [Zicklag](mailto:zicklag@katharostech.com) | MIT |
 | [cfg_aliases](https://github.com/katharostech/cfg_aliases) ⚒️ | 0.2.1 | [Zicklag](mailto:zicklag@katharostech.com) | MIT |
@@ -67,7 +67,7 @@
 | [crypto-common](https://github.com/RustCrypto/traits) | 0.1.6 | RustCrypto Developers | MIT OR Apache-2.0 |
 | [ctor-lite](https://codeberg.org/notgull/ctor-lite) | 0.1.0 | [John Nunley](mailto:dev@notgull.net) | MIT OR Apache-2.0 |
 | [cursor-icon](https://github.com/rust-windowing/cursor-icon) | 1.1.0 | [Kirill Chibisov](mailto:contact@kchibisov.com) | MIT OR Apache-2.0 OR Zlib |
-| [**dactyl**](https://github.com/Blobfolio/dactyl) | 0.9.1 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [**dactyl**](https://github.com/Blobfolio/dactyl) | 0.10.0 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [dark-light](https://github.com/frewsxcv/rust-dark-light) | 1.1.1 | [Corey Farwell](mailto:coreyf@rwell.org) | MIT OR Apache-2.0 |
 | [dconf_rs](https://github.com/kylecorry31/dconf_rs) | 0.3.0 | [Kyle Corry](mailto:kylecorry31@gmail.com) | MIT |
 | [detect-desktop-environment](https://github.com/demurgos/detect-desktop-environment) | 0.2.0 | [Charles Samborski](mailto:demurgos@demurgos.net) | MIT |
@@ -78,13 +78,13 @@
 | [dlib](https://github.com/elinorbgr/dlib) | 0.5.2 | [Elinor Berger](mailto:elinor@safaradeg.net) | MIT |
 | [dlv-list](https://github.com/sgodwincs/dlv-list-rs) | 0.3.0 | [Scott Godwin](mailto:sgodwincs@gmail.com) | MIT |
 | [downcast-rs](https://github.com/marcianx/downcast-rs) | 1.2.1 | [Ashish Myles](mailto:marcianx@gmail.com) and [Runji Wang](mailto:wangrunji0408@163.com) | MIT OR Apache-2.0 |
-| [**dowser**](https://github.com/Blobfolio/dowser) | 0.11.0 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [**dowser**](https://github.com/Blobfolio/dowser) | 0.12.0 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [dpi](https://github.com/rust-windowing/winit) | 0.1.1 |  | Apache-2.0 |
 | [drm](https://github.com/Smithay/drm-rs) | 0.12.0 | [Tyler Slabinski](mailto:tslabinski@slabity.net) and [Victoria Brekenfeld](mailto:crates-io@drakulix.de) | MIT |
 | [drm-ffi](https://github.com/Smithay/drm-rs) | 0.8.0 | [Tyler Slabinski](mailto:tslabinski@slabity.net) | MIT |
 | [drm-fourcc](https://github.com/danielzfranklin/drm-fourcc-rs) | 2.2.0 | [Daniel Franklin](mailto:daniel@danielzfranklin.org) | MIT |
 | [drm-sys](https://github.com/Smithay/drm-rs) | 0.7.0 | [Tyler Slabinski](mailto:tslabinski@slabity.net) | MIT |
-| [either](https://github.com/rayon-rs/either) | 1.13.0 | bluss | MIT OR Apache-2.0 |
+| [either](https://github.com/rayon-rs/either) | 1.14.0 | bluss | MIT OR Apache-2.0 |
 | [endi](https://github.com/zeenix/endi) | 1.1.0 | [Zeeshan Ali Khan](mailto:zeenix@gmail.com) | MIT |
 | [enumflags2](https://github.com/meithecatte/enumflags2) | 0.7.11 | [maik klein](mailto:maikklein@googlemail.com) and [Maja Kądziołka](mailto:maya@compilercrim.es) | MIT OR Apache-2.0 |
 | [enumflags2_derive](https://github.com/meithecatte/enumflags2) | 0.7.11 | [maik klein](mailto:maikklein@googlemail.com) and [Maja Kądziołka](mailto:maya@compilercrim.es) | MIT OR Apache-2.0 |
@@ -97,7 +97,7 @@
 | [fast-srgb8](https://github.com/thomcc/fast-srgb8) | 1.0.0 | [Thom Chiovoloni](mailto:chiovolonit@gmail.com) | MIT OR Apache-2.0 OR CC0-1.0 |
 | [fastrand](https://github.com/smol-rs/fastrand) | 2.3.0 | [Stjepan Glavina](mailto:stjepang@gmail.com) | Apache-2.0 OR MIT |
 | [fdeflate](https://github.com/image-rs/fdeflate) | 0.3.7 | The image-rs Developers | MIT OR Apache-2.0 |
-| [flate2](https://github.com/rust-lang/flate2-rs) | 1.0.35 | [Alex Crichton](mailto:alex@alexcrichton.com) and [Josh Triplett](mailto:josh@joshtriplett.org) | MIT OR Apache-2.0 |
+| [flate2](https://github.com/rust-lang/flate2-rs) | 1.1.0 | [Alex Crichton](mailto:alex@alexcrichton.com) and [Josh Triplett](mailto:josh@joshtriplett.org) | MIT OR Apache-2.0 |
 | [font-types](https://github.com/googlefonts/fontations) | 0.7.3 |  | MIT OR Apache-2.0 |
 | [fontconfig-parser](https://github.com/Riey/fontconfig-parser) | 0.5.7 |  | MIT |
 | [fontdb](https://github.com/RazrFalcon/fontdb) | 0.16.2 | [Yevhenii Reizner](mailto:razrfalcon@gmail.com) | MIT |
@@ -164,23 +164,24 @@
 | [kv-log-macro](https://github.com/yoshuawuyts/kv-log-macro) | 1.0.7 | [Yoshua Wuyts](mailto:yoshuawuyts@gmail.com) | MIT OR Apache-2.0 |
 | [libaom-sys](https://github.com/njaard/libavif-rs) | 0.17.1+libaom.3.10.0 | [Charles Samuels](mailto:ks@ks.ax), [Paolo Barbolini](mailto:paolo@paolo565.org), and [Kornel](mailto:kornel@geekhood.net) | BSD-2-Clause |
 | [**libavif-sys**](https://github.com/njaard/libavif-rs) | 0.17.0+libavif.1.0.4 | [Charles Samuels](mailto:ks@ks.ax) and [Paolo Barbolini](mailto:paolo@paolo565.org) | BSD-2-Clause |
-| [libc](https://github.com/rust-lang/libc) | 0.2.169 | The Rust Project Developers | MIT OR Apache-2.0 |
+| [libc](https://github.com/rust-lang/libc) | 0.2.170 | The Rust Project Developers | MIT OR Apache-2.0 |
 | [libloading](https://github.com/nagisa/rust_libloading/) | 0.7.4 | [Simonas Kazlauskas](mailto:libloading@kazlauskas.me) | ISC |
 | [libloading](https://github.com/nagisa/rust_libloading/) | 0.8.6 | [Simonas Kazlauskas](mailto:libloading@kazlauskas.me) | ISC |
 | [libm](https://github.com/rust-lang/libm) | 0.2.11 | [Jorge Aparicio](mailto:jorge@japaric.io) | MIT AND (MIT OR Apache-2.0) |
-| [**libwebp-sys2**](https://github.com/qnighy/libwebp-sys2-rs) | 0.1.10 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
-| [**link-cplusplus**](https://github.com/dtolnay/link-cplusplus) | 1.0.9 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
+| [libwebp-sys2](https://github.com/qnighy/libwebp-sys2-rs) | 0.1.11 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
+| [**libwebp-sys2**](https://github.com/qnighy/libwebp-sys2-rs) | 0.2.0 | [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | BSD-3-Clause |
+| [**link-cplusplus**](https://github.com/dtolnay/link-cplusplus) | 1.0.10 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
 | [linux-raw-sys](https://github.com/sunfishcode/linux-raw-sys) | 0.4.15 | [Dan Gohman](mailto:dev@sunfishcode.online) | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | [linux-raw-sys](https://github.com/sunfishcode/linux-raw-sys) | 0.6.5 | [Dan Gohman](mailto:dev@sunfishcode.online) | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
-| [litemap](https://github.com/unicode-org/icu4x) | 0.7.4 | The ICU4X Project Developers | Unicode-3.0 |
+| [litemap](https://github.com/unicode-org/icu4x) | 0.7.5 | The ICU4X Project Developers | Unicode-3.0 |
 | [lock_api](https://github.com/Amanieu/parking_lot) | 0.4.12 | [Amanieu d'Antras](mailto:amanieu@gmail.com) | MIT OR Apache-2.0 |
 | [**lodepng**](https://github.com/kornelski/lodepng-rust.git) | 3.11.0 | [Kornel](mailto:kornel@geekhood.net) and [Lode Vandevenne](mailto:lvandeve@gmail.com) | Zlib |
-| [log](https://github.com/rust-lang/log) | 0.4.25 | The Rust Project Developers | MIT OR Apache-2.0 |
+| [log](https://github.com/rust-lang/log) | 0.4.26 | The Rust Project Developers | MIT OR Apache-2.0 |
 | [lru](https://github.com/jeromefroe/lru-rs.git) | 0.12.5 | [Jerome Froelich](mailto:jeromefroelic@hotmail.com) | MIT |
 | [memchr](https://github.com/BurntSushi/memchr) | 2.7.4 | [Andrew Gallant](mailto:jamslam@gmail.com) and bluss | Unlicense OR MIT |
 | [memmap2](https://github.com/RazrFalcon/memmap2-rs) | 0.9.5 | [Dan Burkert](mailto:dan@danburkert.com) and [Yevhenii Reizner](mailto:razrfalcon@gmail.com) | MIT OR Apache-2.0 |
 | [memoffset](https://github.com/Gilnaa/memoffset) | 0.9.1 | [Gilad Naaman](mailto:gilad.naaman@gmail.com) | MIT |
-| [miniz_oxide](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide) | 0.8.4 | [Frommi](mailto:daniil.liferenko@gmail.com), [oyvindln](mailto:oyvindln@users.noreply.github.com), and Rich Geldreich richgel99@gmail.com | MIT OR Zlib OR Apache-2.0 |
+| [miniz_oxide](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide) | 0.8.5 | [Frommi](mailto:daniil.liferenko@gmail.com), [oyvindln](mailto:oyvindln@users.noreply.github.com), and Rich Geldreich richgel99@gmail.com | MIT OR Zlib OR Apache-2.0 |
 | [mutate_once](https://github.com/kamadak/mutate_once-rs) | 0.1.1 | [KAMADA Ken'ichi](mailto:kamada@nanohz.org) | BSD-2-Clause |
 | [naga](https://github.com/gfx-rs/wgpu/tree/trunk/naga) | 0.19.2 | gfx-rs developers | MIT OR Apache-2.0 |
 | [nix](https://github.com/nix-rust/nix) | 0.29.0 | The nix-rust Project Developers | MIT |
@@ -205,16 +206,16 @@
 | [pin-project-lite](https://github.com/taiki-e/pin-project-lite) | 0.2.16 |  | Apache-2.0 OR MIT |
 | [pin-utils](https://github.com/rust-lang-nursery/pin-utils) | 0.1.0 | [Josef Brandl](mailto:mail@josefbrandl.de) | MIT OR Apache-2.0 |
 | [piper](https://github.com/smol-rs/piper) | 0.2.4 | [Stjepan Glavina](mailto:stjepang@gmail.com) and [John Nunley](mailto:dev@notgull.net) | MIT OR Apache-2.0 |
-| [pkg-config](https://github.com/rust-lang/pkg-config-rs) ⚒️ | 0.3.31 | [Alex Crichton](mailto:alex@alexcrichton.com) | MIT OR Apache-2.0 |
+| [pkg-config](https://github.com/rust-lang/pkg-config-rs) ⚒️ | 0.3.32 | [Alex Crichton](mailto:alex@alexcrichton.com) | MIT OR Apache-2.0 |
 | [png](https://github.com/image-rs/image-png) | 0.17.16 | The image-rs Developers | MIT OR Apache-2.0 |
 | [polling](https://github.com/smol-rs/polling) | 3.7.4 | [Stjepan Glavina](mailto:stjepang@gmail.com) and [John Nunley](mailto:dev@notgull.net) | Apache-2.0 OR MIT |
 | [pollster](https://github.com/zesterer/pollster) | 0.4.0 | [Joshua Barretto](mailto:joshua.s.barretto@gmail.com) | Apache-2.0 OR MIT |
 | [ppv-lite86](https://github.com/cryptocorrosion/cryptocorrosion) | 0.2.20 | The CryptoCorrosion Contributors | MIT OR Apache-2.0 |
 | [proc-macro-crate](https://github.com/bkchr/proc-macro-crate) | 3.2.0 | [Bastian Köcher](mailto:git@kchr.de) | MIT OR Apache-2.0 |
-| [proc-macro2](https://github.com/dtolnay/proc-macro2) | 1.0.93 | [David Tolnay](mailto:dtolnay@gmail.com) and [Alex Crichton](mailto:alex@alexcrichton.com) | MIT OR Apache-2.0 |
+| [proc-macro2](https://github.com/dtolnay/proc-macro2) | 1.0.94 | [David Tolnay](mailto:dtolnay@gmail.com) and [Alex Crichton](mailto:alex@alexcrichton.com) | MIT OR Apache-2.0 |
 | [profiling](https://github.com/aclysma/profiling) | 1.0.16 | [Philip Degarmo](mailto:aclysma@gmail.com) | MIT OR Apache-2.0 |
 | [quick-xml](https://github.com/tafia/quick-xml) | 0.37.2 |  | MIT |
-| [quote](https://github.com/dtolnay/quote) | 1.0.38 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
+| [quote](https://github.com/dtolnay/quote) | 1.0.39 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
 | [rand](https://github.com/rust-random/rand) | 0.8.5 | The Rand Project Developers and The Rust Project Developers | MIT OR Apache-2.0 |
 | [rand_chacha](https://github.com/rust-random/rand) | 0.3.1 | The Rand Project Developers, The Rust Project Developers, and The CryptoCorrosion Contributors | MIT OR Apache-2.0 |
 | [rand_core](https://github.com/rust-random/rand) | 0.6.4 | The Rand Project Developers and The Rust Project Developers | MIT OR Apache-2.0 |
@@ -223,7 +224,7 @@
 | [rayon](https://github.com/rayon-rs/rayon) | 1.10.0 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | MIT OR Apache-2.0 |
 | [rayon-core](https://github.com/rayon-rs/rayon) | 1.12.1 | [Niko Matsakis](mailto:niko@alum.mit.edu) and [Josh Stone](mailto:cuviper@gmail.com) | MIT OR Apache-2.0 |
 | [read-fonts](https://github.com/googlefonts/fontations) | 0.22.7 |  | MIT OR Apache-2.0 |
-| [**refract_core**](https://github.com/Blobfolio/refract) | 1.0.1 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [**refract_core**](https://github.com/Blobfolio/refract) | 1.0.2 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [renderdoc-sys](https://github.com/ebkalderon/renderdoc-rs) | 1.1.0 | [Eyal Kalderon](mailto:ebkalderon@gmail.com) | MIT OR Apache-2.0 |
 | [**rfd**](https://github.com/PolyMeilex/rfd) | 0.15.2 | [Poly](mailto:marynczak.bartlomiej@gmail.com) | MIT |
 | [**rgb**](https://github.com/kornelski/rust-rgb) | 0.8.50 | [Kornel Lesiński](mailto:kornel@geekhood.net) and [James Forster](mailto:james.forsterer@gmail.com) | MIT |
@@ -239,7 +240,7 @@
 | [self_cell](https://github.com/Voultapher/self_cell) | 1.1.0 | [Lukas Bergdoll](mailto:lukas.bergdoll@gmail.com) | Apache-2.0 |
 | [serde](https://github.com/serde-rs/serde) | 1.0.218 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
 | [serde_derive](https://github.com/serde-rs/serde) | 1.0.218 | [Erick Tryzelaar](mailto:erick.tryzelaar@gmail.com) and [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
-| [serde_repr](https://github.com/dtolnay/serde-repr) | 0.1.19 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
+| [serde_repr](https://github.com/dtolnay/serde-repr) | 0.1.20 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
 | [sha1](https://github.com/RustCrypto/hashes) | 0.10.6 | RustCrypto Developers | MIT OR Apache-2.0 |
 | [shlex](https://github.com/comex/rust-shlex) ⚒️ | 1.3.0 | [comex](mailto:comexk@gmail.com), [Fenhl](mailto:fenhl@fenhl.net), [Adrian Taylor](mailto:adetaylor@chromium.org), [Alex Touchet](mailto:alextouchet@outlook.com), [Daniel Parks](mailto:dp&#43;git@oxidized.org), and [Garrett Berg](mailto:googberg@gmail.com) | MIT OR Apache-2.0 |
 | [signal-hook-registry](https://github.com/vorner/signal-hook) | 1.4.2 | [Michal 'vorner' Vaner](mailto:vorner@vorner.cz) and [Masaki Hara](mailto:ackie.h.gmai@gmail.com) | Apache-2.0 OR MIT |
@@ -259,7 +260,7 @@
 | [strict-num](https://github.com/RazrFalcon/strict-num) | 0.1.1 | [Yevhenii Reizner](mailto:razrfalcon@gmail.com) | MIT |
 | [svg_fmt](https://github.com/nical/rust_debug) | 0.4.4 | [Nicolas Silva](mailto:nical@fastmail.com) | MIT OR Apache-2.0 |
 | [swash](https://github.com/dfrg/swash) | 0.1.19 | [Chad Brokaw](mailto:cbrokaw@gmail.com) | Apache-2.0 OR MIT |
-| [syn](https://github.com/dtolnay/syn) | 2.0.98 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
+| [syn](https://github.com/dtolnay/syn) | 2.0.99 | [David Tolnay](mailto:dtolnay@gmail.com) | MIT OR Apache-2.0 |
 | [synstructure](https://github.com/mystor/synstructure) | 0.13.1 | [Nika Layzell](mailto:nika@thelayzells.com) | MIT |
 | [sys-locale](https://github.com/1Password/sys-locale) | 0.3.2 | 1Password | MIT OR Apache-2.0 |
 | [tempfile](https://github.com/Stebalien/tempfile) | 3.17.1 | [Steven Allen](mailto:steven@stebalien.com), The Rust Project Developers, [Ashley Mannix](mailto:ashleymannix@live.com.au), and [Jason White](mailto:me@jasonwhite.io) | MIT OR Apache-2.0 |
@@ -270,7 +271,7 @@
 | [tiny-skia-path](https://github.com/RazrFalcon/tiny-skia/tree/master/path) | 0.11.4 | [Yevhenii Reizner](mailto:razrfalcon@gmail.com) | BSD-3-Clause |
 | [tiny-xlib](https://github.com/notgull/tiny-xlib) | 0.2.4 | [John Nunley](mailto:dev@notgull.net) | MIT OR Apache-2.0 OR Zlib |
 | [tinystr](https://github.com/unicode-org/icu4x) | 0.7.6 | The ICU4X Project Developers | Unicode-3.0 |
-| [tinyvec](https://github.com/Lokathor/tinyvec) | 1.8.1 | [Lokathor](mailto:zefria@gmail.com) | Zlib OR Apache-2.0 OR MIT |
+| [tinyvec](https://github.com/Lokathor/tinyvec) | 1.9.0 | [Lokathor](mailto:zefria@gmail.com) | Zlib OR Apache-2.0 OR MIT |
 | [tinyvec_macros](https://github.com/Soveu/tinyvec_macros) | 0.1.1 | [Soveu](mailto:marx.tomasz@gmail.com) | MIT OR Apache-2.0 OR Zlib |
 | [toml_datetime](https://github.com/toml-rs/toml) | 0.6.8 | [Alex Crichton](mailto:alex@alexcrichton.com) | MIT OR Apache-2.0 |
 | [toml_edit](https://github.com/toml-rs/toml) | 0.22.24 | [Andronik Ordian](mailto:write@reusable.software) and [Ed Page](mailto:eopage@gmail.com) | MIT OR Apache-2.0 |
@@ -285,7 +286,7 @@
 | [unicode-bidi](https://github.com/servo/unicode-bidi) | 0.3.18 | The Servo Project Developers | MIT OR Apache-2.0 |
 | [unicode-bidi-mirroring](https://github.com/RazrFalcon/unicode-bidi-mirroring) | 0.2.0 | [Yevhenii Reizner](mailto:razrfalcon@gmail.com) | MIT OR Apache-2.0 |
 | [unicode-ccc](https://github.com/RazrFalcon/unicode-ccc) | 0.2.0 | [Yevhenii Reizner](mailto:razrfalcon@gmail.com) | MIT OR Apache-2.0 |
-| [unicode-ident](https://github.com/dtolnay/unicode-ident) | 1.0.17 | [David Tolnay](mailto:dtolnay@gmail.com) | (MIT OR Apache-2.0) AND Unicode-3.0 |
+| [unicode-ident](https://github.com/dtolnay/unicode-ident) | 1.0.18 | [David Tolnay](mailto:dtolnay@gmail.com) | (MIT OR Apache-2.0) AND Unicode-3.0 |
 | [unicode-linebreak](https://github.com/axelf4/unicode-linebreak) | 0.1.5 | [Axel Forsman](mailto:axelsfor@gmail.com) | Apache-2.0 |
 | [unicode-properties](https://github.com/unicode-rs/unicode-properties) | 0.1.3 | [Charles Lew](mailto:crlf0710@gmail.com) and [Manish Goregaokar](mailto:manishsmail@gmail.com) | MIT OR Apache-2.0 |
 | [unicode-script](https://github.com/unicode-rs/unicode-script) | 0.5.7 | [Manish Goregaokar](mailto:manishsmail@gmail.com) | MIT OR Apache-2.0 |
@@ -295,7 +296,7 @@
 | [unicode-xid](https://github.com/unicode-rs/unicode-xid) | 0.2.6 | [erick.tryzelaar](mailto:erick.tryzelaar@gmail.com), [kwantam](mailto:kwantam@gmail.com), and [Manish Goregaokar](mailto:manishsmail@gmail.com) | MIT OR Apache-2.0 |
 | [url](https://github.com/servo/rust-url) | 2.5.4 | The rust-url developers | MIT OR Apache-2.0 |
 | [urlencoding](https://github.com/kornelski/rust_urlencoding) | 2.1.3 | [Kornel](mailto:kornel@geekhood.net) and [Bertram Truong](mailto:b@bertramtruong.com) | MIT |
-| [**utc2k**](https://github.com/Blobfolio/utc2k) | 0.11.2 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [**utc2k**](https://github.com/Blobfolio/utc2k) | 0.12.0 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [utf16_iter](https://github.com/hsivonen/utf16_iter) | 1.0.5 | [Henri Sivonen](mailto:hsivonen@hsivonen.fi) | Apache-2.0 OR MIT |
 | [utf8_iter](https://github.com/hsivonen/utf8_iter) | 1.0.4 | [Henri Sivonen](mailto:hsivonen@hsivonen.fi) | Apache-2.0 OR MIT |
 | [value-bag](https://github.com/sval-rs/value-bag) | 1.10.0 | [Ashley Mannix](mailto:ashleymannix@live.com.au) | Apache-2.0 OR MIT |
@@ -318,7 +319,7 @@
 | [winit](https://github.com/rust-windowing/winit) | 0.30.9 | The winit contributors and [Pierre Krieger](mailto:pierre.krieger1708@gmail.com) | Apache-2.0 |
 | [winnow](https://github.com/winnow-rs/winnow) | 0.7.3 |  | MIT |
 | [write16](https://github.com/hsivonen/write16) | 1.0.0 |  | Apache-2.0 OR MIT |
-| [**write_atomic**](https://github.com/Blobfolio/write_atomic) | 0.5.3 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
+| [**write_atomic**](https://github.com/Blobfolio/write_atomic) | 0.6.0 | [Josh Stoik](mailto:josh@blobfolio.com) | WTFPL |
 | [writeable](https://github.com/unicode-org/icu4x) | 0.5.5 | The ICU4X Project Developers | Unicode-3.0 |
 | [x11-dl](https://github.com/AltF02/x11-rs.git) | 2.21.0 | [daggerbot](mailto:daggerbot@gmail.com), [Erle Pereira](mailto:erle@erlepereira.com), and [AltF02](mailto:contact@altf2.dev) | MIT |
 | [x11rb](https://github.com/psychon/x11rb) | 0.13.1 | [Uli Schlachter](mailto:psychon@znc.in), [Eduardo Sánchez Muñoz](mailto:eduardosm-dev@e64.io), and [notgull](mailto:jtnunley01@gmail.com) | MIT OR Apache-2.0 |
@@ -339,8 +340,8 @@
 | [zeno](https://github.com/dfrg/zeno) | 0.2.3 | [Chad Brokaw](mailto:cbrokaw@gmail.com) | MIT OR Apache-2.0 |
 | [zerocopy](https://github.com/google/zerocopy) | 0.7.35 | [Joshua Liebow-Feeser](mailto:joshlf@google.com) | BSD-2-Clause OR Apache-2.0 OR MIT |
 | [zerocopy-derive](https://github.com/google/zerocopy) | 0.7.35 | [Joshua Liebow-Feeser](mailto:joshlf@google.com) | BSD-2-Clause OR Apache-2.0 OR MIT |
-| [zerofrom](https://github.com/unicode-org/icu4x) | 0.1.5 | [Manish Goregaokar](mailto:manishsmail@gmail.com) | Unicode-3.0 |
-| [zerofrom-derive](https://github.com/unicode-org/icu4x) | 0.1.5 | [Manish Goregaokar](mailto:manishsmail@gmail.com) | Unicode-3.0 |
+| [zerofrom](https://github.com/unicode-org/icu4x) | 0.1.6 | [Manish Goregaokar](mailto:manishsmail@gmail.com) | Unicode-3.0 |
+| [zerofrom-derive](https://github.com/unicode-org/icu4x) | 0.1.6 | [Manish Goregaokar](mailto:manishsmail@gmail.com) | Unicode-3.0 |
 | [zerovec](https://github.com/unicode-org/icu4x) | 0.10.4 | The ICU4X Project Developers | Unicode-3.0 |
 | [zerovec-derive](https://github.com/unicode-org/icu4x) | 0.10.3 | [Manish Goregaokar](mailto:manishsmail@gmail.com) | Unicode-3.0 |
 | [zvariant](https://github.com/dbus2/zbus/) | 4.2.0 | [Zeeshan Ali Khan](mailto:zeeshanak@gnome.org) | MIT |

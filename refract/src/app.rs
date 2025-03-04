@@ -261,9 +261,11 @@ impl App {
 					let _res = paths.read_paths_from_file(s);
 				},
 
-				// Assume paths.
-				Argument::Other(s) => { paths = paths.with_path(s); },
-				Argument::InvalidUtf8(s) => { paths = paths.with_path(s); },
+				Argument::Path(s) => { paths = paths.with_path(s); },
+
+				// Mistake?
+				Argument::Other(s) => { cli_log_arg(&s); },
+				Argument::InvalidUtf8(s) => { cli_log_arg(&s.to_string_lossy()); },
 
 				// Nothing else is relevant.
 				_ => {},
@@ -2247,6 +2249,18 @@ fn cli_log_error(src: MessageError) {
 		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m]\x1b[0;93m Warning:\x1b[0m {}",
 		now.time(),
 		src.as_str(),
+	);
+}
+
+/// # CLI Log: Invalid Argument.
+///
+/// Print a timestamped warning if an invalid/unrecognized CLI argument is
+/// provided, including paths that don't exist.
+fn cli_log_arg(arg: &str) {
+	let now = FmtUtc2k::now_local();
+	eprintln!(
+		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m]\x1b[0;93m Warning:\x1b[0m Invalid/unknown arg: \x1b[2m{arg}\x1b[0m",
+		now.time(),
 	);
 }
 

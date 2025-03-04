@@ -1,16 +1,16 @@
 [package]
 name = "refract_core"
-version = "1.0.1"
+version = "1.0.2"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
-edition = "2021"
+edition = "2024"
 description = "The library for Refract."
 repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
 publish = false
 
 [dependencies.dactyl]
-version = "0.9.*"
+version = "0.10.*"
 optional = true
 
 [dependencies.jpeg-decoder]
@@ -18,7 +18,7 @@ version = "=0.3.1"
 optional = true
 
 [dependencies.link-cplusplus]
-version = "=1.0.9"
+version = "=1.0.10"
 optional = true
 
 [dependencies.lodepng]
@@ -40,8 +40,8 @@ features = [ "codec-aom" ]
 optional = true
 
 [dependencies.libwebp-sys2]
-version = "=0.1.10"
-features = [ "1_1", "static" ]
+version = "=0.2.0"
+features = [ "static" ]
 optional = true
 
 [dependencies.rgb] # Match lodepng's dependency listing.
