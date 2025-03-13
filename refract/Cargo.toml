@@ -110,7 +110,7 @@ features = [ "png" ]
 dactyl = "0.10.*"
 dowser = "0.12.*"
 open = "=5.3.2"
-rfd = "=0.15.2"
+rfd = "=0.15.3"
 unicode-width = "0.2.*"
 write_atomic = "0.6.*"
 
