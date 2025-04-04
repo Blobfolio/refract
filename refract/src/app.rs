@@ -358,7 +358,7 @@ impl App {
 	/// Flip the bits corresponding to a given flag, except in cases where
 	/// that would leave us without any formats or modes, in which case _all_
 	/// formats or modes (respectively) will be flipped back _on_.
-	fn toggle_flag(&mut self, flag: u16) {
+	const fn toggle_flag(&mut self, flag: u16) {
 		self.flags ^= flag;
 
 		// Same as `new`, we need to make sure the format and mode flags aren't
@@ -1822,6 +1822,7 @@ impl CurrentImage {
 	/// Return the output format that is currently being crunched, if any.
 	const fn output_kind(&self) -> Option<ImageKind> { self.output_kind }
 
+	#[expect(clippy::missing_const_for_fn, reason = "False positive.")]
 	/// # Source Path.
 	fn src(&self) -> &Path { &self.done.src }
 }

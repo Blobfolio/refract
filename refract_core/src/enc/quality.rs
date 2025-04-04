@@ -249,7 +249,7 @@ impl QualityValueFmt {
 					// This can't fail, but the compiler won't know it.
 					if let Some((mut a, b)) = n.split_at_checked(len.get() - 1) {
 						// Make sure we have an integer in the first part.
-						if a.is_empty() { a = "0" };
+						if a.is_empty() { a = "0"; }
 
 						let mut out = String::with_capacity(len.get() + 1);
 						out.push_str(a);
