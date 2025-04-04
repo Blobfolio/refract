@@ -118,7 +118,7 @@ impl AsRef<str> for RefractError {
 impl fmt::Display for RefractError {
 	#[inline]
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(self.as_str())
+		<str as fmt::Display>::fmt(self.as_str(), f)
 	}
 }
 
