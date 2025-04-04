@@ -123,7 +123,7 @@ impl Output {
 	///
 	/// This is used internally by the JPEG XL encoder to stream write the
 	/// results.
-	pub(crate) fn as_mut_vec(&mut self) -> &mut Vec<u8> { &mut self.data }
+	pub(crate) const fn as_mut_vec(&mut self) -> &mut Vec<u8> { &mut self.data }
 
 	#[inline]
 	#[must_use]

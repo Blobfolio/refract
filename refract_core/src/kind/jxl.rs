@@ -117,7 +117,7 @@ impl Decoder for ImageJxl {
 						&mut buffer
 					)?;
 				},
-				JxlDecoderStatus::FullImage => continue,
+				JxlDecoderStatus::FullImage => {},
 				JxlDecoderStatus::Success => {
 					// Safety: this is an FFI call…
 					unsafe { JxlDecoderReset(decoder.0); }
