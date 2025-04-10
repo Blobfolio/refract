@@ -3,6 +3,10 @@
 */
 
 use crate::ImageKind;
+use fyi_ansi::{
+	ansi,
+	csi,
+};
 use std::{
 	error::Error,
 	fmt,
@@ -18,7 +22,7 @@ const HELP: &str = concat!(r"
  ^/aPePN@@@@peWQ@Qez;
  =iKBDB@@@O^:.::\kQO=~
  =iKQ@QWOP: ~gBQw'|Qgz,
- =i6RwEQ#s' N@RQQl i@D:   ", "\x1b[38;5;199mRefract\x1b[0;38;5;69m v", env!("CARGO_PKG_VERSION"), "\x1b[0m", r#"
+ =i6RwEQ#s' N@RQQl i@D:   ", csi!(199), "Refract", ansi!((cornflower_blue) " v", env!("CARGO_PKG_VERSION")), r#"
  =?|>a@@Nv'^Q@@@Qe ,aW|   Guided image conversion from
  ==;.\QQ@6,|Q@@@@p.;;+\,  JPEG/PNG to AVIF/JPEG-XL/WebP.
  '\tlFw9Wgs~W@@@@S   ,;'

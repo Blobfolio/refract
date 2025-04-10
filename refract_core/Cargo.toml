@@ -9,6 +9,9 @@ repository = "https://github.com/Blobfolio/refract"
 readme = "README.md"
 publish = false
 
+[dependencies]
+fyi_ansi = "2.0.*"
+
 [dependencies.dactyl]
 version = "0.10.*"
 optional = true
