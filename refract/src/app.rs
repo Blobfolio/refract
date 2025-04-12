@@ -1827,9 +1827,8 @@ impl CurrentImage {
 	/// Return the output format that is currently being crunched, if any.
 	const fn output_kind(&self) -> Option<ImageKind> { self.output_kind }
 
-	#[expect(clippy::missing_const_for_fn, reason = "False positive.")]
 	/// # Source Path.
-	fn src(&self) -> &Path { &self.done.src }
+	fn src(&self) -> Path { self.done.src.as_path() }
 }
 
 
