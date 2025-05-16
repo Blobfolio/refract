@@ -155,7 +155,7 @@ impl EncodeIter {
 	/// # Output Size.
 	///
 	/// This returns the size of the current best output image, if any.
-	pub fn output_size(&self) -> Option<NonZeroUsize> { self.best.size() }
+	pub const fn output_size(&self) -> Option<NonZeroUsize> { self.best.size() }
 
 	/// # Take the Best!
 	///

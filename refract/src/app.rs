@@ -13,6 +13,11 @@ use dactyl::{
 	traits::IntDivFloat,
 };
 use dowser::Dowser;
+use fyi_ansi::{
+	ansi,
+	csi,
+	dim,
+};
 use iced::{
 	alignment::{
 		Horizontal,
@@ -1822,9 +1827,8 @@ impl CurrentImage {
 	/// Return the output format that is currently being crunched, if any.
 	const fn output_kind(&self) -> Option<ImageKind> { self.output_kind }
 
-	#[expect(clippy::missing_const_for_fn, reason = "False positive.")]
 	/// # Source Path.
-	fn src(&self) -> &Path { &self.done.src }
+	fn src(&self) -> &Path { self.done.src.as_path() }
 }
 
 
@@ -2208,7 +2212,13 @@ fn cli_log(src: &Path, quality: Option<Quality>) {
 	let Some((dir, name)) = split_path(src) else { return; };
 	let now = FmtUtc2k::now_local();
 	let mut out = format!(
-		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m] {}/\x1b[0m{} \x1b[2m(",
+		concat!(
+			csi!(dim), "[",
+			csi!(reset, blue), "{}",
+			ansi!((reset, dim) "] {}/"),
+			"{} ",
+			csi!(dim), "(",
+		),
 		now.time(),
 		dir.to_string_lossy(),
 		name.to_string_lossy(),
@@ -2223,7 +2233,7 @@ fn cli_log(src: &Path, quality: Option<Quality>) {
 	}
 	else { out.push_str("source"); }
 
-	eprintln!("{out})\x1b[0m");
+	eprintln!(concat!("{})", csi!(reset)), out);
 }
 
 /// # Cli Log: Sad Conversion.
@@ -2234,7 +2244,13 @@ fn cli_log_sad(src: &Path) {
 	let now = FmtUtc2k::now_local();
 
 	eprintln!(
-		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m]\x1b[91m {}/\x1b[0;91m{}\x1b[0m",
+		concat!(
+			csi!(dim), "[",
+			csi!(reset, blue), "{}",
+			csi!(reset, dim), "]",
+			csi!(light_red), " {}/",
+			ansi!((!dim) "{}"),
+		),
 		now.time(),
 		dir.to_string_lossy(),
 		name.to_string_lossy(),
@@ -2247,7 +2263,13 @@ fn cli_log_sad(src: &Path) {
 fn cli_log_error(src: MessageError) {
 	let now = FmtUtc2k::now_local();
 	eprintln!(
-		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m]\x1b[0;93m Warning:\x1b[0m {}",
+		concat!(
+			csi!(dim), "[",
+			csi!(reset, blue), "{}",
+			csi!(reset, dim), "]",
+			ansi!((reset, light_yellow) " Warning:"),
+			" {}",
+		),
 		now.time(),
 		src.as_str(),
 	);
@@ -2260,8 +2282,16 @@ fn cli_log_error(src: MessageError) {
 fn cli_log_arg(arg: &str) {
 	let now = FmtUtc2k::now_local();
 	eprintln!(
-		"\x1b[2m[\x1b[0;34m{}\x1b[0;2m]\x1b[0;93m Warning:\x1b[0m Invalid/unknown arg: \x1b[2m{arg}\x1b[0m",
+		concat!(
+			csi!(dim), "[",
+			csi!(reset, blue), "{}",
+			csi!(reset, dim), "]",
+			ansi!((reset, light_yellow) " Warning:"),
+			" Invalid/unknown arg: ",
+			dim!("{}"),
+		),
 		now.time(),
+		arg,
 	);
 }
 
