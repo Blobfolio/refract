@@ -180,7 +180,7 @@ impl Output {
 	///
 	/// To prevent weirdness, a size is only returned if the image data is
 	/// valid.
-	pub fn size(&self) -> Option<NonZeroUsize> {
+	pub const fn size(&self) -> Option<NonZeroUsize> {
 		if self.is_valid() {
 			NonZeroUsize::new(self.data.len())
 		}

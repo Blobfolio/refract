@@ -1828,7 +1828,7 @@ impl CurrentImage {
 	const fn output_kind(&self) -> Option<ImageKind> { self.output_kind }
 
 	/// # Source Path.
-	fn src(&self) -> Path { self.done.src.as_path() }
+	fn src(&self) -> &Path { self.done.src.as_path() }
 }
 
 
