@@ -13,7 +13,7 @@ publish = false
 fyi_ansi = "2.1.*"
 
 [dependencies.dactyl]
-version = "0.10.*"
+version = "0.11.*"
 optional = true
 
 [dependencies.jpeg-decoder]
