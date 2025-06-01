@@ -113,7 +113,7 @@ fyi_ansi = "2.1.*"
 open = "=5.3.2"
 rfd = "=0.15.3"
 unicode-width = "0.2.*"
-write_atomic = "0.6.*"
+write_atomic = "0.7.*"
 
 [dependencies.argyle]
 version = "0.12.*"
