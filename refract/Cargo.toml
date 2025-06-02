@@ -109,7 +109,7 @@ features = [ "png" ]
 [dependencies]
 dactyl = "0.12.*"
 dowser = "0.14.*"
-fyi_ansi = "2.1.*"
+fyi_ansi = "2.2.*"
 open = "=5.3.2"
 rfd = "=0.15.3"
 unicode-width = "0.2.*"
