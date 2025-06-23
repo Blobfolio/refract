@@ -17,7 +17,7 @@ version = "0.12.*"
 optional = true
 
 [dependencies.jpeg-decoder]
-version = "=0.3.1"
+version = "=0.3.2"
 optional = true
 
 [dependencies.link-cplusplus]
