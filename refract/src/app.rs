@@ -82,7 +82,7 @@ use std::{
 	},
 	time::Duration,
 };
-use utc2k::FmtUtc2k;
+use utc2k::Local2k;
 
 
 
@@ -2211,7 +2211,7 @@ impl Default for WidgetCache {
 /// Print a quick timestamped message to STDERR in case anybody's watching.
 fn cli_log(src: &Path, quality: Option<Quality>) {
 	let Some((dir, name)) = split_path(src) else { return; };
-	let now = FmtUtc2k::now_local();
+	let now = Local2k::now().formatted();
 	let mut out = format!(
 		concat!(
 			csi!(dim), "[",
@@ -2242,7 +2242,7 @@ fn cli_log(src: &Path, quality: Option<Quality>) {
 /// Print a quick timestamped summary of a failed conversion to STDERR.
 fn cli_log_sad(src: &Path) {
 	let Some((dir, name)) = split_path(src) else { return; };
-	let now = FmtUtc2k::now_local();
+	let now = Local2k::now().formatted();
 
 	eprintln!(
 		concat!(
@@ -2262,7 +2262,7 @@ fn cli_log_sad(src: &Path) {
 ///
 /// Print a quick timestamped error message to STDERR.
 fn cli_log_error(src: MessageError) {
-	let now = FmtUtc2k::now_local();
+	let now = Local2k::now().formatted();
 	eprintln!(
 		concat!(
 			csi!(dim), "[",
@@ -2281,7 +2281,7 @@ fn cli_log_error(src: MessageError) {
 /// Print a timestamped warning if an invalid/unrecognized CLI argument is
 /// provided, including paths that don't exist.
 fn cli_log_arg(arg: &str) {
-	let now = FmtUtc2k::now_local();
+	let now = Local2k::now().formatted();
 	eprintln!(
 		concat!(
 			csi!(dim), "[",
