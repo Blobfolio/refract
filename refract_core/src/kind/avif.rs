@@ -78,12 +78,12 @@ impl Decoder for ImageAvif {
 
 			// Turn the avifImage into an avifRGB.
 			let mut rgb = LibAvifRGBImage::default();
-			avifRGBImageSetDefaults(&mut rgb.0, image.0);
+			avifRGBImageSetDefaults(&raw mut rgb.0, image.0);
 			rgb.0.format = AVIF_RGB_FORMAT_RGBA;
 			rgb.0.depth = 8;
 			if
-				AVIF_RESULT_OK != avifRGBImageAllocatePixels(&mut rgb.0) ||
-				AVIF_RESULT_OK != avifImageYUVToRGB(image.0, &mut rgb.0)
+				AVIF_RESULT_OK != avifRGBImageAllocatePixels(&raw mut rgb.0) ||
+				AVIF_RESULT_OK != avifImageYUVToRGB(image.0, &raw mut rgb.0)
 			{
 				return Err(RefractError::Decode);
 			}
@@ -135,7 +135,7 @@ impl Encoder for ImageAvif {
 		// Encode!
 		let mut data = LibAvifRwData(avifRWData::default());
 		// Safety: this is an FFI call…
-		maybe_die(unsafe { avifEncoderWrite(encoder.0, image.0, &mut data.0) })?;
+		maybe_die(unsafe { avifEncoderWrite(encoder.0, image.0, &raw mut data.0) })?;
 
 		// But make sure it gave us something.
 		if data.0.data.is_null() { return Err(RefractError::Encode); }
@@ -335,7 +335,7 @@ impl LibAvifImage {
 				if greyscale || limited { AVIF_MATRIX_COEFFICIENTS_BT709 as _ }
 				else { AVIF_MATRIX_COEFFICIENTS_IDENTITY as _ };
 
-			maybe_die(avifImageRGBToYUV(tmp, &rgb))?;
+			maybe_die(avifImageRGBToYUV(tmp, &raw const rgb))?;
 
 			tmp
 		};
@@ -375,7 +375,7 @@ impl Drop for LibAvifRGBImage {
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	fn drop(&mut self) {
 		// Safety: libavif handles deallocation.
-		unsafe { avifRGBImageFreePixels(&mut self.0); }
+		unsafe { avifRGBImageFreePixels(&raw mut self.0); }
 	}
 }
 
@@ -391,7 +391,7 @@ impl Drop for LibAvifRwData {
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libavif handles deallocation.
-		unsafe { avifRWDataFree(&mut self.0); }
+		unsafe { avifRWDataFree(&raw mut self.0); }
 	}
 }
 
