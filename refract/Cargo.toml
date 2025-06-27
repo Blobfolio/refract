@@ -98,7 +98,7 @@ label = "<PATH(s)…>"
 description = "Image and/or directory paths to re-encode. Directories will be crawled recursively."
 
 [build-dependencies]
-argyle = "0.12.*"
+argyle = "0.13.*"
 dowser = "0.14.*"
 
 [build-dependencies.refract_core]
@@ -116,7 +116,7 @@ unicode-width = "0.2.*"
 write_atomic = "0.7.*"
 
 [dependencies.argyle]
-version = "0.12.*"
+version = "0.13.*"
 features = [ "try_paths" ]
 
 [dependencies.async-std]
