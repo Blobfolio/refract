@@ -10,7 +10,6 @@ use crate::{
 use dactyl::{
 	NiceFloat,
 	NiceU64,
-	traits::IntDivFloat,
 };
 use dowser::Dowser;
 use fyi_ansi::{
@@ -1477,7 +1476,9 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 						kind: *kind,
 						quality: quality.quality_fmt(),
 						len: Some(NiceU64::from(len)),
-						ratio: job.src_len.get().div_float(len.get()).map(NiceFloat::from),
+						ratio: NiceFloat::div_usize(job.src_len.get(), len.get())
+							.ok()
+							.map(NiceFloat::from),
 						time: Some(&res.time),
 					});
 				}
