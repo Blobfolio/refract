@@ -245,20 +245,20 @@ impl QualityValueFmt {
 				// The length will never be zero, but let's prove it to the
 				// compiler.
 				let n = n.as_str();
-				if let Some(len) = NonZeroUsize::new(n.len()) {
-					// This can't fail, but the compiler won't know it.
-					if let Some((mut a, b)) = n.split_at_checked(len.get() - 1) {
-						// Make sure we have an integer in the first part.
-						if a.is_empty() { a = "0"; }
+				if
+					let Some(len) = NonZeroUsize::new(n.len()) &&
+					let Some((mut a, b)) = n.split_at_checked(len.get() - 1)
+				{
+					// Make sure we have an integer in the first part.
+					if a.is_empty() { a = "0"; }
 
-						let mut out = String::with_capacity(len.get() + 1);
-						out.push_str(a);
-						out.push('.'); // Divide by ten.
-						out.push_str(b);
-						return Cow::Owned(out);
-					}
+					let mut out = String::with_capacity(len.get() + 1);
+					out.push_str(a);
+					out.push('.'); // Divide by ten.
+					out.push_str(b);
+					Cow::Owned(out)
 				}
-				Cow::Borrowed("")
+				else { Cow::Borrowed("") }
 			},
 		}
 	}

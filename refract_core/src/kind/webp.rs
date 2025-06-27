@@ -111,7 +111,7 @@ impl TryFrom<&[u8]> for LibWebPDecode {
 		let mut height: c_int = 0;
 		// Safety: this is an FFI call…
 		let result = unsafe {
-			WebPDecodeRGBA(src.as_ptr(), src.len(), &mut width, &mut height)
+			WebPDecodeRGBA(src.as_ptr(), src.len(), &raw mut width, &raw mut height)
 		};
 
 		if result.is_null() { Err(RefractError::Decode) }
@@ -158,7 +158,7 @@ impl TryFrom<&Input> for LibWebpPicture {
 		// Safety: libwebp expects zeroed memory.
 		let mut out = Self(unsafe { std::mem::zeroed() });
 		// Safety: this is an FFI call…
-		maybe_die(unsafe { WebPPictureInit(&mut out.0) })?;
+		maybe_die(unsafe { WebPPictureInit(&raw mut out.0) })?;
 
 		out.0.use_argb = 1;
 		out.0.width = width;
@@ -170,7 +170,7 @@ impl TryFrom<&Input> for LibWebpPicture {
 		unsafe {
 			let raw: &[u8] = img;
 			maybe_die(WebPPictureImportRGBA(
-				&mut out.0,
+				&raw mut out.0,
 				raw.as_ptr().cast(), // This doesn't actually mutate.
 				width << 2,
 			))?;
@@ -197,7 +197,7 @@ impl Drop for LibWebpPicture {
 	#[inline]
 	fn drop(&mut self) {
 		// Safety: libwebp handles deallocation.
-		unsafe { WebPPictureFree(&mut self.0); }
+		unsafe { WebPPictureFree(&raw mut self.0); }
 	}
 }
 
@@ -226,7 +226,7 @@ impl From<&mut WebPPicture> for LibWebpWriter {
 		// Safety: this is an FFI call…
 		let writer = Self(unsafe {
 			let mut writer: WebPMemoryWriter = std::mem::zeroed();
-			WebPMemoryWriterInit(&mut writer);
+			WebPMemoryWriterInit(&raw mut writer);
 			Box::into_raw(Box::new(writer))
 		});
 
@@ -270,7 +270,7 @@ fn encode(
 
 	// Encode!
 	// Safety: this is an FFI call…
-	maybe_die(unsafe { WebPEncode(&config, &mut picture.0) })?;
+	maybe_die(unsafe { WebPEncode(&raw const config, &raw mut picture.0) })?;
 
 	// Copy output.
 	// Safety: we need to box the data to access it.
@@ -309,9 +309,9 @@ fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
 	// Safety: the subsequent call expects zeroed memory.
 	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
 	// Safety: this is an FFI call…
-	maybe_die(unsafe { WebPConfigInit(&mut config) })?;
+	maybe_die(unsafe { WebPConfigInit(&raw mut config) })?;
 	// Safety: this is an FFI call…
-	maybe_die(unsafe { WebPValidateConfig(&config) })?;
+	maybe_die(unsafe { WebPValidateConfig(&raw const config) })?;
 
 	// Lossy bits.
 	if let Some(quality) = quality {
@@ -322,7 +322,7 @@ fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
 	// Lossless bits.
 	else {
 		// Safety: this is an FFI call…
-		maybe_die(unsafe { WebPConfigLosslessPreset(&mut config, 9) })?;
+		maybe_die(unsafe { WebPConfigLosslessPreset(&raw mut config, 9) })?;
 		config.lossless = 1;
 		config.quality = 100.0;
 	}

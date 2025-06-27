@@ -234,7 +234,7 @@ impl LibJxlDecoder {
 				JxlDecoderGetICCProfileSize(
 					self.0,
 					JxlColorProfileTarget::Data,
-					&mut icc_size,
+					&raw mut icc_size,
 				)
 			}
 		)?;
@@ -266,7 +266,7 @@ impl LibJxlDecoder {
 		let mut size = 0;
 		// Safety: this is an FFI call…
 		maybe_die_dec(unsafe {
-			JxlDecoderImageOutBufferSize(self.0, pixel_format, &mut size)
+			JxlDecoderImageOutBufferSize(self.0, pixel_format, &raw mut size)
 		})?;
 
 		buffer.resize(size, 0);
@@ -358,9 +358,9 @@ impl LibJxlEncoder {
 		};
 
 		// Safety: this is an FFI call…
-		maybe_die(unsafe { JxlEncoderSetBasicInfo(self.0, &basic_info) })?;
+		maybe_die(unsafe { JxlEncoderSetBasicInfo(self.0, &raw const basic_info) })?;
 		// Safety: this is an FFI call…
-		maybe_die(unsafe { JxlEncoderSetColorEncoding(self.0, &color_encoding) })
+		maybe_die(unsafe { JxlEncoderSetColorEncoding(self.0, &raw const color_encoding) })
 	}
 
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
@@ -385,7 +385,7 @@ impl LibJxlEncoder {
 			let mut next_out = unsafe { buf.as_mut_ptr().add(len).cast() };
 			// Safety: this is an FFI call…
 			let res = unsafe {
-				JxlEncoderProcessOutput(self.0, &mut next_out, &mut avail_out)
+				JxlEncoderProcessOutput(self.0, &raw mut next_out, &raw mut avail_out)
 			};
 
 			// Abort on error.
@@ -528,7 +528,7 @@ fn encode(
 	maybe_die(unsafe {
 		JxlEncoderAddImageFrame(
 			options,
-			&pixel_format,
+			&raw const pixel_format,
 			data.as_ptr().cast(),
 			size_of_val(data),
 		)

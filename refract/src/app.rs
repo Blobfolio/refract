@@ -10,7 +10,6 @@ use crate::{
 use dactyl::{
 	NiceFloat,
 	NiceU64,
-	traits::IntDivFloat,
 };
 use dowser::Dowser;
 use fyi_ansi::{
@@ -83,7 +82,7 @@ use std::{
 	},
 	time::Duration,
 };
-use utc2k::FmtUtc2k;
+use utc2k::Local2k;
 
 
 
@@ -344,10 +343,8 @@ impl App {
 		// Grab the first path manually so we can note its parent directory
 		// (for any subsequent file browsing needs).
 		let Some(first) = paths.next() else { return; };
-		if let Some(dir) = first.parent() {
-			if self.last_dir.as_ref().is_none_or(|old| old != dir) {
-				self.last_dir.replace(dir.to_path_buf());
-			}
+		if let Some(dir) = first.parent() && self.last_dir.as_ref().is_none_or(|old| old != dir) {
+			self.last_dir.replace(dir.to_path_buf());
 		}
 
 		// Add the first and the rest.
@@ -421,15 +418,14 @@ impl App {
 			},
 
 			// Process the user's yay/nay evaluation of a candidate image.
-			Message::Feedback(feedback) => if let Some(current) = &mut self.current {
-				if current.candidate.is_some() {
+			Message::Feedback(feedback) =>
+				if let Some(current) = &mut self.current && current.candidate.is_some() {
 					self.flags &= ! OTHER_BSIDE;
 					// Back around again!
 					if current.feedback(feedback) {
 						return Task::done(Message::NextStep);
 					}
-				}
-			},
+				},
 
 			// Switch to the next encoder.
 			Message::NextEncoder =>
@@ -605,10 +601,11 @@ impl App {
 		if self.current.as_ref().is_some_and(CurrentImage::active) {
 			// Unless we _just_ switched encoders, in which case we should
 			// announce it real quick.
-			if self.has_flag(SWITCHED_ENCODER) {
-				if let Some(kind) = self.current.as_ref().and_then(CurrentImage::output_kind) {
-					return self.view_encoder(kind);
-				}
+			if
+				self.has_flag(SWITCHED_ENCODER) &&
+				let Some(kind) = self.current.as_ref().and_then(CurrentImage::output_kind)
+			{
+				return self.view_encoder(kind);
 			}
 			self.view_ab()
 		}
@@ -1139,13 +1136,11 @@ impl App {
 			let mut count = 0;
 
 			// Pull the candidate info if we're looking at that.
-			if self.has_flag(OTHER_BSIDE) {
-				if let Some(can) = current.candidate.as_ref() {
-					kind = can.kind;
-					count = can.count;
-					color = Skin::PINK;
-					quality.replace(can.quality);
-				}
+			if self.has_flag(OTHER_BSIDE) && let Some(can) = current.candidate.as_ref() {
+				kind = can.kind;
+				count = can.count;
+				color = Skin::PINK;
+				quality.replace(can.quality);
 			}
 
 			// Helper: key/value pair.
@@ -1324,10 +1319,8 @@ impl App {
 		let mut handle = None;
 
 		// Show the new one?
-		if self.has_flag(OTHER_BSIDE) {
-			if let Some(can) = current.candidate.as_ref() {
-				handle.replace(can.img.clone());
-			}
+		if self.has_flag(OTHER_BSIDE) && let Some(can) = current.candidate.as_ref() {
+			handle.replace(can.img.clone());
 		}
 
 		// If we aren't showing the new one, show the old one.
@@ -1477,7 +1470,9 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 						kind: *kind,
 						quality: quality.quality_fmt(),
 						len: Some(NiceU64::from(len)),
-						ratio: job.src_len.get().div_float(len.get()).map(NiceFloat::from),
+						ratio: NiceFloat::div_usize(job.src_len.get(), len.get())
+							.ok()
+							.map(NiceFloat::from),
 						time: Some(&res.time),
 					});
 				}
@@ -1659,15 +1654,12 @@ impl CurrentImage {
 
 	/// # Provide Feedback.
 	fn feedback(&mut self, keep: bool) -> bool {
-		if self.candidate.take().is_some() {
-			if let Some((_, iter)) = &mut self.iter {
-				if keep { iter.keep(); }
-				else { iter.discard(); }
-				return true;
-			}
+		if self.candidate.take().is_some() && let Some((_, iter)) = &mut self.iter {
+			if keep { iter.keep(); }
+			else { iter.discard(); }
+			true
 		}
-
-		false
+		else { false }
 	}
 
 	/// # Finish Current Encoder.
@@ -1971,17 +1963,15 @@ impl ImageResultWrapper {
 	/// Reformat the data for final storage in `ImageResults`, and log the
 	/// results to CLI.
 	fn into_result(self) -> (ImageKind, ImageResult) {
-		if let Some(best) = self.best {
-			if let Some(len) = best.size() {
-				let quality = best.quality();
-				cli_log(&self.dst, Some(quality));
-				return (self.kind, ImageResult {
-					src: self.dst,
-					len: Some(len),
-					quality: Some(quality),
-					time: self.time,
-				});
-			}
+		if let Some(best) = self.best && let Some(len) = best.size() {
+			let quality = best.quality();
+			cli_log(&self.dst, Some(quality));
+			return (self.kind, ImageResult {
+				src: self.dst,
+				len: Some(len),
+				quality: Some(quality),
+				time: self.time,
+			});
 		}
 
 		cli_log_sad(&self.dst);
@@ -1998,11 +1988,9 @@ impl ImageResultWrapper {
 	/// Permanently save the best candidate, if any, to disk. If this fails,
 	/// the candidate will be deleted.
 	fn save(&mut self) {
-		if let Some(best) = &self.best {
-			// If saving fails, pretend there was no best.
-			if write_atomic::write_file(&self.dst, best).is_err() {
-				self.best = None;
-			}
+		// If saving fails, pretend there was no best.
+		if let Some(best) = &self.best && write_atomic::write_file(&self.dst, best).is_err() {
+			self.best = None;
 		}
 	}
 
@@ -2210,7 +2198,7 @@ impl Default for WidgetCache {
 /// Print a quick timestamped message to STDERR in case anybody's watching.
 fn cli_log(src: &Path, quality: Option<Quality>) {
 	let Some((dir, name)) = split_path(src) else { return; };
-	let now = FmtUtc2k::now_local();
+	let now = Local2k::now().formatted();
 	let mut out = format!(
 		concat!(
 			csi!(dim), "[",
@@ -2241,7 +2229,7 @@ fn cli_log(src: &Path, quality: Option<Quality>) {
 /// Print a quick timestamped summary of a failed conversion to STDERR.
 fn cli_log_sad(src: &Path) {
 	let Some((dir, name)) = split_path(src) else { return; };
-	let now = FmtUtc2k::now_local();
+	let now = Local2k::now().formatted();
 
 	eprintln!(
 		concat!(
@@ -2261,7 +2249,7 @@ fn cli_log_sad(src: &Path) {
 ///
 /// Print a quick timestamped error message to STDERR.
 fn cli_log_error(src: MessageError) {
-	let now = FmtUtc2k::now_local();
+	let now = Local2k::now().formatted();
 	eprintln!(
 		concat!(
 			csi!(dim), "[",
@@ -2280,7 +2268,7 @@ fn cli_log_error(src: MessageError) {
 /// Print a timestamped warning if an invalid/unrecognized CLI argument is
 /// provided, including paths that don't exist.
 fn cli_log_arg(arg: &str) {
-	let now = FmtUtc2k::now_local();
+	let now = Local2k::now().formatted();
 	eprintln!(
 		concat!(
 			csi!(dim), "[",
@@ -2330,11 +2318,9 @@ fn split_path(src: &Path) -> Option<(&OsStr, &OsStr)> {
 /// the home screen.
 fn subscribe_home(key: Key, modifiers: Modifiers) -> Option<Message> {
 	// These require CTRL and not ALT.
-	if modifiers.command() && ! modifiers.alt() {
-		if let Key::Character(c) = key {
-			if c == "n" { return Some(Message::ToggleFlag(OTHER_NIGHT)); }
-			if c == "o" { return Some(Message::OpenFd(modifiers.shift())); }
-		}
+	if modifiers.command() && ! modifiers.alt() && let Key::Character(c) = key {
+		if c == "n" { return Some(Message::ToggleFlag(OTHER_NIGHT)); }
+		if c == "o" { return Some(Message::OpenFd(modifiers.shift())); }
 	}
 
 	None
@@ -2349,10 +2335,10 @@ fn subscribe_ab(key: Key, modifiers: Modifiers) -> Option<Message> {
 	if modifiers.alt() { None }
 	// CTRL+N toggles Night Mode.
 	else if modifiers.command() {
-		if let Key::Character(c) = key {
-			if c == "n" { return Some(Message::ToggleFlag(OTHER_NIGHT)); }
+		if let Key::Character(c) = key && c == "n" {
+			Some(Message::ToggleFlag(OTHER_NIGHT))
 		}
-		None
+		else { None }
 	}
 	else {
 		match key {

@@ -31,8 +31,8 @@ include!(concat!(env!("OUT_DIR"), "/refract-img.rs"));
 /// # Is JPEG/PNG File.
 pub(super) fn is_jpeg_png(path: &Path) -> bool {
 	Extension::try_from3(path).map_or_else(
-		|| Extension::try_from4(path) == Some(E_JPEG),
-		|e| e == E_JPG || e == E_PNG
+		|| matches!(Extension::try_from4(path), Some(E_JPEG)),
+		|e| matches!(e, E_JPG | E_PNG),
 	)
 }
 

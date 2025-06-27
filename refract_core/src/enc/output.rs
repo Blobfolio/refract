@@ -48,7 +48,7 @@ impl Deref for Output {
 
 	#[inline]
 	fn deref(&self) -> &Self::Target {
-		if self.is_valid() { &self.data }
+		if self.is_valid() { self.data.as_slice() }
 		else { &[] }
 	}
 }

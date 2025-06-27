@@ -187,11 +187,7 @@ fn blur_alpha(img: &mut [u8], width: usize, height: usize) {
 	let mut diff: Vec<(usize, [u8; 4])> = Vec::new();
 	let mut idx: usize = 0;
 	the_nines(img, width, height, |n| {
-		if n.has_alpha() {
-			if let Some(avg) = n.weighted() {
-				diff.push((idx, avg));
-			}
-		}
+		if n.has_alpha() && let Some(avg) = n.weighted() { diff.push((idx, avg)); }
 		idx += 4;
 	});
 
@@ -204,11 +200,7 @@ fn blur_alpha(img: &mut [u8], width: usize, height: usize) {
 	// Now compute a straight average.
 	idx = 0;
 	the_nines(img, width, height, |n| {
-		if n.has_alpha() {
-			if let Some(avg) = n.averaged() {
-				diff.push((idx, avg));
-			}
-		}
+		if n.has_alpha() && let Some(avg) = n.averaged() { diff.push((idx, avg)); }
 		idx += 4;
 	});
 

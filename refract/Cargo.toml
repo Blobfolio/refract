@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "1.0.4"
+version = "1.1.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2024"
@@ -98,8 +98,8 @@ label = "<PATH(s)…>"
 description = "Image and/or directory paths to re-encode. Directories will be crawled recursively."
 
 [build-dependencies]
-argyle = "0.12.*"
-dowser = "0.13.*"
+argyle = "0.13.*"
+dowser = "0.15.*"
 
 [build-dependencies.refract_core]
 path = "../refract_core"
@@ -107,16 +107,16 @@ default-features = false
 features = [ "png" ]
 
 [dependencies]
-dactyl = "0.10.*"
-dowser = "0.13.*"
-fyi_ansi = "2.1.*"
+dactyl = "0.13.*"
+dowser = "0.15.*"
+fyi_ansi = "2.2.*"
 open = "=5.3.2"
 rfd = "=0.15.3"
 unicode-width = "0.2.*"
-write_atomic = "0.6.*"
+write_atomic = "0.7.*"
 
 [dependencies.argyle]
-version = "0.12.*"
+version = "0.13.*"
 features = [ "try_paths" ]
 
 [dependencies.async-std]
@@ -132,5 +132,5 @@ path = "../refract_core"
 features = [ "images" ]
 
 [dependencies.utc2k]
-version = "0.13.*"
+version = "0.15.*"
 features = [ "local" ]
