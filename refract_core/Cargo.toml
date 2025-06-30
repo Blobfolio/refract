@@ -25,9 +25,9 @@ version = "=1.0.10"
 optional = true
 
 [dependencies.lodepng]
-version = "=3.11.0"
+version = "=3.12.1"
 default-features = false
-features = [ "rust_backend" ]
+features = [ "zlibrs" ]
 optional = true
 
 [dependencies.jpegxl-sys]
