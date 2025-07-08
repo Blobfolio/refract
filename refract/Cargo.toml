@@ -99,7 +99,6 @@ description = "Image and/or directory paths to re-encode. Directories will be cr
 
 [build-dependencies]
 argyle = "0.13.*"
-dowser = "0.15.*"
 
 [build-dependencies.refract_core]
 path = "../refract_core"
@@ -108,7 +107,7 @@ features = [ "png" ]
 
 [dependencies]
 dactyl = "0.13.*"
-dowser = "0.15.*"
+dowser = "0.16.*"
 fyi_ansi = "2.2.*"
 open = "=5.3.2"
 rfd = "=0.15.3"
