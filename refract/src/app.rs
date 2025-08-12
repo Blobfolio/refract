@@ -596,7 +596,7 @@ impl App {
 	///
 	/// Under the hood, this defers to either `view_home`, `view_encoder`, or
 	/// `view_ab` depending on the state of things.
-	pub(super) fn view(&self) -> Container<Message> {
+	pub(super) fn view(&self) -> Container<'_, Message> {
 		// If we're processing an image, return the A/B screen.
 		if self.current.as_ref().is_some_and(CurrentImage::active) {
 			// Unless we _just_ switched encoders, in which case we should
@@ -624,7 +624,7 @@ impl App {
 	///
 	/// (A warning/error message may also be presented, but they're short-
 	/// lived and uncommon.)
-	fn view_home(&self) -> Container<Message> {
+	fn view_home(&self) -> Container<'_, Message> {
 		container(
 			column!(
 				self.view_settings(),
@@ -641,7 +641,7 @@ impl App {
 	/// # View: About.
 	///
 	/// This returns the application name, version, and repository URL.
-	fn view_about(&self) -> Column<Message> {
+	fn view_about(&self) -> Column<'_, Message> {
 		column!(
 			rich_text!(
 				emphasize!(span("Refract "), Skin::PINK),
@@ -663,7 +663,7 @@ impl App {
 	/// If the user did something that did nothing instead of something, this
 	/// returns a message explaining why they got nothing instead of something,
 	/// lest they think it's our fault!
-	fn view_error(&self) -> Option<Container<Message>> {
+	fn view_error(&self) -> Option<Container<'_, Message>> {
 		use iced::widget::container::Style;
 
 		self.error.map(|err|
@@ -690,7 +690,7 @@ impl App {
 	///
 	/// This returns button widgets for adding file(s) or directories, and
 	/// some basic instructions for same.
-	fn view_enqueue_buttons(&self) -> Container<Message> {
+	fn view_enqueue_buttons(&self) -> Container<'_, Message> {
 		container(
 			column!(
 				row!(
@@ -865,7 +865,7 @@ impl App {
 	///
 	/// This collects and returns the contents of the `view_settings_*`
 	/// helpers, along with the add-file buttons and about information.
-	fn view_settings(&self) -> Container<Message> {
+	fn view_settings(&self) -> Container<'_, Message> {
 		container(
 			row!(
 				self.view_settings_fmt(),
@@ -889,7 +889,7 @@ impl App {
 	///
 	/// This returns a list of checkboxes corresponding to the available
 	/// next-gen image formats (the encoders that will be used).
-	fn view_settings_fmt(&self) -> Column<Message> {
+	fn view_settings_fmt(&self) -> Column<'_, Message> {
 		column!(
 			emphasize!(text("Formats"), Skin::PINK),
 			chk!(self, "AVIF", FMT_AVIF),
@@ -902,7 +902,7 @@ impl App {
 	/// # View: Mode Checkboxes.
 	///
 	/// This returns checkboxes for the various compression modes.
-	fn view_settings_mode(&self) -> Column<Message> {
+	fn view_settings_mode(&self) -> Column<'_, Message> {
 		column!(
 			emphasize!(text("Compression"), Skin::PINK),
 			chk!(self, "Lossless", MODE_LOSSLESS),
@@ -922,7 +922,7 @@ impl App {
 	///
 	/// This returns checkboxes for the program's one-off settings, i.e.
 	/// night mode and automatic saving.
-	fn view_settings_other(&self) -> Column<Message> {
+	fn view_settings_other(&self) -> Column<'_, Message> {
 		column!(
 			emphasize!(text("Other"), Skin::PINK),
 			tip!(
@@ -948,7 +948,7 @@ impl App {
 	///
 	/// The constant format changes can get confusing. This screen is used to
 	/// (very briefly) announce the changes.
-	fn view_encoder(&self, kind: ImageKind) -> Container<Message> {
+	fn view_encoder(&self, kind: ImageKind) -> Container<'_, Message> {
 		use iced::widget::container::Style;
 
 		container(
@@ -1001,7 +1001,7 @@ impl App {
 	///
 	/// It comprises a title-like bar, image stack, and footer with
 	/// instructions, progress, and action buttons.
-	fn view_ab(&self) -> Container<Message> {
+	fn view_ab(&self) -> Container<'_, Message> {
 		container(
 			column!(
 				self.view_ab_header(),
@@ -1027,7 +1027,7 @@ impl App {
 	/// This returns the "Accept" and "Reject" buttons used for candidate image
 	/// feedback, though they'll only be enabled if the program is ready to
 	/// receive said feedback.
-	fn view_ab_feedback(&self) -> Column<Message> {
+	fn view_ab_feedback(&self) -> Column<'_, Message> {
 		let Some(current) = &self.current else { return Column::new(); };
 		let active = current.candidate.is_some();
 		let b_side = active && self.has_flag(OTHER_BSIDE);
@@ -1102,7 +1102,7 @@ impl App {
 	/// 1. In A/B mode, it contains the format and quality details for the image actively being displayed, i.e. the source or candidate.
 	/// 2. In lossless-only mode, it lets the user know that no feedback will be required.
 	/// 3. Otherwise a generic "reticulating splines" message, since there's nothing to do but wait.
-	fn view_ab_header(&self) -> Container<Message> {
+	fn view_ab_header(&self) -> Container<'_, Message> {
 		use iced::widget::container::Style;
 
 		let mut row = Row::new()
@@ -1182,7 +1182,7 @@ impl App {
 	///
 	/// It also includes a checkbox to toggle night mode, since visually it
 	/// fits better in this column than anywhere else.
-	fn view_ab_progress(&self) -> Column<Message> {
+	fn view_ab_progress(&self) -> Column<'_, Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 
 		let active = current.candidate.is_some();
@@ -1245,7 +1245,7 @@ impl App {
 	///
 	/// The image itself is technically optional, but should always be present
 	/// in practice.
-	fn view_image(&self) -> Stack<Message> {
+	fn view_image(&self) -> Stack<'_, Message> {
 		Stack::with_capacity(3)
 			.push(self.view_image_checkers_a())
 			.push_maybe(self.view_image_checkers_b())
@@ -1258,7 +1258,7 @@ impl App {
 	///
 	/// Produce a checkered background to make it easier to visualize image
 	/// transparency.
-	fn view_image_checkers_a(&self) -> Container<Message> {
+	fn view_image_checkers_a(&self) -> Container<'_, Message> {
 		container(
 			image(self.cache.checkers_a.clone())
 			.content_fit(ContentFit::None)
@@ -1272,7 +1272,7 @@ impl App {
 	///
 	/// This adds a "B" to every fourth square for added emphasis, but only
 	/// when viewing a candidate image.
-	fn view_image_checkers_b(&self) -> Option<Container<Message>> {
+	fn view_image_checkers_b(&self) -> Option<Container<'_, Message>> {
 		if self.has_flag(OTHER_BSIDE) && self.has_candidate() {
 			Some(
 				container(
@@ -1296,7 +1296,7 @@ impl App {
 	///
 	/// This method is technically fallible, but in practice it should never
 	/// not return something.
-	fn view_image_image(&self) -> Option<Container<Message>> {
+	fn view_image_image(&self) -> Option<Container<'_, Message>> {
 		use iced::widget::scrollable::{
 			Direction,
 			Rail,
@@ -1355,7 +1355,7 @@ impl App {
 	///
 	/// This returns a simple legend illustrating the available keyboard
 	/// shortcuts that can be used in lieu of the button widgets.
-	fn view_keyboard_shortcuts(&self) -> Column<Message> {
+	fn view_keyboard_shortcuts(&self) -> Column<'_, Message> {
 		let Some(current) = self.current.as_ref() else { return Column::new(); };
 		let src_kind = current.input_kind();
 		let dst_kind = current.output_kind().unwrap_or(ImageKind::Invalid);
@@ -2287,7 +2287,7 @@ fn cli_log_arg(arg: &str) {
 ///
 /// Split the file name into stem and extension parts, trimming the stem if
 /// too long, and checking that the extension is appropriate for JPEG/PNG.
-fn split_ext(src: &Path) -> Option<(Cow<str>, &str)> {
+fn split_ext(src: &Path) -> Option<(Cow<'_, str>, &str)> {
 	use unicode_width::UnicodeWidthStr;
 
 	let ext = src.extension().and_then(OsStr::to_str)?;

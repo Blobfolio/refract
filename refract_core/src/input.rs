@@ -294,7 +294,7 @@ impl Input {
 	///
 	/// Return the pixels as 4-byte RGBA, upsampling the colorspace as
 	/// necessary.
-	pub fn pixels_rgba(&self) -> Cow<[u8]> {
+	pub fn pixels_rgba(&self) -> Cow<'_, [u8]> {
 		// The expected size.
 		let size = self.width() * self.height() * 4;
 
