@@ -46,9 +46,11 @@ pub(super) trait Decoder {
 /// This is implemented for image formats capable of encoding from RGBA pixels
 /// into a raw image.
 pub(super) trait Encoder {
+	#[allow(dead_code, clippy::allow_attributes, reason = "Feature-specific.")]
 	/// # Minimum Quality.
 	const MIN_QUALITY: NonZeroU8 = NonZeroU8::MIN;
 
+	#[allow(dead_code, clippy::allow_attributes, reason = "Feature-specific.")]
 	/// # Maximum Quality.
 	const MAX_QUALITY: NonZeroU8 = NZ_100;
 

@@ -234,7 +234,7 @@ impl QualityValueFmt {
 	///
 	/// This requires allocation for `Self::Float` variants, but everything
 	/// else can enjoy a cheap borrow.
-	pub fn as_str(&self) -> Cow<str> {
+	pub fn as_str(&self) -> Cow<'_, str> {
 		match self {
 			Self::None => Cow::Borrowed(""),
 			Self::Int(n) => Cow::Borrowed(n.as_str()),
