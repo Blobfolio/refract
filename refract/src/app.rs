@@ -501,7 +501,7 @@ impl App {
 				let confirm = ! self.has_flag(OTHER_SAVE_AUTO);
 				if let Some(current) = &mut self.current {
 					// Advance iterator and wait for feedback.
-					if current.next_candidate_done(wrapper) {
+					if let Some(wrapper) = wrapper && current.next_candidate_done(wrapper) {
 						self.flags |= OTHER_BSIDE;
 						return Task::none();
 					}
@@ -574,7 +574,7 @@ impl App {
 		else {
 			self.flags |= SWITCHED_ENCODER;
 			Task::future(async {
-				async_std::task::sleep(Duration::from_millis(1500)).await;
+				tokio::time::sleep(Duration::from_millis(1500)).await;
 				Message::UnsetFlag(SWITCHED_ENCODER)
 			})
 				.chain(Task::done(Message::NextStep))
@@ -1703,11 +1703,11 @@ impl CurrentImage {
 		self.candidate = None;
 		let borrow = self.iter.take()?;
 		Some(Task::future(async {
-			let enc = async_std::task::spawn_blocking(||
+			let enc = tokio::task::spawn_blocking(||
 				EncodeWrapper::from(borrow).advance()
 			).await;
 
-			Message::NextStepDone(enc)
+			Message::NextStepDone(enc.ok())
 		}))
 	}
 
@@ -2086,7 +2086,7 @@ pub(super) enum Message {
 	/// In most contexts the program will idle after this, waiting for user
 	/// feedback, but if we're out of candidates to generate, it'll move onto
 	/// `SaveImage`, or `NextEncoder` depending on the state of things.
-	NextStepDone(EncodeWrapper),
+	NextStepDone(Option<EncodeWrapper>),
 
 	/// # Save Image (and Continue).
 	///

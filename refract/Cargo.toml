@@ -118,17 +118,18 @@ write_atomic = "0.7.*"
 version = "0.13.*"
 features = [ "try_paths" ]
 
-[dependencies.async-std]
-version = "=1.13.*"
-default-features = false
-
 [dependencies.iced]
 version = "=0.13.1"
-features = [ "async-std", "image-without-codecs" ]
+features = [ "image-without-codecs", "tokio" ]
 
 [dependencies.refract_core]
 path = "../refract_core"
 features = [ "images" ]
+
+[dependencies.tokio]
+version = "=1.47.*"
+default-features = false
+features = [ "rt", "rt-multi-thread", "time" ]
 
 [dependencies.utc2k]
 version = "0.17.*"
