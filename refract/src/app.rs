@@ -262,7 +262,7 @@ impl App {
 				Argument::Key("-V" | "--version") => return Err(RefractError::PrintVersion),
 
 				Argument::KeyWithValue("-l" | "--list", s) => {
-					let _res = paths.read_paths_from_file(s);
+					let _res = paths.push_paths_from_file(s);
 				},
 
 				Argument::Path(s) => { paths = paths.with_path(s); },
@@ -1423,9 +1423,9 @@ impl App {
 				.await
 				.map(|paths| Task::done(
 					Message::AddPaths(
-						Dowser::default().with_paths(
-							paths.iter().map(rfd::FileHandle::path)
-						)
+						paths.iter()
+							.map(rfd::FileHandle::path)
+							.fold(Dowser::default(), Dowser::with_path)
 					)
 				))
 		}).and_then(|t| t)
