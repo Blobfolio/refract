@@ -28,12 +28,12 @@ release_dir := justfile_directory() + "/release"
 
 
 
-#export RUSTFLAGS := "-Ctarget-cpu=x86-64-v3 -Cllvm-args=--cost-kind=throughput -Clinker-plugin-lto -Clink-arg=-fuse-ld=lld"
-#export CC        := "clang"
-#export CXX       := "clang++"
-#export CFLAGS    := `llvm-config --cflags` + " -march=x86-64-v3 -Wall -Wextra -flto"
-#export CXXFLAGS  := `llvm-config --cxxflags` + " -march=x86-64-v3 -Wall -Wextra -flto"
-#export LDFLAGS   := `llvm-config --ldflags` + " -fuse-ld=lld -flto"
+export RUSTFLAGS := "-Ctarget-cpu=x86-64-v3 -Cllvm-args=--cost-kind=throughput -Clinker-plugin-lto -Clink-arg=-fuse-ld=lld"
+export CC        := "clang"
+export CXX       := "clang++"
+export CFLAGS    := `llvm-config --cflags` + " -march=x86-64-v3 -Wall -Wextra -flto"
+export CXXFLAGS  := `llvm-config --cxxflags` + " -march=x86-64-v3 -Wall -Wextra -flto"
+export LDFLAGS   := `llvm-config --ldflags` + " -fuse-ld=lld -flto"
 
 
 
@@ -133,11 +133,22 @@ release_dir := justfile_directory() + "/release"
 # Unit tests!
 @test:
 	clear
-	cargo test \
-		--workspace \
-		--target-dir "{{ cargo_dir }}"
+
 	cargo test \
 		--release \
+		--workspace \
+		--target-dir "{{ cargo_dir }}"
+
+	just _test-debug
+
+# Unit Tests (Debug).
+_test-debug:
+	#!/usr/bin/env bash
+	set -e
+
+	unset -v RUSTFLAGS CC CXX CFLAGS CXXFLAGS LDFLAGS
+
+	cargo test \
 		--workspace \
 		--target-dir "{{ cargo_dir }}"
 
