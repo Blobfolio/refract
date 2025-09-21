@@ -2,7 +2,6 @@
 # Refract - Build
 */
 
-use argyle::KeyWordsBuilder;
 use std::{
 	fs::File,
 	io::Write,
@@ -20,27 +19,7 @@ fn main() {
 	println!("cargo:rerun-if-changed=Cargo.toml");
 	println!("cargo:rerun-if-changed=skel");
 
-	build_cli();
 	build_imgs();
-}
-
-/// # Build CLI Keys.
-fn build_cli() {
-	let mut builder = KeyWordsBuilder::default();
-	builder.push_keys([
-		"-e", "--exit-auto",
-		"-h", "--help",
-		"--no-avif",
-		"--no-jxl",
-		"--no-webp",
-		"--no-lossless",
-		"--no-lossy",
-		"--no-ycbcr",
-		"-s", "--save-auto",
-		"-V", "--version",
-	]);
-	builder.push_keys_with_values(["-l", "--list"]);
-	builder.save(_out_path("argyle.rs").expect("Missing OUT_DIR."));
 }
 
 /// # Build Images.
