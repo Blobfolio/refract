@@ -276,9 +276,11 @@ impl App {
 				Argument::SaveAuto => { flags |= OTHER_SAVE_AUTO; },
 				Argument::Version => return Err(RefractError::PrintVersion),
 
-				Argument::List(s) => {
-					let _res = paths.push_paths_from_file(s);
-				},
+				Argument::List(s) =>
+					if s == "-" { paths.push_paths_from_stdin(); }
+					else {
+						let _res = paths.push_paths_from_file(s);
+					},
 				Argument::Path(s) => { paths = paths.with_path(s); },
 
 				// Mistake?
