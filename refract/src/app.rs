@@ -2,7 +2,6 @@
 # Refract: App
 */
 
-use argyle::Argument;
 use crate::{
 	Candidate,
 	Skin,
@@ -242,37 +241,51 @@ impl App {
 	/// `--help` or `--version` were requested instead, in which case the
 	/// corresponding "error" is returned.
 	pub(super) fn new() -> Result<Self, RefractError> {
+		argyle::argue! {
+			ExitAuto   "-e" "--exit-auto",
+			Help       "-h" "--help",
+			NoAvif          "--no-avif",
+			NoJxl           "--no-jxl",
+			NoWebp          "--no-webp",
+			NoLossless      "--no-lossless",
+			NoLossy         "--no-lossy",
+			NoYcbcr         "--no-ycbcr",
+			SaveAuto   "-s" "--save-auto",
+			Version    "-V" "--version",
+
+			@options
+			List       "-l" "--list",
+
+			@catchall-paths Path,
+		}
+
 		let mut paths = Dowser::default();
 		let mut flags = DEFAULT_FLAGS;
 
 		// Load CLI arguments, if any.
-		let args = argyle::args()
-			.with_keywords(include!(concat!(env!("OUT_DIR"), "/argyle.rs")));
-		for arg in args {
+		for arg in Argument::args_os() {
 			match arg {
-				Argument::Key("-e" | "--exit-auto") => { flags |= OTHER_EXIT_AUTO; },
-				Argument::Key("-h" | "--help") => return Err(RefractError::PrintHelp),
-				Argument::Key("--no-avif") => { flags &= ! FMT_AVIF; },
-				Argument::Key("--no-jxl") => { flags &= ! FMT_JXL; },
-				Argument::Key("--no-webp") => { flags &= ! FMT_WEBP; },
-				Argument::Key("--no-lossless") => { flags &= ! MODE_LOSSLESS; },
-				Argument::Key("--no-lossy") => { flags &= ! MODE_LOSSY; },
-				Argument::Key("--no-ycbcr") => { flags &= ! MODE_LOSSY_YCBCR; },
-				Argument::Key("-s" | "--save-auto") => { flags |= OTHER_SAVE_AUTO; },
-				Argument::Key("-V" | "--version") => return Err(RefractError::PrintVersion),
+				Argument::ExitAuto => { flags |= OTHER_EXIT_AUTO; },
+				Argument::Help => return Err(RefractError::PrintHelp),
+				Argument::NoAvif => { flags &= ! FMT_AVIF; },
+				Argument::NoJxl => { flags &= ! FMT_JXL; },
+				Argument::NoWebp => { flags &= ! FMT_WEBP; },
+				Argument::NoLossless => { flags &= ! MODE_LOSSLESS; },
+				Argument::NoLossy => { flags &= ! MODE_LOSSY; },
+				Argument::NoYcbcr => { flags &= ! MODE_LOSSY_YCBCR; },
+				Argument::SaveAuto => { flags |= OTHER_SAVE_AUTO; },
+				Argument::Version => return Err(RefractError::PrintVersion),
 
-				Argument::KeyWithValue("-l" | "--list", s) => {
-					let _res = paths.push_paths_from_file(s);
-				},
-
+				Argument::List(s) =>
+					if s == "-" { paths.push_paths_from_stdin(); }
+					else {
+						let _res = paths.push_paths_from_file(s);
+					},
 				Argument::Path(s) => { paths = paths.with_path(s); },
 
 				// Mistake?
-				Argument::Other(s) => { cli_log_arg(&s); },
-				Argument::InvalidUtf8(s) => { cli_log_arg(&s.to_string_lossy()); },
-
-				// Nothing else is relevant.
-				_ => {},
+				Argument::Other(s) =>   { cli_log_arg(&s); },
+				Argument::OtherOs(s) => { cli_log_arg(&s.to_string_lossy()); },
 			}
 		}
 
