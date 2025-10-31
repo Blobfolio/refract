@@ -105,7 +105,7 @@ features = [ "png" ]
 [dependencies]
 argyle = "0.14.*"
 dactyl = "0.13.*"
-dowser = "0.17.*"
+dowser = "0.18.*"
 fyi_ansi = "2.2.*"
 open = "=5.3.2"
 rfd = "=0.15.4"
