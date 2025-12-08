@@ -108,7 +108,7 @@ dactyl = "0.13.*"
 dowser = "0.18.*"
 fyi_ansi = "2.2.*"
 open = "=5.3.3"
-rfd = "=0.15.4"
+rfd = "=0.16.0"
 unicode-width = "0.2.*"
 write_atomic = "0.7.*"
 
