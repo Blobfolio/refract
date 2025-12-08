@@ -45,6 +45,7 @@ use iced::{
 		Container,
 		container::bordered_box,
 		image,
+		keyed_column,
 		rich_text,
 		row,
 		Row,
@@ -151,7 +152,8 @@ macro_rules! btn {
 /// Generate a flag-toggle checkbox with the given label and flag.
 macro_rules! chk {
 	($lhs:ident, $label:literal, $flag:ident) => (
-		checkbox($label, $lhs.has_flag($flag))
+		checkbox($lhs.has_flag($flag))
+			.label($label)
 			.on_toggle(|_| Message::ToggleFlag($flag))
 			.size(Skin::CHK_SIZE)
 	);
@@ -170,7 +172,15 @@ macro_rules! emphasize {
 /// Image kinds are (almost) always displayed with emphasis; this reduces the
 /// code a little bit and ensures consistent formatting.
 macro_rules! kind {
-	($kind:expr, $color:expr) => (emphasize!(span($kind.as_str()), $color));
+	(
+		$kind:expr,
+		$color:expr $(,)?
+	) => (emphasize!(span($kind.as_str()), $color));
+	(
+		$kind:expr,
+		$color:expr,
+		$ty:ty $(,)?
+	) => (emphasize!(span::<'_, $ty, _>($kind.as_str()), $color));
 }
 
 /// # Helper: Tooltip.
@@ -599,8 +609,20 @@ impl App {
 	/// This method sets up listeners for the program's keyboard shortcuts,
 	/// bubbling up `Message`s as needed.
 	pub(super) fn subscription(&self) -> Subscription<Message> {
-		if self.has_candidate() { iced::keyboard::on_key_press(subscribe_ab) }
-		else { iced::keyboard::on_key_press(subscribe_home) }
+		use iced::keyboard::Event;
+
+		if self.has_candidate() {
+			iced::keyboard::listen().filter_map(|e| match e {
+				Event::KeyPressed { key, modifiers, .. } => subscribe_ab(key, modifiers),
+				_ => None,
+			})
+		}
+		else {
+			iced::keyboard::listen().filter_map(|e| match e {
+				Event::KeyPressed { key, modifiers, .. } => subscribe_home(key, modifiers),
+				_ => None,
+			})
+		}
 	}
 
 	/// # View.
@@ -639,11 +661,8 @@ impl App {
 	/// lived and uncommon.)
 	fn view_home(&self) -> Container<'_, Message> {
 		container(
-			column!(
-				self.view_settings(),
-				self.view_log(),
-			)
-				.push_maybe(self.view_error())
+			 keyed_column!((0, self.view_settings()), (1, self.view_log()))
+				.push_maybe(2, self.view_error())
 				.spacing(Skin::GAP50)
 		)
 			.padding(Skin::GAP50)
@@ -657,14 +676,15 @@ impl App {
 	fn view_about(&self) -> Column<'_, Message> {
 		column!(
 			rich_text!(
-				emphasize!(span("Refract "), Skin::PINK),
+				emphasize!(span::<'_, (), _>("Refract "), Skin::PINK),
 				emphasize!(span(concat!("v", env!("CARGO_PKG_VERSION"))), Skin::PURPLE),
 			),
 
 			rich_text!(
-				emphasize!(span(env!("CARGO_PKG_REPOSITORY")), Skin::GREEN)
+				emphasize!(span::<'_, Message, _>(env!("CARGO_PKG_REPOSITORY")), Skin::GREEN)
 					.link(Message::OpenUrl(env!("CARGO_PKG_REPOSITORY")))
-			),
+			)
+				.on_link_click(|v| v),
 		)
 			.align_x(Horizontal::Right)
 			.spacing(Skin::GAP25)
@@ -682,7 +702,7 @@ impl App {
 		self.error.map(|err|
 			container(row!(
 				rich_text!(
-					emphasize!(span("Warning: ")),
+					emphasize!(span::<'_, (), _>("Warning: ")),
 					span(err.as_str()),
 				)
 					.width(Shrink)
@@ -716,7 +736,7 @@ impl App {
 					.width(Shrink),
 
 				rich_text!(
-					span("Choose one or more "),
+					span::<'_, (), _>("Choose one or more "),
 					emphasize!(span("JPEG")),
 					span("/"),
 					emphasize!(span("PNG")),
@@ -751,7 +771,7 @@ impl App {
 
 		// Finally, add all the lines!
 		let mut lines = column!(rich_text!(
-			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])), Skin::PURPLE),
+			emphasize!(span::<'_, (), _>(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])), Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
 			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])), Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
@@ -784,7 +804,7 @@ impl App {
 
 			lines = lines.push(rich_text!(
 				// Path, pretty-formatted.
-				span(format!("{}/", dir.to_string_lossy()))
+				span::<'_, Message, _>(format!("{}/", dir.to_string_lossy()))
 					.color(
 						if dir == last_dir { Skin::TRANSPARENT }
 						else { Skin::GREY }
@@ -837,7 +857,7 @@ impl App {
 								.color_maybe((nice == "0.000").then_some(Skin::GREY))
 						},
 				),
-			));
+			).on_link_click(|v| v));
 
 			// Update the last directory before leaving.
 			last_dir = dir;
@@ -848,7 +868,7 @@ impl App {
 			.push(text(""))
 			.push(text(""))
 			.push(rich_text!(
-				span(" *").color(Skin::PURPLE),
+				span::<'_, (), _>(" *").color(Skin::PURPLE),
 				span(" Compression ratio is ").color(Skin::GREY),
 				emphasize!(span("src"), Skin::PURPLE),
 				emphasize!(span(":"), Skin::GREY),
@@ -856,7 +876,7 @@ impl App {
 				span(".").color(Skin::GREY),
 			))
 			.push(rich_text!(
-				span("**").color(Skin::PURPLE),
+				span::<'_, (), _>("**").color(Skin::PURPLE),
 				span(" Total encoding time, rejects and all.").color(Skin::GREY),
 			));
 
@@ -922,7 +942,8 @@ impl App {
 			chk!(self, "Lossy", MODE_LOSSY),
 			tip!(
 				self,
-				checkbox("Lossy YCbCr", self.has_flag(MODE_LOSSY_YCBCR))
+				checkbox(self.has_flag(MODE_LOSSY_YCBCR))
+					.label("Lossy YCbCr")
 					.on_toggle_maybe(self.has_flag(FMT_AVIF | MODE_LOSSY).then_some(|_| Message::ToggleFlag(MODE_LOSSY_YCBCR)))
 					.size(Skin::CHK_SIZE),
 				"Repeat AVIF A/B tests in YCbCr colorspace to look for additional savings."
@@ -969,7 +990,7 @@ impl App {
 				emphasize!(text("Up Next…").size(Skin::TEXT_LG)),
 				match kind {
 					ImageKind::Avif => rich_text!(
-						emphasize!(span("A"), Skin::PURPLE),
+						emphasize!(span::<'_, (), _>("A"), Skin::PURPLE),
 						emphasize!(span("v"), Skin::TEAL),
 						emphasize!(span("i"), Skin::BLUE),
 						emphasize!(span("f"), Skin::YELLOW),
@@ -1065,7 +1086,7 @@ impl App {
 						left: Skin::GAP75,
 					}),
 					rich_text!(
-						span("Forget about images past. Are you happy with "),
+						span::<'_, (), _>("Forget about images past. Are you happy with "),
 						span("this").underline(true),
 						span(" one? If yes, "),
 						emphasize!(span("accept"), Skin::GREEN),
@@ -1083,10 +1104,11 @@ impl App {
 				rich_text!(
 					kind!(
 						src_kind,
-						if b_side { Skin::GREY } else { Skin::PURPLE }
+						if b_side { Skin::GREY } else { Skin::PURPLE },
+						Message,
 					)
 						.link_maybe(b_side.then_some(Message::ToggleFlag(OTHER_BSIDE)))
-				),
+				).on_link_click(|v| v),
 
 				toggler(b_side)
 					.spacing(0)
@@ -1095,10 +1117,11 @@ impl App {
 				rich_text!(
 					kind!(
 						dst_kind,
-						if b_side { Skin::PINK } else { Skin::GREY }
+						if b_side { Skin::PINK } else { Skin::GREY },
+						Message,
 					)
 						.link_maybe((active && ! b_side).then_some(Message::ToggleFlag(OTHER_BSIDE)))
-				),
+				).on_link_click(|v| v),
 			)
 				.spacing(Skin::GAP25)
 				.align_y(Vertical::Center)
@@ -1158,7 +1181,7 @@ impl App {
 
 			// Helper: key/value pair.
 			macro_rules! kv {
-				($k:expr, $v:expr) => (rich_text!(span($k), emphasize!(span($v))));
+				($k:expr, $v:expr) => (rich_text!(span::<'_, (), _>($k), emphasize!(span($v))));
 			}
 
 			// Kind.
@@ -1203,7 +1226,7 @@ impl App {
 		// Image.Ext > Ext1 Ext2 Ext3.
 		let mut formats = Vec::with_capacity(6);
 		if let Some((stem, ext)) = split_ext(current.src()) {
-			formats.push(emphasize!(span(stem)));
+			formats.push(emphasize!(span::<'_, (), _>(stem)));
 			formats.push(emphasize!(span(format!(".{ext}")), Skin::PURPLE));
 			formats.push(span(" > ").color(Skin::GREY));
 		}
@@ -1237,13 +1260,14 @@ impl App {
 
 			// Cancel.
 			rich_text!(
-				span("Ready for bed? ").color(Skin::maybe_dim(self.fg(), active)),
+				span::<'_, Message, _>("Ready for bed? ").color(Skin::maybe_dim(self.fg(), active)),
 				emphasize!(
 					span("Skip ahead!"),
 					Skin::maybe_dim(Skin::ORANGE, active)
 				)
 					.link_maybe(active.then_some(Message::NextImage)),
 			)
+				.on_link_click(|v| v)
 		)
 			.spacing(Skin::GAP75)
 			.align_x(Horizontal::Center)
@@ -1259,14 +1283,21 @@ impl App {
 	/// The image itself is technically optional, but should always be present
 	/// in practice.
 	fn view_image(&self) -> Stack<'_, Message> {
-		Stack::with_capacity(3)
-			.push(self.view_image_checkers_a())
-			.push_maybe(self.view_image_checkers_b())
-			.push_maybe(self.view_image_image())
+		let mut stack = Stack::with_capacity(3).push(self.view_image_checkers_a());
+
+		if let Some(c) = self.view_image_image() {
+			if let Some(b) = self.view_image_checkers_b() {
+				stack = stack.push(b);
+			}
+			stack = stack.push(c);
+		}
+
+		stack
 			.width(Fill)
 			.height(Fill)
 	}
 
+	#[inline]
 	/// # View: Image Checkers (A).
 	///
 	/// Produce a checkered background to make it easier to visualize image
@@ -1274,13 +1305,15 @@ impl App {
 	fn view_image_checkers_a(&self) -> Container<'_, Message> {
 		container(
 			image(self.cache.checkers_a.clone())
-			.content_fit(ContentFit::None)
-			.width(Fill)
-			.height(Fill)
+				.content_fit(ContentFit::None)
+				.width(Fill)
+				.height(Fill)
 		)
+			.id("container_checkers-a")
 			.clip(true)
 	}
 
+	#[inline]
 	/// # View: Image Checkers (B).
 	///
 	/// This adds a "B" to every fourth square for added emphasis, but only
@@ -1294,13 +1327,14 @@ impl App {
 						.width(Fill)
 						.height(Fill)
 				)
+					.id("container_checkers-b")
 					.clip(true)
 			)
 		}
 		else { None }
 	}
 
-	#[expect(clippy::default_trait_access, reason = "Can't.")]
+	#[inline]
 	/// # Image Layer.
 	///
 	/// Return a rendering of either the source image or candidate for
@@ -1312,20 +1346,8 @@ impl App {
 	fn view_image_image(&self) -> Option<Container<'_, Message>> {
 		use iced::widget::scrollable::{
 			Direction,
-			Rail,
 			Scrollbar,
-			Scroller,
-			Style,
-		};
-
-		/// # Scroll paddle thingy.
-		const RAIL: Rail = Rail {
-			background: Some(Background::Color(Skin::YELLUCK)),
-			border: Skin::border_style(Skin::TRANSPARENT, 0.0, 0.0),
-			scroller: Scroller {
-				color: Skin::YELLOW,
-				border: Skin::border_style(Skin::BABYFOOD, 2.0, 0.0),
-			},
+			Scrollable,
 		};
 
 		let current = self.current.as_ref()?;
@@ -1341,23 +1363,21 @@ impl App {
 
 		Some(
 			container(
-				scrollable(
+				Scrollable::with_direction(
 					image(handle)
 						.content_fit(ContentFit::None)
 						.width(Shrink)
 						.height(Shrink)
-						.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 })
+						.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 }),
+					Direction::Both {
+						vertical: Scrollbar::new(),
+						horizontal: Scrollbar::new(),
+					},
 				)
-					.width(Shrink)
-					.height(Shrink)
-					.direction(Direction::Both { vertical: Scrollbar::new(), horizontal: Scrollbar::new() })
-					.style(|_, _| Style {
-						container: Default::default(),
-						vertical_rail: RAIL,
-						horizontal_rail: RAIL,
-						gap: None,
-					})
+					.id("scrollable_image")
+					.style(|_, _| Skin::IMG_SCROLL)
 			)
+				.id("container_image")
 				.width(Fill)
 				.height(Fill)
 				.center(Fill)
@@ -1374,7 +1394,7 @@ impl App {
 		let dst_kind = current.output_kind().unwrap_or(ImageKind::Invalid);
 		column!(
 			rich_text!(
-				emphasize!(span("   [space]")),
+				emphasize!(span::<'_, (), _>("   [space]")),
 				span(" Toggle image view (").color(Skin::GREY),
 				kind!(src_kind, Skin::PURPLE),
 				span(" vs ").color(Skin::GREY),
@@ -1382,15 +1402,15 @@ impl App {
 				span(").").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span("       [d]"), Skin::RED),
+				emphasize!(span::<'_, (), _>("       [d]"), Skin::RED),
 				span(" Reject candidate.").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span("       [k]"), Skin::GREEN),
+				emphasize!(span::<'_, (), _>("       [k]"), Skin::GREEN),
 				span(" Accept candidate.").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span("[ctrl]")),
+				emphasize!(span::<'_, (), _>("[ctrl]")),
 				span("+").color(Skin::GREY),
 				emphasize!(span("[n]")),
 				span(" Toggle night mode.").color(Skin::GREY),
