@@ -1025,7 +1025,7 @@ impl App {
 		container(
 			column!(
 				self.view_ab_header(),
-				self.view_image(),
+				self.view_ab_image(),
 				container(
 					row!(
 						self.view_keyboard_shortcuts(),
@@ -1187,6 +1187,7 @@ impl App {
 		}
 
 		container(row)
+			.id("view_ab_header")
 			.padding(Skin::GAP50)
 			.center(Fill)
 			.height(Shrink)
@@ -1266,106 +1267,78 @@ impl App {
 	///
 	/// The image itself is technically optional, but should always be present
 	/// in practice.
-	fn view_image(&self) -> Stack<'_, Message> {
-		let mut stack = Stack::with_capacity(3).push(self.view_image_checkers_a());
-
-		if let Some(c) = self.view_image_image() {
-			if let Some(b) = self.view_image_checkers_b() {
-				stack = stack.push(b);
-			}
-			stack = stack.push(c);
-		}
-
-		stack
-			.width(Fill)
-			.height(Fill)
-	}
-
-	#[inline]
-	/// # View: Image Checkers (A).
-	///
-	/// Produce a checkered background to make it easier to visualize image
-	/// transparency.
-	fn view_image_checkers_a(&self) -> Container<'_, Message> {
-		container(
-			image(self.cache.checkers_a.clone())
-				.content_fit(ContentFit::None)
-				.width(Fill)
-				.height(Fill)
-		)
-			.id("container_checkers-a")
-			.clip(true)
-	}
-
-	#[inline]
-	/// # View: Image Checkers (B).
-	///
-	/// This adds a "B" to every fourth square for added emphasis, but only
-	/// when viewing a candidate image.
-	fn view_image_checkers_b(&self) -> Option<Container<'_, Message>> {
-		if self.has_flag(OTHER_BSIDE) && self.has_candidate() {
-			Some(
-				container(
-					image(self.cache.checkers_b.clone())
-						.content_fit(ContentFit::None)
-						.width(Fill)
-						.height(Fill)
-				)
-					.id("container_checkers-b")
-					.clip(true)
-			)
-		}
-		else { None }
-	}
-
-	#[inline]
-	/// # Image Layer.
-	///
-	/// Return a rendering of either the source image or candidate for
-	/// display. When no candidate is available, the source image is returned
-	/// in a semi-transparent state to help imply "loading".
-	///
-	/// This method is technically fallible, but in practice it should never
-	/// not return something.
-	fn view_image_image(&self) -> Option<Container<'_, Message>> {
+	fn view_ab_image(&self) -> Stack<'_, Message> {
 		use iced::widget::scrollable::{
 			Direction,
 			Scrollbar,
 			Scrollable,
 		};
 
-		let current = self.current.as_ref()?;
-		let mut handle = None;
+		let mut stack = Stack::with_capacity(3);
 
-		// Show the new one?
-		if self.has_flag(OTHER_BSIDE) && let Some(can) = current.candidate.as_ref() {
-			handle.replace(can.img.clone());
+		// Push one image or the other.
+		if let Some(current) = self.current.as_ref() {
+			let (handle, b, id) =
+				// B side.
+				if self.has_flag(OTHER_BSIDE) && let Some(can) = current.candidate.as_ref() {
+					(can.img.clone(), true, "container_image_b")
+				}
+				// A side.
+				else { (current.img.clone(), false, "container_image_a") };
+
+			stack = stack.push(
+				container(
+					Scrollable::with_direction(
+						image(handle)
+							.content_fit(ContentFit::None)
+							.width(Shrink)
+							.height(Shrink)
+							.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 }),
+						Direction::Both {
+							vertical: Scrollbar::new(),
+							horizontal: Scrollbar::new(),
+						},
+					)
+						.style(|_, _| Skin::IMG_SCROLL)
+				)
+					.id(id)
+					.width(Fill)
+					.height(Fill)
+					.center(Fill)
+			)
+			// Add the B checkers even if this is the A side to help with
+			// render cache. (Opacity is zero if inapplicable.)
+			.push_under(
+				container(
+					image(self.cache.checkers_b.clone())
+						.content_fit(ContentFit::None)
+						.width(Fill)
+						.height(Fill)
+						.opacity(if b { 1.0 } else { 0.0 }),
+				)
+					.id("container_checkers_b")
+					.width(Fill)
+					.height(Fill)
+					.clip(true)
+			);
 		}
 
-		// If we aren't showing the new one, show the old one.
-		let handle = handle.unwrap_or_else(|| current.img.clone());
-
-		Some(
+		// Add the A checkers to the top and we're done!
+		stack.push_under(
 			container(
-				Scrollable::with_direction(
-					image(handle)
-						.content_fit(ContentFit::None)
-						.width(Shrink)
-						.height(Shrink)
-						.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 }),
-					Direction::Both {
-						vertical: Scrollbar::new(),
-						horizontal: Scrollbar::new(),
-					},
-				)
-					.id("scrollable_image")
-					.style(|_, _| Skin::IMG_SCROLL)
+				image(self.cache.checkers_a.clone())
+					.content_fit(ContentFit::None)
+					.width(Fill)
+					.height(Fill)
 			)
-				.id("container_image")
+				.id("container_checkers_a")
 				.width(Fill)
 				.height(Fill)
-				.center(Fill)
+				.clip(true)
 		)
+		.width(Fill)
+		.height(Fill)
+		.clip(true)
 	}
 
 	/// # View: Image Screen Keyboard Shortcuts.
