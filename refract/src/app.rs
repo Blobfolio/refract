@@ -395,6 +395,7 @@ impl App {
 		else { Task::done(Message::NextImage) }
 	}
 
+	#[expect(clippy::too_many_lines, reason = "Yeah.")]
 	/// # Update.
 	///
 	/// This method serves as the entrypoint for the application's
@@ -405,6 +406,8 @@ impl App {
 	/// roundabout way by returning a new `Message` that will make its way
 	/// back to itself.
 	pub(super) fn update(&mut self, message: Message) -> Task<Message> {
+		use iced::widget::operation::AbsoluteOffset;
+
 		// Clear the last error, if any.
 		self.error = None;
 
@@ -559,6 +562,28 @@ impl App {
 			// Open a URL in e.g. the system's default web browser.
 			Message::OpenUrl(url) => if open::that_detached(url).is_err() {
 				return Task::done(Message::Error(MessageError::NoOpen));
+			},
+
+			// Scroll X.
+			Message::ScrollX(flag) => {
+				return iced::widget::operation::scroll_by(
+					"container_image_scroll",
+					AbsoluteOffset {
+						x: if flag { 10.0 } else { -10.0 },
+						y: 0.0,
+					}
+				);
+			},
+
+			// Scroll Y.
+			Message::ScrollY(flag) => {
+				return iced::widget::operation::scroll_by(
+					"container_image_scroll",
+					AbsoluteOffset {
+						x: 0.0,
+						y: if flag { 10.0 } else { -10.0 },
+					}
+				);
 			},
 
 			// Toggle a flag.
@@ -1278,13 +1303,13 @@ impl App {
 
 		// Push one image or the other.
 		if let Some(current) = self.current.as_ref() {
-			let (handle, b, id) =
+			let (handle, b) =
 				// B side.
 				if self.has_flag(OTHER_BSIDE) && let Some(can) = current.candidate.as_ref() {
-					(can.img.clone(), true, "container_image_b")
+					(can.img.clone(), true)
 				}
 				// A side.
-				else { (current.img.clone(), false, "container_image_a") };
+				else { (current.img.clone(), false) };
 
 			stack = stack.push(
 				container(
@@ -1299,9 +1324,10 @@ impl App {
 							horizontal: Scrollbar::new(),
 						},
 					)
+						.id("container_image_scroll")
 						.style(|_, _| Skin::IMG_SCROLL)
 				)
-					.id(id)
+					.id("container_image")
 					.width(Fill)
 					.height(Fill)
 					.center(Fill)
@@ -2107,6 +2133,12 @@ pub(super) enum Message {
 	/// it thinks appropriate.
 	OpenUrl(&'static str),
 
+	/// # A/B Scroll X.
+	ScrollX(bool),
+
+	/// # A/B Scroll Y.
+	ScrollY(bool),
+
 	/// # Toggle Flag.
 	///
 	/// This signal is used to toggle program settings like Night Mode.
@@ -2334,11 +2366,20 @@ fn subscribe_ab(key: Key, modifiers: Modifiers) -> Option<Message> {
 		match key {
 			// Toggle A/B.
 			Key::Named(Named::Space) => Some(Message::ToggleFlag(OTHER_BSIDE)),
+
 			// Feedback.
 			Key::Character(c) =>
 				if c == "d" { Some(Message::Feedback(false)) }
 				else if c == "k" { Some(Message::Feedback(true)) }
 				else { None }
+
+			// Scrolling.
+			Key::Named(Named::ArrowUp) => Some(Message::ScrollY(false)),
+			Key::Named(Named::ArrowDown) => Some(Message::ScrollY(true)),
+			Key::Named(Named::ArrowLeft) => Some(Message::ScrollX(false)),
+			Key::Named(Named::ArrowRight) => Some(Message::ScrollX(true)),
+
+			// Dunno?
 			_ => None,
 		}
 	}
