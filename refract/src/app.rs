@@ -141,7 +141,7 @@ const DEFAULT_FLAGS: u16 =
 macro_rules! btn {
 	($label:literal, $color:expr) => (btn!($label, $color, Skin::BTN_PADDING));
 	($label:literal, $color:expr, $pad:expr) => (
-		button(text($label).size(Skin::TEXT_LG).font(Skin::FONT_BOLD))
+		button(text($label).size(Skin::TEXT_LG))
 			.style(|_, status| Skin::button_style(status, $color))
 			.padding($pad)
 	);
@@ -159,28 +159,19 @@ macro_rules! chk {
 	);
 }
 
-/// # Helper: Colorize and Embolden.
-///
-/// Emphasize a (text-type) element by making it bold, and optionally colored.
-macro_rules! emphasize {
-	($el:expr) => ($el.font(Skin::FONT_BOLD));
-	($el:expr, $color:expr) => ($el.color($color).font(Skin::FONT_BOLD));
-}
-
 /// # Helper: Image Kind (span).
 ///
-/// Image kinds are (almost) always displayed with emphasis; this reduces the
-/// code a little bit and ensures consistent formatting.
+/// Generate a span for an image kind with the appropriate color.
 macro_rules! kind {
 	(
 		$kind:expr,
 		$color:expr $(,)?
-	) => (emphasize!(span($kind.as_str()), $color));
+	) => (span($kind.as_str()).color($color));
 	(
 		$kind:expr,
 		$color:expr,
 		$ty:ty $(,)?
-	) => (emphasize!(span::<'_, $ty, _>($kind.as_str()), $color));
+	) => (span::<'_, $ty, _>($kind.as_str()).color($color));
 }
 
 /// # Helper: Tooltip.
@@ -676,12 +667,13 @@ impl App {
 	fn view_about(&self) -> Column<'_, Message> {
 		column!(
 			rich_text!(
-				emphasize!(span::<'_, (), _>("Refract "), Skin::PINK),
-				emphasize!(span(concat!("v", env!("CARGO_PKG_VERSION"))), Skin::PURPLE),
+				span::<'_, (), _>("Refract ").color(Skin::PINK),
+				span(concat!("v", env!("CARGO_PKG_VERSION"))).color(Skin::PURPLE),
 			),
 
 			rich_text!(
-				emphasize!(span::<'_, Message, _>(env!("CARGO_PKG_REPOSITORY")), Skin::GREEN)
+				span::<'_, Message, _>(env!("CARGO_PKG_REPOSITORY"))
+					.color(Skin::GREEN)
 					.link(Message::OpenUrl(env!("CARGO_PKG_REPOSITORY")))
 			)
 				.on_link_click(|v| v),
@@ -702,7 +694,7 @@ impl App {
 		self.error.map(|err|
 			container(row!(
 				rich_text!(
-					emphasize!(span::<'_, (), _>("Warning: ")),
+					span::<'_, (), _>("Warning: "),
 					span(err.as_str()),
 				)
 					.width(Shrink)
@@ -735,13 +727,7 @@ impl App {
 					.spacing(Skin::GAP50)
 					.width(Shrink),
 
-				rich_text!(
-					span::<'_, (), _>("Choose one or more "),
-					emphasize!(span("JPEG")),
-					span("/"),
-					emphasize!(span("PNG")),
-					span(" images."),
-				),
+				text("Choose one or more JPEG/PNG images"),
 			)
 				.align_x(Horizontal::Center)
 				.spacing(Skin::GAP50)
@@ -771,17 +757,17 @@ impl App {
 
 		// Finally, add all the lines!
 		let mut lines = column!(rich_text!(
-			emphasize!(span::<'_, (), _>(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])), Skin::PURPLE),
+			span::<'_, (), _>(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])), Skin::PURPLE),
+			span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])), Skin::PURPLE),
+			span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])), Skin::PURPLE),
+			span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])), Skin::PURPLE),
+			span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])), Skin::PURPLE),
+			span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])).color(Skin::PURPLE),
 		));
 
 		// The rows, interspersed with dividers for each new source.
@@ -870,9 +856,9 @@ impl App {
 			.push(rich_text!(
 				span::<'_, (), _>(" *").color(Skin::PURPLE),
 				span(" Compression ratio is ").color(Skin::GREY),
-				emphasize!(span("src"), Skin::PURPLE),
-				emphasize!(span(":"), Skin::GREY),
-				emphasize!(span("dst"), Skin::PINK),
+				span("src").color(Skin::PURPLE),
+				span(":").color(Skin::GREY),
+				span("dst").color(Skin::PINK),
 				span(".").color(Skin::GREY),
 			))
 			.push(rich_text!(
@@ -924,7 +910,7 @@ impl App {
 	/// next-gen image formats (the encoders that will be used).
 	fn view_settings_fmt(&self) -> Column<'_, Message> {
 		column!(
-			emphasize!(text("Formats"), Skin::PINK),
+			text("Formats").color(Skin::PINK),
 			chk!(self, "AVIF", FMT_AVIF),
 			chk!(self, "JPEG XL", FMT_JXL),
 			chk!(self, "WebP", FMT_WEBP),
@@ -937,7 +923,7 @@ impl App {
 	/// This returns checkboxes for the various compression modes.
 	fn view_settings_mode(&self) -> Column<'_, Message> {
 		column!(
-			emphasize!(text("Compression"), Skin::PINK),
+			text("Compression").color(Skin::PINK),
 			chk!(self, "Lossless", MODE_LOSSLESS),
 			chk!(self, "Lossy", MODE_LOSSY),
 			tip!(
@@ -958,7 +944,7 @@ impl App {
 	/// night mode and automatic saving.
 	fn view_settings_other(&self) -> Column<'_, Message> {
 		column!(
-			emphasize!(text("Other"), Skin::PINK),
+			text("Other").color(Skin::PINK),
 			tip!(
 				self,
 				chk!(self, "Auto-Save", OTHER_SAVE_AUTO),
@@ -987,29 +973,29 @@ impl App {
 
 		container(
 			column!(
-				emphasize!(text("Up Next…").size(Skin::TEXT_LG)),
+				text("Up Next…").size(Skin::TEXT_LG),
 				match kind {
 					ImageKind::Avif => rich_text!(
-						emphasize!(span::<'_, (), _>("A"), Skin::PURPLE),
-						emphasize!(span("v"), Skin::TEAL),
-						emphasize!(span("i"), Skin::BLUE),
-						emphasize!(span("f"), Skin::YELLOW),
+						span::<'_, (), _>("A").color(Skin::PURPLE),
+						span("v").color(Skin::TEAL),
+						span("i").color(Skin::BLUE),
+						span("f").color(Skin::YELLOW),
 					),
 					ImageKind::Jxl => rich_text!(
-						emphasize!(span("J"), Skin::BLUE),
-						emphasize!(span("P"), Skin::GREEN),
-						emphasize!(span("E"), Skin::PINK),
-						emphasize!(span("G"), Skin::YELLOW),
-						emphasize!(span("X"), Skin::PURPLE),
-						emphasize!(span("L"), Skin::RED),
+						span("J").color(Skin::BLUE),
+						span("P").color(Skin::GREEN),
+						span("E").color(Skin::PINK),
+						span("G").color(Skin::YELLOW),
+						span("X").color(Skin::PURPLE),
+						span("L").color(Skin::RED),
 					),
 					ImageKind::Webp => rich_text!(
-						emphasize!(span("W"), Skin::RED),
-						emphasize!(span("e"), Skin::PURPLE),
-						emphasize!(span("b"), Skin::BLUE),
-						emphasize!(span("P"), Skin::GREEN),
+						span("W").color(Skin::RED),
+						span("e").color(Skin::PURPLE),
+						span("b").color(Skin::BLUE),
+						span("P").color(Skin::GREEN),
 					),
-					_ => rich_text!(emphasize!(span("???"))),
+					_ => rich_text!(span("???")),
 				}
 					.size(72),
 			)
@@ -1089,7 +1075,7 @@ impl App {
 						span::<'_, (), _>("Forget about images past. Are you happy with "),
 						span("this").underline(true),
 						span(" one? If yes, "),
-						emphasize!(span("accept"), Skin::GREEN),
+						span("accept").color(Skin::GREEN),
 						span(" it. The best of the best will be saved at the very end."),
 					),
 					Top
@@ -1155,15 +1141,15 @@ impl App {
 			// Lossless/auto requires no feedback, so let's give a different
 			// message.
 			if self.automatic() {
-				row = row.push(emphasize!(text(
+				row = row.push(text(
 					"Lossless conversion is automatic. Just sit back and wait!"
-				)));
+				));
 			}
 			else if let Some(kind) = current.output_kind() {
-				row = row.push(emphasize!(text(format!("Preparing the next {kind}; sit tight!"))));
+				row = row.push(text(format!("Preparing the next {kind}; sit tight!")));
 			}
 			else {
-				row = row.push(emphasize!(text("Reticulating splines…")));
+				row = row.push(text("Reticulating splines…"));
 			}
 		}
 		else {
@@ -1181,7 +1167,7 @@ impl App {
 
 			// Helper: key/value pair.
 			macro_rules! kv {
-				($k:expr, $v:expr) => (rich_text!(span::<'_, (), _>($k), emphasize!(span($v))));
+				($k:expr, $v:expr) => (rich_text!(span::<'_, (), _>($k), span($v)));
 			}
 
 			// Kind.
@@ -1226,8 +1212,8 @@ impl App {
 		// Image.Ext > Ext1 Ext2 Ext3.
 		let mut formats = Vec::with_capacity(6);
 		if let Some((stem, ext)) = split_ext(current.src()) {
-			formats.push(emphasize!(span::<'_, (), _>(stem)));
-			formats.push(emphasize!(span(format!(".{ext}")), Skin::PURPLE));
+			formats.push(span::<'_, (), _>(stem));
+			formats.push(span(format!(".{ext}")).color(Skin::PURPLE));
 			formats.push(span(" > ").color(Skin::GREY));
 		}
 		let mut any = false;
@@ -1261,10 +1247,8 @@ impl App {
 			// Cancel.
 			rich_text!(
 				span::<'_, Message, _>("Ready for bed? ").color(Skin::maybe_dim(self.fg(), active)),
-				emphasize!(
-					span("Skip ahead!"),
-					Skin::maybe_dim(Skin::ORANGE, active)
-				)
+				span("Skip ahead!")
+					.color(Skin::maybe_dim(Skin::ORANGE, active))
 					.link_maybe(active.then_some(Message::NextImage)),
 			)
 				.on_link_click(|v| v)
@@ -1394,7 +1378,7 @@ impl App {
 		let dst_kind = current.output_kind().unwrap_or(ImageKind::Invalid);
 		column!(
 			rich_text!(
-				emphasize!(span::<'_, (), _>("   [space]")),
+				span::<'_, (), _>("   [space]"),
 				span(" Toggle image view (").color(Skin::GREY),
 				kind!(src_kind, Skin::PURPLE),
 				span(" vs ").color(Skin::GREY),
@@ -1402,17 +1386,17 @@ impl App {
 				span(").").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span::<'_, (), _>("       [d]"), Skin::RED),
+				span::<'_, (), _>("       [d]").color(Skin::RED),
 				span(" Reject candidate.").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span::<'_, (), _>("       [k]"), Skin::GREEN),
+				span::<'_, (), _>("       [k]").color(Skin::GREEN),
 				span(" Accept candidate.").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span::<'_, (), _>("[ctrl]")),
+				span::<'_, (), _>("[ctrl]"),
 				span("+").color(Skin::GREY),
-				emphasize!(span("[n]")),
+				span("[n]"),
 				span(" Toggle night mode.").color(Skin::GREY),
 			),
 		)

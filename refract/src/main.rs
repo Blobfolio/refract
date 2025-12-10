@@ -131,12 +131,9 @@ fn main__() -> Result<(), RefractError> {
 		.title("Refract")
 		.settings(Settings {
 			id: Some("refract".to_owned()),
-			default_font: Skin::FONT_REGULAR,
+			default_font: Skin::FONT,
 			default_text_size: Skin::TEXT_MD,
-			fonts: vec![
-				include_bytes!("../skel/font/FiraMono-Bold.otf").into(),
-				include_bytes!("../skel/font/FiraMono-Regular.otf").into(),
-			],
+			fonts: vec![include_bytes!("../skel/font/FiraMono-Medium.otf").into()],
 			..Settings::default()
 		})
 		.window(WindowSettings {

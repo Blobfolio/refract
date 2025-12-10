@@ -101,17 +101,9 @@ impl Skin {
 /// # Fonts and Text.
 impl Skin {
 	/// # Fira Mono: Regular.
-	pub(super) const FONT_REGULAR: Font = Font {
+	pub(super) const FONT: Font = Font {
 		family:  font::Family::Name("Fira Mono"),
-		weight:  font::Weight::Normal,
-		stretch: font::Stretch::Normal,
-		style:   font::Style::Normal,
-	};
-
-	/// # Fira Mono: Bold.
-	pub(super) const FONT_BOLD: Font = Font {
-		family:  font::Family::Name("Fira Mono"),
-		weight:  font::Weight::Bold,
+		weight:  font::Weight::Medium,
 		stretch: font::Stretch::Normal,
 		style:   font::Style::Normal,
 	};
