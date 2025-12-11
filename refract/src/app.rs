@@ -58,7 +58,10 @@ use iced::{
 		toggler,
 	},
 };
-use iced_runtime::image::Allocation as ImageAllocation;
+use iced_runtime::image::{
+	Allocation as ImageAllocation,
+	Error as ImageError,
+};
 use refract_core::{
 	EncodeIter,
 	FLAG_NO_AVIF_YCBCR,
@@ -1662,7 +1665,7 @@ impl CurrentImage {
 				Base((Input, NonZeroUsize, u16, PathBuf)),
 
 				/// # Allocation Result.
-				Alloc(Result<ImageAllocation, iced_runtime::image::Error>),
+				Alloc(Result<ImageAllocation, ImageError>),
 			}
 
 			// Create an image handle real quick.
