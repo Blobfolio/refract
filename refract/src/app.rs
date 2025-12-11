@@ -45,7 +45,7 @@ use iced::{
 		Container,
 		container::bordered_box,
 		image,
-		keyed_column,
+		image::Handle as ImageHandle,
 		rich_text,
 		row,
 		Row,
@@ -58,6 +58,7 @@ use iced::{
 		toggler,
 	},
 };
+use iced_runtime::image::Allocation as ImageAllocation;
 use refract_core::{
 	EncodeIter,
 	FLAG_NO_AVIF_YCBCR,
@@ -464,30 +465,32 @@ impl App {
 				}
 
 				// Designate a new current!
-				while let Some(src) = self.paths.pop_first() {
-					if let Some(mut current) = CurrentImage::new(src.clone(), self.flags) {
-						// Make sure the encoder can be set before accepting
-						// the result.
-						if current.next_encoder() {
-							self.current = Some(current);
-							return self.update_switch_encoder__();
-						}
-
-						// Otherwise make sure we grab the non-result results.
-						self.done.push(current.take_done());
-					}
-					// Decode error?
-					else {
-						self.done.push(ImageResults::invalid(src));
-						if self.paths.is_empty() {
-							return Task::done(Message::Error(MessageError::NoImages));
-						}
-					}
+				if let Some(src) = self.paths.pop_first() {
+					return CurrentImage::load(src, self.flags);
 				}
 
 				// If we're here, there are no more images. If --exit-auto,
 				// that means quittin' time!
 				if self.has_flag(OTHER_EXIT_AUTO) { return iced::exit(); }
+			},
+
+			// Next image successfully decoded.
+			Message::NextImageDecoded(Ok(mut current)) => {
+				// Make sure the encoder can be set before accepting
+				// the result.
+				if current.next_encoder() {
+					self.current = Some(current);
+					return self.update_switch_encoder__();
+				}
+
+				// Otherwise make sure we grab the non-result results.
+				self.done.push(current.take_done());
+			},
+
+			// Next image unsuccessful.
+			Message::NextImageDecoded(Err(src)) => {
+				self.done.push(ImageResults::invalid(src));
+				return Task::done(Message::NextImage);
 			},
 
 			// Spawn a thread to get the next candidate image crunching or, if
@@ -676,11 +679,9 @@ impl App {
 	/// (A warning/error message may also be presented, but they're short-
 	/// lived and uncommon.)
 	fn view_home(&self) -> Container<'_, Message> {
-		container(
-			 keyed_column!((0, self.view_settings()), (1, self.view_log()))
-				.push_maybe(2, self.view_error())
-				.spacing(Skin::GAP50)
-		)
+		let mut col = column!(self.view_settings(), self.view_log());
+		if let Some(v) = self.view_error() { col = col.push(v); }
+		container(col.spacing(Skin::GAP50))
 			.padding(Skin::GAP50)
 			.width(Fill)
 	}
@@ -1309,7 +1310,7 @@ impl App {
 					(can.img.clone(), true)
 				}
 				// A side.
-				else { (current.img.clone(), false) };
+				else { (current.handle().clone(), false) };
 
 			stack = stack.push(
 				container(
@@ -1596,6 +1597,7 @@ impl ActivityTableRow<'_> {
 
 
 
+#[derive(Debug, Clone)]
 /// # Current Image.
 ///
 /// This struct holds the state details for an image that is currently being
@@ -1604,7 +1606,7 @@ impl ActivityTableRow<'_> {
 ///
 /// Because there is only ever one of these at a time, its existence (or lack
 /// thereof) is used to tell which screen to display.
-struct CurrentImage {
+pub(super) struct CurrentImage {
 	/// # Results.
 	done: ImageResults,
 
@@ -1615,7 +1617,7 @@ struct CurrentImage {
 	///
 	/// This is largely redundant given that `input` holds the same pixels,
 	/// but the caching should help speed up A/B renders.
-	img: image::Handle,
+	img: ImageAllocation,
 
 	/// # Refract Flags.
 	flags: u16,
@@ -1631,41 +1633,97 @@ struct CurrentImage {
 }
 
 impl CurrentImage {
-	/// # New.
+	/// # Load/Decode/Allocate Image.
 	///
-	/// This method returns a new instance containing the decoded source
-	/// image, if valid.
+	/// This method attempts to read, decode, and allocate a new source image,
+	/// returning a task that'll resolve to a new `CurrentImage` instance or
+	/// the failing image path.
+	///
+	/// The allocation is a bitch, but sadly necessary to prevent A/B
+	/// flickering in `iced 0.14`.
 	///
 	/// Note that this does _not_ initialize an encoder or generate a
 	/// candidate image. Those tasks can be long-running so are left for later.
-	fn new(src: PathBuf, flags: u16) -> Option<Self> {
-		let input = std::fs::read(&src).ok()?;
-		let input = Input::try_from(input.as_slice()).ok()?.into_rgba();
-		let img = image::Handle::from_rgba(
-			u32::try_from(input.width()).ok()?,
-			u32::try_from(input.height()).ok()?,
-			input.pixels_rgba().into_owned(),
-		);
-		let src_len = NonZeroUsize::new(input.size())?;
+	fn load(src: PathBuf, flags: u16) -> Task<Message> {
+		// Eliminate all synchronous fallibility.
+		if
+			let Ok(input) = std::fs::read(&src) &&
+			let Ok(input) = Input::try_from(input.as_slice()).map(Input::into_rgba) &&
+			let Some(src_len) = NonZeroUsize::new(input.size()) &&
+			let Ok(w) = u32::try_from(input.width()) &&
+			let Ok(h) = u32::try_from(input.height())
+		{
+			/// # Either.
+			///
+			/// This enum allows us to treat the two task responses as a single
+			/// type, required for `Task::collect`.
+			enum Either {
+				/// # Data We Already Have.
+				Base((Input, NonZeroUsize, u16, PathBuf)),
 
-		// Log it.
-		cli_log(&src, None);
+				/// # Allocation Result.
+				Alloc(Result<ImageAllocation, iced_runtime::image::Error>),
+			}
 
-		// Done!
-		Some(Self {
-			done: ImageResults {
-				src,
-				src_kind: input.kind(),
-				src_len,
-				dst: Vec::new(),
-			},
-			input,
-			img,
-			flags,
-			candidate: None,
-			iter: None,
-			output_kind: None,
-		})
+			// Create an image handle real quick.
+			let img = ImageHandle::from_rgba(w, h, input.pixels_rgba().into_owned());
+
+			// We need to combine the data we've already worked out with the
+			// resulting allocation, but can't do that via `Task::map`, etc.,
+			// because of callback constraints.
+			//
+			// Weirdly, scope stops being an issue if we chuck that same shit
+			// into a task of their own. Haha. Hacky, but this "allocation" is
+			// the only way to prevent A/B paint flickering in iced 0.14.
+			Task::chain(
+				Task::done(Either::Base((input, src_len, flags, src))),
+				iced_runtime::image::allocate(img).map(Either::Alloc),
+			)
+				.collect()
+				.map(|v| {
+					let mut data = None;
+					let mut res = None;
+					for v2 in v {
+						match v2 {
+							Either::Base(v) => { data.replace(v); },
+							Either::Alloc(v) => { res.replace(v); },
+						}
+					}
+
+					// This shouldn't ever fail. We know which two tasks we're
+					// collecting. Haha.
+					if let Some((input, src_len, flags, src)) = data {
+						match res {
+							Some(Ok(img)) => {
+								// Log it.
+								cli_log(&src, None);
+
+								Message::NextImageDecoded(Ok(Self {
+									done: ImageResults {
+										src,
+										src_kind: input.kind(),
+										src_len,
+										dst: Vec::new(),
+									},
+									input,
+									img,
+									flags,
+									candidate: None,
+									iter: None,
+									output_kind: None,
+								}))
+							},
+							_ => Message::NextImageDecoded(Err(src)),
+						}
+					}
+					else {
+						Message::NextImageDecoded(Err(PathBuf::new()))
+					}
+				})
+		}
+		else {
+			Task::done(Message::NextImageDecoded(Err(src)))
+		}
 	}
 
 	/// # Provide Feedback.
@@ -1822,6 +1880,9 @@ impl CurrentImage {
 		else { Skin::GREY }
 	}
 
+	/// # Handle.
+	fn handle(&self) -> &ImageHandle { self.img.handle() }
+
 	/// # Has Candidate?
 	///
 	/// Returns `true` if a candidate has been generated.
@@ -1879,6 +1940,7 @@ impl EncodeWrapper {
 
 
 
+#[derive(Debug, Clone)]
 /// # Image Encoding Results.
 ///
 /// This struct is used to help group activity logs by source while still
@@ -1930,6 +1992,7 @@ impl ImageResults {
 
 
 
+#[derive(Debug, Clone)]
 /// # (Best) Image Encoding Result.
 ///
 /// This struct holds the details for the best image candidate produced by a
@@ -2082,8 +2145,15 @@ pub(super) enum Message {
 	/// # Next Image.
 	///
 	/// This is essentially the outermost image-related signal. It moves the
-	/// first next queued path to `current` and triggers `NextEncoder`.
+	/// first (valid) next queued path to `current`.
 	NextImage,
+
+	/// # Next Image (Load/Decode).
+	///
+	/// Load and decode a new source image from a file, and create a render
+	/// callocation for it, returning a new `CurrentImage` instance if
+	/// everything worked out, otherwise the offending path.
+	NextImageDecoded(Result<CurrentImage, PathBuf>),
 
 	/// # Next Step.
 	///
@@ -2185,13 +2255,13 @@ impl MessageError {
 /// thereafter.
 struct WidgetCache {
 	/// # Checkerboard Underlay (A).
-	checkers_a: image::Handle,
+	checkers_a: ImageHandle,
 
 	/// # Checkerboard Underlay (B).
-	checkers_b: image::Handle,
+	checkers_b: ImageHandle,
 
 	/// # Program Logo.
-	logo: image::Handle,
+	logo: ImageHandle,
 
 	/// # Light Theme.
 	theme_a: Theme,
