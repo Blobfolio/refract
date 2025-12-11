@@ -10,7 +10,7 @@ readme = "README.md"
 publish = false
 
 [dependencies]
-fyi_ansi = "2.2.*"
+fyi_ansi = "2.4.*"
 
 [dependencies.dactyl]
 version = "0.13.*"

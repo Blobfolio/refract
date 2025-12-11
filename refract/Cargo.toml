@@ -106,7 +106,7 @@ features = [ "png" ]
 argyle = "0.14.*"
 dactyl = "0.13.*"
 dowser = "0.18.*"
-fyi_ansi = "2.2.*"
+fyi_ansi = "2.4.*"
 iced_runtime = "0.14.0" # Iced doesn't re-export Allocation, etc.
 open = "=5.3.3"
 rfd = "=0.16.0"
