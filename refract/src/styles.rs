@@ -20,6 +20,7 @@ use iced::{
 	widget::{
 		button,
 		container,
+		scrollable,
 	},
 };
 
@@ -66,8 +67,7 @@ impl Skin {
 		text:       Self::BLACK,
 		primary: 	Self::BLUE,
 		success: 	Self::GREEN,
-		// TODO: coming soon?
-		// warning: Self::ORANGE,
+		warning:    Self::ORANGE,
 		danger:     Self::RED,
 	};
 
@@ -77,8 +77,7 @@ impl Skin {
 		text:       Self::WHITE,
 		primary: 	Self::BLUE,
 		success: 	Self::GREEN,
-		// TODO: coming soon?
-		// warning: Self::ORANGE,
+		warning:    Self::ORANGE,
 		danger:     Self::RED,
 	};
 
@@ -102,17 +101,9 @@ impl Skin {
 /// # Fonts and Text.
 impl Skin {
 	/// # Fira Mono: Regular.
-	pub(super) const FONT_REGULAR: Font = Font {
+	pub(super) const FONT: Font = Font {
 		family:  font::Family::Name("Fira Mono"),
-		weight:  font::Weight::Normal,
-		stretch: font::Stretch::Normal,
-		style:   font::Style::Normal,
-	};
-
-	/// # Fira Mono: Bold.
-	pub(super) const FONT_BOLD: Font = Font {
-		family:  font::Family::Name("Fira Mono"),
-		weight:  font::Weight::Bold,
+		weight:  font::Weight::Medium,
 		stretch: font::Stretch::Normal,
 		style:   font::Style::Normal,
 	};
@@ -155,6 +146,36 @@ impl Skin {
 	/// # Check Size.
 	pub(super) const CHK_SIZE: Pixels = Pixels(12.0);
 
+	/// # Image Scroller Rail.
+	const IMG_SCROLL_RAIL: scrollable::Rail = scrollable::Rail {
+		background: Some(Background::Color(Self::YELLUCK)),
+		border: Self::border_style(Self::TRANSPARENT, 0.0, 0.0),
+		scroller: scrollable::Scroller {
+			background: Background::Color(Self::YELLOW),
+			border: Self::border_style(Self::BABYFOOD, 2.0, 0.0),
+		},
+	};
+
+	/// # Image Scroller.
+	pub(super) const IMG_SCROLL: scrollable::Style = scrollable::Style {
+		container: container::Style {
+			text_color: None,
+			background: None,
+			border: Self::border_style(Self::TRANSPARENT, 0.0, 0.0),
+			shadow: Self::NO_SHADOW,
+			snap: true,
+		},
+		vertical_rail: Self::IMG_SCROLL_RAIL,
+		horizontal_rail: Self::IMG_SCROLL_RAIL,
+		gap: None,
+		auto_scroll: scrollable::AutoScroll {
+			background: Background::Color(Self::YELLOW),
+			border: Self::border_style(Self::BABYFOOD, 2.0, 0.0),
+			shadow: Self::NO_SHADOW,
+			icon: Self::WHITE,
+		}
+	};
+
 	/// # Non-Shadow Shadow.
 	pub(super) const NO_SHADOW: Shadow = Shadow {
 		color: Self::TRANSPARENT,
@@ -193,6 +214,7 @@ impl Skin {
 			text_color: Self::WHITE,
 			border: Self::border_style(Self::TRANSPARENT, 0.0, 8.0),
 			shadow: Self::NO_SHADOW,
+			snap: true,
 		}
 	}
 
@@ -209,6 +231,7 @@ impl Skin {
 			background: Some(Background::Color(bg)),
 			border: Self::border_style(Self::TEAL, 2.0, 0.0),
 			shadow: Self::NO_SHADOW,
+			snap: true,
 		}
 	}
 }

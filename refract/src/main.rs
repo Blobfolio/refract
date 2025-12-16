@@ -60,7 +60,10 @@ mod candidate;
 mod img;
 mod styles;
 
-use app::App;
+use app::{
+	App,
+	Message,
+};
 use candidate::Candidate;
 use img::{
 	checkers,
@@ -69,7 +72,10 @@ use img::{
 	with_ng_extension,
 };
 use refract_core::RefractError;
-use std::process::ExitCode;
+use std::{
+	cell::RefCell,
+	process::ExitCode,
+};
 use styles::Skin;
 
 
@@ -97,23 +103,41 @@ fn main() -> ExitCode {
 /// Initialize and launch the GUI, or return an error.
 fn main__() -> Result<(), RefractError> {
 	use iced::{
-		settings::Settings,
+		Settings,
+		Task,
 		window::{
 			settings::PlatformSpecific,
 			Settings as WindowSettings,
 		},
 	};
 
+	/// # Initializer.
+	///
+	/// This works around v14's loss of `FnOnce` support, allowing us to return
+	/// an owned App and (possible) first task from a method with only
+	/// borrowed access.
+	struct Booter(RefCell<Option<App>>);
+	impl iced::application::BootFn<App, Message> for Booter {
+		fn boot(&self) -> (App, Task<Message>) {
+			let app = self.0.borrow_mut().take().unwrap();
+			let task = app.start();
+			(app, task)
+		}
+	}
+
 	let app = App::new()?;
-	iced::application("Refract", App::update, App::view)
+	let booter = Booter(RefCell::new(Some(app)));
+	iced::application(booter, App::update, App::view)
+		.title("Refract")
 		.settings(Settings {
-			default_font: Skin::FONT_REGULAR,
+			id: Some("refract".to_owned()),
+			default_font: Skin::FONT,
 			default_text_size: Skin::TEXT_MD,
+			fonts: vec![include_bytes!("../skel/font/FiraMono-Medium.otf").into()],
 			..Settings::default()
 		})
 		.window(WindowSettings {
-			// TODO: replace with `maximized: true` when stable.
-			size: iced::Size::INFINITY,
+			maximized: true,
 			min_size: Some(iced::Size { width: 1200.0, height: 800.0 }),
 			icon: img::icon(),
 			platform_specific: PlatformSpecific {
@@ -122,13 +146,8 @@ fn main__() -> Result<(), RefractError> {
 			},
 			..WindowSettings::default()
 		})
-		.font(include_bytes!("../skel/font/FiraMono-Bold.otf"))
-		.font(include_bytes!("../skel/font/FiraMono-Regular.otf"))
 		.theme(App::theme)
 		.subscription(App::subscription)
-		.run_with(move || {
-			let task = app.start();
-			(app, task)
-		})
+		.run()
 		.map_err(|_| RefractError::PrintHelp)
 }

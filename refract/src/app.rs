@@ -45,6 +45,7 @@ use iced::{
 		Container,
 		container::bordered_box,
 		image,
+		image::Handle as ImageHandle,
 		rich_text,
 		row,
 		Row,
@@ -56,6 +57,10 @@ use iced::{
 		tooltip,
 		toggler,
 	},
+};
+use iced_runtime::image::{
+	Allocation as ImageAllocation,
+	Error as ImageError,
 };
 use refract_core::{
 	EncodeIter,
@@ -140,7 +145,7 @@ const DEFAULT_FLAGS: u16 =
 macro_rules! btn {
 	($label:literal, $color:expr) => (btn!($label, $color, Skin::BTN_PADDING));
 	($label:literal, $color:expr, $pad:expr) => (
-		button(text($label).size(Skin::TEXT_LG).font(Skin::FONT_BOLD))
+		button(text($label).size(Skin::TEXT_LG))
 			.style(|_, status| Skin::button_style(status, $color))
 			.padding($pad)
 	);
@@ -151,26 +156,26 @@ macro_rules! btn {
 /// Generate a flag-toggle checkbox with the given label and flag.
 macro_rules! chk {
 	($lhs:ident, $label:literal, $flag:ident) => (
-		checkbox($label, $lhs.has_flag($flag))
+		checkbox($lhs.has_flag($flag))
+			.label($label)
 			.on_toggle(|_| Message::ToggleFlag($flag))
 			.size(Skin::CHK_SIZE)
 	);
 }
 
-/// # Helper: Colorize and Embolden.
-///
-/// Emphasize a (text-type) element by making it bold, and optionally colored.
-macro_rules! emphasize {
-	($el:expr) => ($el.font(Skin::FONT_BOLD));
-	($el:expr, $color:expr) => ($el.color($color).font(Skin::FONT_BOLD));
-}
-
 /// # Helper: Image Kind (span).
 ///
-/// Image kinds are (almost) always displayed with emphasis; this reduces the
-/// code a little bit and ensures consistent formatting.
+/// Generate a span for an image kind with the appropriate color.
 macro_rules! kind {
-	($kind:expr, $color:expr) => (emphasize!(span($kind.as_str()), $color));
+	(
+		$kind:expr,
+		$color:expr $(,)?
+	) => (span($kind.as_str()).color($color));
+	(
+		$kind:expr,
+		$color:expr,
+		$ty:ty $(,)?
+	) => (span::<'_, $ty, _>($kind.as_str()).color($color));
 }
 
 /// # Helper: Tooltip.
@@ -394,6 +399,7 @@ impl App {
 		else { Task::done(Message::NextImage) }
 	}
 
+	#[expect(clippy::too_many_lines, reason = "Yeah.")]
 	/// # Update.
 	///
 	/// This method serves as the entrypoint for the application's
@@ -404,6 +410,8 @@ impl App {
 	/// roundabout way by returning a new `Message` that will make its way
 	/// back to itself.
 	pub(super) fn update(&mut self, message: Message) -> Task<Message> {
+		use iced::widget::operation::AbsoluteOffset;
+
 		// Clear the last error, if any.
 		self.error = None;
 
@@ -460,30 +468,32 @@ impl App {
 				}
 
 				// Designate a new current!
-				while let Some(src) = self.paths.pop_first() {
-					if let Some(mut current) = CurrentImage::new(src.clone(), self.flags) {
-						// Make sure the encoder can be set before accepting
-						// the result.
-						if current.next_encoder() {
-							self.current = Some(current);
-							return self.update_switch_encoder__();
-						}
-
-						// Otherwise make sure we grab the non-result results.
-						self.done.push(current.take_done());
-					}
-					// Decode error?
-					else {
-						self.done.push(ImageResults::invalid(src));
-						if self.paths.is_empty() {
-							return Task::done(Message::Error(MessageError::NoImages));
-						}
-					}
+				if let Some(src) = self.paths.pop_first() {
+					return CurrentImage::load(src, self.flags);
 				}
 
 				// If we're here, there are no more images. If --exit-auto,
 				// that means quittin' time!
 				if self.has_flag(OTHER_EXIT_AUTO) { return iced::exit(); }
+			},
+
+			// Next image successfully decoded.
+			Message::NextImageDecoded(Ok(mut current)) => {
+				// Make sure the encoder can be set before accepting
+				// the result.
+				if current.next_encoder() {
+					self.current = Some(current);
+					return self.update_switch_encoder__();
+				}
+
+				// Otherwise make sure we grab the non-result results.
+				self.done.push(current.take_done());
+			},
+
+			// Next image unsuccessful.
+			Message::NextImageDecoded(Err(src)) => {
+				self.done.push(ImageResults::invalid(src));
+				return Task::done(Message::NextImage);
 			},
 
 			// Spawn a thread to get the next candidate image crunching or, if
@@ -560,6 +570,28 @@ impl App {
 				return Task::done(Message::Error(MessageError::NoOpen));
 			},
 
+			// Scroll X.
+			Message::ScrollX(flag) => {
+				return iced::widget::operation::scroll_by(
+					"container_image_scroll",
+					AbsoluteOffset {
+						x: if flag { 10.0 } else { -10.0 },
+						y: 0.0,
+					}
+				);
+			},
+
+			// Scroll Y.
+			Message::ScrollY(flag) => {
+				return iced::widget::operation::scroll_by(
+					"container_image_scroll",
+					AbsoluteOffset {
+						x: 0.0,
+						y: if flag { 10.0 } else { -10.0 },
+					}
+				);
+			},
+
 			// Toggle a flag.
 			Message::ToggleFlag(flag) => { self.toggle_flag(flag); },
 
@@ -599,8 +631,20 @@ impl App {
 	/// This method sets up listeners for the program's keyboard shortcuts,
 	/// bubbling up `Message`s as needed.
 	pub(super) fn subscription(&self) -> Subscription<Message> {
-		if self.has_candidate() { iced::keyboard::on_key_press(subscribe_ab) }
-		else { iced::keyboard::on_key_press(subscribe_home) }
+		use iced::keyboard::Event;
+
+		if self.has_candidate() {
+			iced::keyboard::listen().filter_map(|e| match e {
+				Event::KeyPressed { key, modifiers, .. } => subscribe_ab(key, modifiers),
+				_ => None,
+			})
+		}
+		else {
+			iced::keyboard::listen().filter_map(|e| match e {
+				Event::KeyPressed { key, modifiers, .. } => subscribe_home(key, modifiers),
+				_ => None,
+			})
+		}
 	}
 
 	/// # View.
@@ -638,14 +682,9 @@ impl App {
 	/// (A warning/error message may also be presented, but they're short-
 	/// lived and uncommon.)
 	fn view_home(&self) -> Container<'_, Message> {
-		container(
-			column!(
-				self.view_settings(),
-				self.view_log(),
-			)
-				.push_maybe(self.view_error())
-				.spacing(Skin::GAP50)
-		)
+		let mut col = column!(self.view_settings(), self.view_log());
+		if let Some(v) = self.view_error() { col = col.push(v); }
+		container(col.spacing(Skin::GAP50))
 			.padding(Skin::GAP50)
 			.width(Fill)
 	}
@@ -657,14 +696,16 @@ impl App {
 	fn view_about(&self) -> Column<'_, Message> {
 		column!(
 			rich_text!(
-				emphasize!(span("Refract "), Skin::PINK),
-				emphasize!(span(concat!("v", env!("CARGO_PKG_VERSION"))), Skin::PURPLE),
+				span::<'_, (), _>("Refract ").color(Skin::PINK),
+				span(concat!("v", env!("CARGO_PKG_VERSION"))).color(Skin::PURPLE),
 			),
 
 			rich_text!(
-				emphasize!(span(env!("CARGO_PKG_REPOSITORY")), Skin::GREEN)
+				span::<'_, Message, _>(env!("CARGO_PKG_REPOSITORY"))
+					.color(Skin::GREEN)
 					.link(Message::OpenUrl(env!("CARGO_PKG_REPOSITORY")))
-			),
+			)
+				.on_link_click(|v| v),
 		)
 			.align_x(Horizontal::Right)
 			.spacing(Skin::GAP25)
@@ -682,7 +723,7 @@ impl App {
 		self.error.map(|err|
 			container(row!(
 				rich_text!(
-					emphasize!(span("Warning: ")),
+					span::<'_, (), _>("Warning: "),
 					span(err.as_str()),
 				)
 					.width(Shrink)
@@ -715,13 +756,7 @@ impl App {
 					.spacing(Skin::GAP50)
 					.width(Shrink),
 
-				rich_text!(
-					span("Choose one or more "),
-					emphasize!(span("JPEG")),
-					span("/"),
-					emphasize!(span("PNG")),
-					span(" images."),
-				),
+				text("Choose one or more JPEG/PNG images"),
 			)
 				.align_x(Horizontal::Center)
 				.spacing(Skin::GAP50)
@@ -751,17 +786,17 @@ impl App {
 
 		// Finally, add all the lines!
 		let mut lines = column!(rich_text!(
-			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])), Skin::PURPLE),
+			span::<'_, (), _>(format!("{:<w$}", ActivityTable::HEADERS[0], w=widths[0])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])), Skin::PURPLE),
+			span(format!("{:<w$}", ActivityTable::HEADERS[1], w=widths[1])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])), Skin::PURPLE),
+			span(format!("{:>w$}", ActivityTable::HEADERS[2], w=widths[2])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])), Skin::PURPLE),
+			span(format!("{:>w$}", ActivityTable::HEADERS[3], w=widths[3])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])), Skin::PURPLE),
+			span(format!("{:>w$}", ActivityTable::HEADERS[4], w=widths[4])).color(Skin::PURPLE),
 			span(" | ").color(Skin::PINK),
-			emphasize!(span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])), Skin::PURPLE),
+			span(format!("{:>w$}", ActivityTable::HEADERS[5], w=widths[5])).color(Skin::PURPLE),
 		));
 
 		// The rows, interspersed with dividers for each new source.
@@ -784,7 +819,7 @@ impl App {
 
 			lines = lines.push(rich_text!(
 				// Path, pretty-formatted.
-				span(format!("{}/", dir.to_string_lossy()))
+				span::<'_, Message, _>(format!("{}/", dir.to_string_lossy()))
 					.color(
 						if dir == last_dir { Skin::TRANSPARENT }
 						else { Skin::GREY }
@@ -837,7 +872,7 @@ impl App {
 								.color_maybe((nice == "0.000").then_some(Skin::GREY))
 						},
 				),
-			));
+			).on_link_click(|v| v));
 
 			// Update the last directory before leaving.
 			last_dir = dir;
@@ -848,15 +883,15 @@ impl App {
 			.push(text(""))
 			.push(text(""))
 			.push(rich_text!(
-				span(" *").color(Skin::PURPLE),
+				span::<'_, (), _>(" *").color(Skin::PURPLE),
 				span(" Compression ratio is ").color(Skin::GREY),
-				emphasize!(span("src"), Skin::PURPLE),
-				emphasize!(span(":"), Skin::GREY),
-				emphasize!(span("dst"), Skin::PINK),
+				span("src").color(Skin::PURPLE),
+				span(":").color(Skin::GREY),
+				span("dst").color(Skin::PINK),
 				span(".").color(Skin::GREY),
 			))
 			.push(rich_text!(
-				span("**").color(Skin::PURPLE),
+				span::<'_, (), _>("**").color(Skin::PURPLE),
 				span(" Total encoding time, rejects and all.").color(Skin::GREY),
 			));
 
@@ -904,7 +939,7 @@ impl App {
 	/// next-gen image formats (the encoders that will be used).
 	fn view_settings_fmt(&self) -> Column<'_, Message> {
 		column!(
-			emphasize!(text("Formats"), Skin::PINK),
+			text("Formats").color(Skin::PINK),
 			chk!(self, "AVIF", FMT_AVIF),
 			chk!(self, "JPEG XL", FMT_JXL),
 			chk!(self, "WebP", FMT_WEBP),
@@ -917,12 +952,13 @@ impl App {
 	/// This returns checkboxes for the various compression modes.
 	fn view_settings_mode(&self) -> Column<'_, Message> {
 		column!(
-			emphasize!(text("Compression"), Skin::PINK),
+			text("Compression").color(Skin::PINK),
 			chk!(self, "Lossless", MODE_LOSSLESS),
 			chk!(self, "Lossy", MODE_LOSSY),
 			tip!(
 				self,
-				checkbox("Lossy YCbCr", self.has_flag(MODE_LOSSY_YCBCR))
+				checkbox(self.has_flag(MODE_LOSSY_YCBCR))
+					.label("Lossy YCbCr")
 					.on_toggle_maybe(self.has_flag(FMT_AVIF | MODE_LOSSY).then_some(|_| Message::ToggleFlag(MODE_LOSSY_YCBCR)))
 					.size(Skin::CHK_SIZE),
 				"Repeat AVIF A/B tests in YCbCr colorspace to look for additional savings."
@@ -937,7 +973,7 @@ impl App {
 	/// night mode and automatic saving.
 	fn view_settings_other(&self) -> Column<'_, Message> {
 		column!(
-			emphasize!(text("Other"), Skin::PINK),
+			text("Other").color(Skin::PINK),
 			tip!(
 				self,
 				chk!(self, "Auto-Save", OTHER_SAVE_AUTO),
@@ -966,29 +1002,29 @@ impl App {
 
 		container(
 			column!(
-				emphasize!(text("Up Next…").size(Skin::TEXT_LG)),
+				text("Up Next…").size(Skin::TEXT_LG),
 				match kind {
 					ImageKind::Avif => rich_text!(
-						emphasize!(span("A"), Skin::PURPLE),
-						emphasize!(span("v"), Skin::TEAL),
-						emphasize!(span("i"), Skin::BLUE),
-						emphasize!(span("f"), Skin::YELLOW),
+						span::<'_, (), _>("A").color(Skin::PURPLE),
+						span("v").color(Skin::TEAL),
+						span("i").color(Skin::BLUE),
+						span("f").color(Skin::YELLOW),
 					),
 					ImageKind::Jxl => rich_text!(
-						emphasize!(span("J"), Skin::BLUE),
-						emphasize!(span("P"), Skin::GREEN),
-						emphasize!(span("E"), Skin::PINK),
-						emphasize!(span("G"), Skin::YELLOW),
-						emphasize!(span("X"), Skin::PURPLE),
-						emphasize!(span("L"), Skin::RED),
+						span("J").color(Skin::BLUE),
+						span("P").color(Skin::GREEN),
+						span("E").color(Skin::PINK),
+						span("G").color(Skin::YELLOW),
+						span("X").color(Skin::PURPLE),
+						span("L").color(Skin::RED),
 					),
 					ImageKind::Webp => rich_text!(
-						emphasize!(span("W"), Skin::RED),
-						emphasize!(span("e"), Skin::PURPLE),
-						emphasize!(span("b"), Skin::BLUE),
-						emphasize!(span("P"), Skin::GREEN),
+						span("W").color(Skin::RED),
+						span("e").color(Skin::PURPLE),
+						span("b").color(Skin::BLUE),
+						span("P").color(Skin::GREEN),
 					),
-					_ => rich_text!(emphasize!(span("???"))),
+					_ => rich_text!(span("???")),
 				}
 					.size(72),
 			)
@@ -1018,7 +1054,7 @@ impl App {
 		container(
 			column!(
 				self.view_ab_header(),
-				self.view_image(),
+				self.view_ab_image(),
 				container(
 					row!(
 						self.view_keyboard_shortcuts(),
@@ -1065,10 +1101,10 @@ impl App {
 						left: Skin::GAP75,
 					}),
 					rich_text!(
-						span("Forget about images past. Are you happy with "),
+						span::<'_, (), _>("Forget about images past. Are you happy with "),
 						span("this").underline(true),
 						span(" one? If yes, "),
-						emphasize!(span("accept"), Skin::GREEN),
+						span("accept").color(Skin::GREEN),
 						span(" it. The best of the best will be saved at the very end."),
 					),
 					Top
@@ -1083,10 +1119,11 @@ impl App {
 				rich_text!(
 					kind!(
 						src_kind,
-						if b_side { Skin::GREY } else { Skin::PURPLE }
+						if b_side { Skin::GREY } else { Skin::PURPLE },
+						Message,
 					)
 						.link_maybe(b_side.then_some(Message::ToggleFlag(OTHER_BSIDE)))
-				),
+				).on_link_click(|v| v),
 
 				toggler(b_side)
 					.spacing(0)
@@ -1095,10 +1132,11 @@ impl App {
 				rich_text!(
 					kind!(
 						dst_kind,
-						if b_side { Skin::PINK } else { Skin::GREY }
+						if b_side { Skin::PINK } else { Skin::GREY },
+						Message,
 					)
 						.link_maybe((active && ! b_side).then_some(Message::ToggleFlag(OTHER_BSIDE)))
-				),
+				).on_link_click(|v| v),
 			)
 				.spacing(Skin::GAP25)
 				.align_y(Vertical::Center)
@@ -1132,15 +1170,15 @@ impl App {
 			// Lossless/auto requires no feedback, so let's give a different
 			// message.
 			if self.automatic() {
-				row = row.push(emphasize!(text(
+				row = row.push(text(
 					"Lossless conversion is automatic. Just sit back and wait!"
-				)));
+				));
 			}
 			else if let Some(kind) = current.output_kind() {
-				row = row.push(emphasize!(text(format!("Preparing the next {kind}; sit tight!"))));
+				row = row.push(text(format!("Preparing the next {kind}; sit tight!")));
 			}
 			else {
-				row = row.push(emphasize!(text("Reticulating splines…")));
+				row = row.push(text("Reticulating splines…"));
 			}
 		}
 		else {
@@ -1158,7 +1196,7 @@ impl App {
 
 			// Helper: key/value pair.
 			macro_rules! kv {
-				($k:expr, $v:expr) => (rich_text!(span($k), emphasize!(span($v))));
+				($k:expr, $v:expr) => (rich_text!(span::<'_, (), _>($k), span($v)));
 			}
 
 			// Kind.
@@ -1178,6 +1216,7 @@ impl App {
 		}
 
 		container(row)
+			.id("view_ab_header")
 			.padding(Skin::GAP50)
 			.center(Fill)
 			.height(Shrink)
@@ -1203,8 +1242,8 @@ impl App {
 		// Image.Ext > Ext1 Ext2 Ext3.
 		let mut formats = Vec::with_capacity(6);
 		if let Some((stem, ext)) = split_ext(current.src()) {
-			formats.push(emphasize!(span(stem)));
-			formats.push(emphasize!(span(format!(".{ext}")), Skin::PURPLE));
+			formats.push(span::<'_, (), _>(stem));
+			formats.push(span(format!(".{ext}")).color(Skin::PURPLE));
 			formats.push(span(" > ").color(Skin::GREY));
 		}
 		let mut any = false;
@@ -1237,13 +1276,12 @@ impl App {
 
 			// Cancel.
 			rich_text!(
-				span("Ready for bed? ").color(Skin::maybe_dim(self.fg(), active)),
-				emphasize!(
-					span("Skip ahead!"),
-					Skin::maybe_dim(Skin::ORANGE, active)
-				)
+				span::<'_, Message, _>("Ready for bed? ").color(Skin::maybe_dim(self.fg(), active)),
+				span("Skip ahead!")
+					.color(Skin::maybe_dim(Skin::ORANGE, active))
 					.link_maybe(active.then_some(Message::NextImage)),
 			)
+				.on_link_click(|v| v)
 		)
 			.spacing(Skin::GAP75)
 			.align_x(Horizontal::Center)
@@ -1258,110 +1296,79 @@ impl App {
 	///
 	/// The image itself is technically optional, but should always be present
 	/// in practice.
-	fn view_image(&self) -> Stack<'_, Message> {
-		Stack::with_capacity(3)
-			.push(self.view_image_checkers_a())
-			.push_maybe(self.view_image_checkers_b())
-			.push_maybe(self.view_image_image())
-			.width(Fill)
-			.height(Fill)
-	}
+	fn view_ab_image(&self) -> Stack<'_, Message> {
+		use iced::widget::scrollable::{
+			Direction,
+			Scrollbar,
+			Scrollable,
+		};
 
-	/// # View: Image Checkers (A).
-	///
-	/// Produce a checkered background to make it easier to visualize image
-	/// transparency.
-	fn view_image_checkers_a(&self) -> Container<'_, Message> {
-		container(
-			image(self.cache.checkers_a.clone())
-			.content_fit(ContentFit::None)
-			.width(Fill)
-			.height(Fill)
-		)
-			.clip(true)
-	}
+		let mut stack = Stack::with_capacity(3);
 
-	/// # View: Image Checkers (B).
-	///
-	/// This adds a "B" to every fourth square for added emphasis, but only
-	/// when viewing a candidate image.
-	fn view_image_checkers_b(&self) -> Option<Container<'_, Message>> {
-		if self.has_flag(OTHER_BSIDE) && self.has_candidate() {
-			Some(
+		// Push one image or the other.
+		if let Some(current) = self.current.as_ref() {
+			let (handle, b) =
+				// B side.
+				if self.has_flag(OTHER_BSIDE) && let Some(can) = current.candidate.as_ref() {
+					(can.img.clone(), true)
+				}
+				// A side.
+				else { (current.handle().clone(), false) };
+
+			stack = stack.push(
+				container(
+					Scrollable::with_direction(
+						image(handle)
+							.content_fit(ContentFit::None)
+							.width(Shrink)
+							.height(Shrink)
+							.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 }),
+						Direction::Both {
+							vertical: Scrollbar::new(),
+							horizontal: Scrollbar::new(),
+						},
+					)
+						.id("container_image_scroll")
+						.style(|_, _| Skin::IMG_SCROLL)
+				)
+					.id("container_image")
+					.width(Fill)
+					.height(Fill)
+					.center(Fill)
+			)
+			// Add the B checkers even if this is the A side to help with
+			// render cache. (Opacity is zero if inapplicable.)
+			.push_under(
 				container(
 					image(self.cache.checkers_b.clone())
 						.content_fit(ContentFit::None)
 						.width(Fill)
 						.height(Fill)
+						.opacity(if b { 1.0 } else { 0.0 }),
 				)
+					.id("container_checkers_b")
+					.width(Fill)
+					.height(Fill)
 					.clip(true)
-			)
-		}
-		else { None }
-	}
-
-	#[expect(clippy::default_trait_access, reason = "Can't.")]
-	/// # Image Layer.
-	///
-	/// Return a rendering of either the source image or candidate for
-	/// display. When no candidate is available, the source image is returned
-	/// in a semi-transparent state to help imply "loading".
-	///
-	/// This method is technically fallible, but in practice it should never
-	/// not return something.
-	fn view_image_image(&self) -> Option<Container<'_, Message>> {
-		use iced::widget::scrollable::{
-			Direction,
-			Rail,
-			Scrollbar,
-			Scroller,
-			Style,
-		};
-
-		/// # Scroll paddle thingy.
-		const RAIL: Rail = Rail {
-			background: Some(Background::Color(Skin::YELLUCK)),
-			border: Skin::border_style(Skin::TRANSPARENT, 0.0, 0.0),
-			scroller: Scroller {
-				color: Skin::YELLOW,
-				border: Skin::border_style(Skin::BABYFOOD, 2.0, 0.0),
-			},
-		};
-
-		let current = self.current.as_ref()?;
-		let mut handle = None;
-
-		// Show the new one?
-		if self.has_flag(OTHER_BSIDE) && let Some(can) = current.candidate.as_ref() {
-			handle.replace(can.img.clone());
+			);
 		}
 
-		// If we aren't showing the new one, show the old one.
-		let handle = handle.unwrap_or_else(|| current.img.clone());
-
-		Some(
+		// Add the A checkers to the top and we're done!
+		stack.push_under(
 			container(
-				scrollable(
-					image(handle)
-						.content_fit(ContentFit::None)
-						.width(Shrink)
-						.height(Shrink)
-						.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 })
-				)
-					.width(Shrink)
-					.height(Shrink)
-					.direction(Direction::Both { vertical: Scrollbar::new(), horizontal: Scrollbar::new() })
-					.style(|_, _| Style {
-						container: Default::default(),
-						vertical_rail: RAIL,
-						horizontal_rail: RAIL,
-						gap: None,
-					})
+				image(self.cache.checkers_a.clone())
+					.content_fit(ContentFit::None)
+					.width(Fill)
+					.height(Fill)
 			)
+				.id("container_checkers_a")
 				.width(Fill)
 				.height(Fill)
-				.center(Fill)
+				.clip(true)
 		)
+		.width(Fill)
+		.height(Fill)
+		.clip(true)
 	}
 
 	/// # View: Image Screen Keyboard Shortcuts.
@@ -1374,7 +1381,7 @@ impl App {
 		let dst_kind = current.output_kind().unwrap_or(ImageKind::Invalid);
 		column!(
 			rich_text!(
-				emphasize!(span("   [space]")),
+				span::<'_, (), _>("   [space]"),
 				span(" Toggle image view (").color(Skin::GREY),
 				kind!(src_kind, Skin::PURPLE),
 				span(" vs ").color(Skin::GREY),
@@ -1382,17 +1389,17 @@ impl App {
 				span(").").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span("       [d]"), Skin::RED),
+				span::<'_, (), _>("       [d]").color(Skin::RED),
 				span(" Reject candidate.").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span("       [k]"), Skin::GREEN),
+				span::<'_, (), _>("       [k]").color(Skin::GREEN),
 				span(" Accept candidate.").color(Skin::GREY),
 			),
 			rich_text!(
-				emphasize!(span("[ctrl]")),
+				span::<'_, (), _>("[ctrl]"),
 				span("+").color(Skin::GREY),
-				emphasize!(span("[n]")),
+				span("[n]"),
 				span(" Toggle night mode.").color(Skin::GREY),
 			),
 		)
@@ -1593,6 +1600,7 @@ impl ActivityTableRow<'_> {
 
 
 
+#[derive(Debug, Clone)]
 /// # Current Image.
 ///
 /// This struct holds the state details for an image that is currently being
@@ -1601,7 +1609,7 @@ impl ActivityTableRow<'_> {
 ///
 /// Because there is only ever one of these at a time, its existence (or lack
 /// thereof) is used to tell which screen to display.
-struct CurrentImage {
+pub(super) struct CurrentImage {
 	/// # Results.
 	done: ImageResults,
 
@@ -1612,7 +1620,7 @@ struct CurrentImage {
 	///
 	/// This is largely redundant given that `input` holds the same pixels,
 	/// but the caching should help speed up A/B renders.
-	img: image::Handle,
+	img: ImageAllocation,
 
 	/// # Refract Flags.
 	flags: u16,
@@ -1628,41 +1636,97 @@ struct CurrentImage {
 }
 
 impl CurrentImage {
-	/// # New.
+	/// # Load/Decode/Allocate Image.
 	///
-	/// This method returns a new instance containing the decoded source
-	/// image, if valid.
+	/// This method attempts to read, decode, and allocate a new source image,
+	/// returning a task that'll resolve to a new `CurrentImage` instance or
+	/// the failing image path.
+	///
+	/// The allocation is a bitch, but sadly necessary to prevent A/B
+	/// flickering in `iced 0.14`.
 	///
 	/// Note that this does _not_ initialize an encoder or generate a
 	/// candidate image. Those tasks can be long-running so are left for later.
-	fn new(src: PathBuf, flags: u16) -> Option<Self> {
-		let input = std::fs::read(&src).ok()?;
-		let input = Input::try_from(input.as_slice()).ok()?.into_rgba();
-		let img = image::Handle::from_rgba(
-			u32::try_from(input.width()).ok()?,
-			u32::try_from(input.height()).ok()?,
-			input.pixels_rgba().into_owned(),
-		);
-		let src_len = NonZeroUsize::new(input.size())?;
+	fn load(src: PathBuf, flags: u16) -> Task<Message> {
+		// Eliminate all synchronous fallibility.
+		if
+			let Ok(input) = std::fs::read(&src) &&
+			let Ok(input) = Input::try_from(input.as_slice()).map(Input::into_rgba) &&
+			let Some(src_len) = NonZeroUsize::new(input.size()) &&
+			let Ok(w) = u32::try_from(input.width()) &&
+			let Ok(h) = u32::try_from(input.height())
+		{
+			/// # Either.
+			///
+			/// This enum allows us to treat the two task responses as a single
+			/// type, required for `Task::collect`.
+			enum Either {
+				/// # Data We Already Have.
+				Base((Input, NonZeroUsize, u16, PathBuf)),
 
-		// Log it.
-		cli_log(&src, None);
+				/// # Allocation Result.
+				Alloc(Result<ImageAllocation, ImageError>),
+			}
 
-		// Done!
-		Some(Self {
-			done: ImageResults {
-				src,
-				src_kind: input.kind(),
-				src_len,
-				dst: Vec::new(),
-			},
-			input,
-			img,
-			flags,
-			candidate: None,
-			iter: None,
-			output_kind: None,
-		})
+			// Create an image handle real quick.
+			let img = ImageHandle::from_rgba(w, h, input.pixels_rgba().into_owned());
+
+			// We need to combine the data we've already worked out with the
+			// resulting allocation, but can't do that via `Task::map`, etc.,
+			// because of callback constraints.
+			//
+			// Weirdly, scope stops being an issue if we chuck that same shit
+			// into a task of their own. Haha. Hacky, but this "allocation" is
+			// the only way to prevent A/B paint flickering in iced 0.14.
+			Task::chain(
+				Task::done(Either::Base((input, src_len, flags, src))),
+				iced_runtime::image::allocate(img).map(Either::Alloc),
+			)
+				.collect()
+				.map(|v| {
+					let mut data = None;
+					let mut res = None;
+					for v2 in v {
+						match v2 {
+							Either::Base(v) => { data.replace(v); },
+							Either::Alloc(v) => { res.replace(v); },
+						}
+					}
+
+					// This shouldn't ever fail. We know which two tasks we're
+					// collecting. Haha.
+					if let Some((input, src_len, flags, src)) = data {
+						match res {
+							Some(Ok(img)) => {
+								// Log it.
+								cli_log(&src, None);
+
+								Message::NextImageDecoded(Ok(Self {
+									done: ImageResults {
+										src,
+										src_kind: input.kind(),
+										src_len,
+										dst: Vec::new(),
+									},
+									input,
+									img,
+									flags,
+									candidate: None,
+									iter: None,
+									output_kind: None,
+								}))
+							},
+							_ => Message::NextImageDecoded(Err(src)),
+						}
+					}
+					else {
+						Message::NextImageDecoded(Err(PathBuf::new()))
+					}
+				})
+		}
+		else {
+			Task::done(Message::NextImageDecoded(Err(src)))
+		}
 	}
 
 	/// # Provide Feedback.
@@ -1819,6 +1883,9 @@ impl CurrentImage {
 		else { Skin::GREY }
 	}
 
+	/// # Handle.
+	fn handle(&self) -> &ImageHandle { self.img.handle() }
+
 	/// # Has Candidate?
 	///
 	/// Returns `true` if a candidate has been generated.
@@ -1876,6 +1943,7 @@ impl EncodeWrapper {
 
 
 
+#[derive(Debug, Clone)]
 /// # Image Encoding Results.
 ///
 /// This struct is used to help group activity logs by source while still
@@ -1927,6 +1995,7 @@ impl ImageResults {
 
 
 
+#[derive(Debug, Clone)]
 /// # (Best) Image Encoding Result.
 ///
 /// This struct holds the details for the best image candidate produced by a
@@ -2079,8 +2148,15 @@ pub(super) enum Message {
 	/// # Next Image.
 	///
 	/// This is essentially the outermost image-related signal. It moves the
-	/// first next queued path to `current` and triggers `NextEncoder`.
+	/// first (valid) next queued path to `current`.
 	NextImage,
+
+	/// # Next Image (Load/Decode).
+	///
+	/// Load and decode a new source image from a file, and create a render
+	/// callocation for it, returning a new `CurrentImage` instance if
+	/// everything worked out, otherwise the offending path.
+	NextImageDecoded(Result<CurrentImage, PathBuf>),
 
 	/// # Next Step.
 	///
@@ -2130,6 +2206,12 @@ pub(super) enum Message {
 	/// it thinks appropriate.
 	OpenUrl(&'static str),
 
+	/// # A/B Scroll X.
+	ScrollX(bool),
+
+	/// # A/B Scroll Y.
+	ScrollY(bool),
+
 	/// # Toggle Flag.
 	///
 	/// This signal is used to toggle program settings like Night Mode.
@@ -2176,13 +2258,13 @@ impl MessageError {
 /// thereafter.
 struct WidgetCache {
 	/// # Checkerboard Underlay (A).
-	checkers_a: image::Handle,
+	checkers_a: ImageHandle,
 
 	/// # Checkerboard Underlay (B).
-	checkers_b: image::Handle,
+	checkers_b: ImageHandle,
 
 	/// # Program Logo.
-	logo: image::Handle,
+	logo: ImageHandle,
 
 	/// # Light Theme.
 	theme_a: Theme,
@@ -2357,11 +2439,20 @@ fn subscribe_ab(key: Key, modifiers: Modifiers) -> Option<Message> {
 		match key {
 			// Toggle A/B.
 			Key::Named(Named::Space) => Some(Message::ToggleFlag(OTHER_BSIDE)),
+
 			// Feedback.
 			Key::Character(c) =>
 				if c == "d" { Some(Message::Feedback(false)) }
 				else if c == "k" { Some(Message::Feedback(true)) }
 				else { None }
+
+			// Scrolling.
+			Key::Named(Named::ArrowUp) => Some(Message::ScrollY(false)),
+			Key::Named(Named::ArrowDown) => Some(Message::ScrollY(true)),
+			Key::Named(Named::ArrowLeft) => Some(Message::ScrollX(false)),
+			Key::Named(Named::ArrowRight) => Some(Message::ScrollX(true)),
+
+			// Dunno?
 			_ => None,
 		}
 	}
