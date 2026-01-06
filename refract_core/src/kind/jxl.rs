@@ -352,7 +352,7 @@ impl LibJxlEncoder {
 			let mut color_encoding = MaybeUninit::uninit();
 			JxlColorEncodingSetToSRGB(
 				color_encoding.as_mut_ptr(),
-				grey
+				grey.into()
 			);
 			color_encoding.assume_init()
 		};
@@ -485,7 +485,7 @@ fn encode(
 
 	// No containers.
 	// Safety: this is an FFI call…
-	maybe_die(unsafe { JxlEncoderUseContainer(enc.0, false) })?;
+	maybe_die(unsafe { JxlEncoderUseContainer(enc.0, JxlBool::False) })?;
 
 	// Set distance and losslessness.
 	let q = match quality.map(NonZeroU8::get) {
@@ -493,7 +493,7 @@ fn encode(
 		_ => 0.0,
 	};
 	// Safety: this is an FFI call…
-	maybe_die(unsafe { JxlEncoderSetFrameLossless(options, 0.0 == q) })?;
+	maybe_die(unsafe { JxlEncoderSetFrameLossless(options, JxlBool::from(0.0 == q)) })?;
 	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderSetFrameDistance(options, q) })?;
 
