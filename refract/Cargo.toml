@@ -109,7 +109,7 @@ dowser = "0.18.*"
 fyi_ansi = "2.4.*"
 iced_runtime = "0.14.0" # Iced doesn't re-export Allocation, etc.
 open = "=5.3.3"
-rfd = "=0.17.1"
+rfd = "=0.17.2"
 unicode-width = "0.2.*"
 write_atomic = "0.7.*"
 
