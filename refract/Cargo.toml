@@ -127,5 +127,5 @@ default-features = false
 features = [ "rt", "rt-multi-thread", "time" ]
 
 [dependencies.utc2k]
-version = "0.18.*"
+version = "0.19.*"
 features = [ "local" ]
