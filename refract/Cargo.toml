@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "1.4.0"
+version = "1.4.1"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2024"
