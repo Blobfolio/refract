@@ -122,7 +122,7 @@ path = "../refract_core"
 features = [ "images" ]
 
 [dependencies.tokio]
-version = "=1.49.*"
+version = "=1.50.*"
 default-features = false
 features = [ "rt", "rt-multi-thread", "time" ]
 
