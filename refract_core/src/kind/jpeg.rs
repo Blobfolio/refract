@@ -12,8 +12,8 @@ use crate::{
 };
 use jpeg_decoder::PixelFormat;
 use rgb::{
-	ComponentSlice,
 	FromSlice,
+	Rgba,
 };
 
 
@@ -51,11 +51,11 @@ impl Decoder for ImageJpeg {
 				.iter()
 				.map(|px| px.with_alpha(255))
 				.fold(
-					(Vec::with_capacity(size), false), |mut acc, px| {
-					acc.0.extend_from_slice(px.as_slice());
+					(Vec::with_capacity(size), false), |mut acc, Rgba { r, g, b, a }| {
+					acc.0.extend_from_slice(&[r, g, b, a]);
 					(
 						acc.0,
-						acc.1 || px.r != px.g || px.r != px.b,
+						acc.1 || r != g || r != b,
 					)
 				}),
 			// Lossless and CMYK aren't supported.
