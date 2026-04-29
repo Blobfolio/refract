@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "1.4.2"
+version = "1.4.3"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2024"
@@ -106,9 +106,9 @@ features = [ "png" ]
 argyle = "0.15.*"
 dactyl = "0.13.*"
 dowser = "0.18.*"
-fyi_ansi = "2.5.*"
+fyi_ansi = "2.6.*"
 iced_runtime = "0.14.0" # Iced doesn't re-export Allocation, etc.
-open = "=5.3.3"
+open = "=5.3.4"
 rfd = "=0.17.2"
 unicode-width = "0.2.*"
 write_atomic = "0.7.*"
@@ -122,7 +122,7 @@ path = "../refract_core"
 features = [ "images" ]
 
 [dependencies.tokio]
-version = "=1.50.*"
+version = "1.52.0"
 default-features = false
 features = [ "rt", "rt-multi-thread", "time" ]
 
