@@ -885,9 +885,9 @@ impl App {
 			.push(rich_text!(
 				span::<'_, (), _>(" *").color(Skin::PURPLE),
 				span(" Compression ratio is ").color(Skin::GREY),
-				span("src").color(Skin::PURPLE),
-				span(":").color(Skin::GREY),
 				span("dst").color(Skin::PINK),
+				span(":").color(Skin::GREY),
+				span("src").color(Skin::PURPLE),
 				span(".").color(Skin::GREY),
 			))
 			.push(rich_text!(
@@ -1490,7 +1490,7 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 						kind: *kind,
 						quality: quality.quality_fmt(),
 						len: Some(NiceU64::from(len)),
-						ratio: NiceFloat::div_usize(job.src_len.get(), len.get())
+						ratio: NiceFloat::div_usize(len.get(), job.src_len.get())
 							.ok()
 							.map(NiceFloat::from),
 						time: Some(&res.time),
