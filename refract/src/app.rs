@@ -1650,8 +1650,7 @@ impl CurrentImage {
 	fn load(src: PathBuf, flags: u16) -> Task<Message> {
 		// Eliminate all synchronous fallibility.
 		if
-			let Ok(input) = std::fs::read(&src) &&
-			let Ok(input) = Input::try_from(input.as_slice()).map(Input::into_rgba) &&
+			let Ok(input) = Input::try_from(src.as_path()).map(Input::into_rgba) &&
 			let Some(src_len) = NonZeroUsize::new(input.size()) &&
 			let Ok(w) = u32::try_from(input.width()) &&
 			let Ok(h) = u32::try_from(input.height())

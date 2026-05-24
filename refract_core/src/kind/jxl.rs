@@ -43,6 +43,7 @@ use jpegxl_sys::{
 		JxlColorEncodingSetToSRGB,
 		JxlEncoder,
 		JxlEncoderAddImageFrame,
+		JxlEncoderAddJPEGFrame,
 		JxlEncoderCloseInput,
 		JxlEncoderCreate,
 		JxlEncoderDestroy,
@@ -59,6 +60,7 @@ use jpegxl_sys::{
 		JxlEncoderSetFrameLossless,
 		JxlEncoderSetParallelRunner,
 		JxlEncoderStatus,
+		JxlEncoderStoreJPEGMetadata,
 		JxlEncoderUseContainer,
 	},
 	metadata::codestream_header::JxlBasicInfo,
@@ -505,6 +507,25 @@ fn encode(
 	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, JxlEncoderFrameSettingId::DecodingSpeed, 0) })?;
 
+	// Specialized methods are required to losslessly recompress JPEG sources.
+	// If that's what we're doing, now's the time!
+	if q == 0.0 && let Some(data) = img.raw_jpeg_data() {
+		// Enable JPEG reconstruction.
+		// Safety: this is an FFI call…
+		maybe_die(unsafe { JxlEncoderStoreJPEGMetadata(enc.0, JxlBool::True) })?;
+
+		// Push the pixels.
+		// Safety: this is an FFI call…
+		maybe_die(unsafe {
+			JxlEncoderAddJPEGFrame(options, data.as_ptr().cast(), size_of_val(data))
+		})?;
+
+		// Finalize the encoder.
+		// Safety: this is an FFI call…
+		unsafe { JxlEncoderCloseInput(enc.0); }
+		return enc.write(candidate);
+	}
+
 	// Set up JPEG XL's "basic info" struct.
 	let color = img.color();
 	enc.set_basic_info(img.width_u32(), img.height_u32(), color.has_alpha(), color.is_greyscale())?;
@@ -523,6 +544,7 @@ fn encode(
 		maybe_die(unsafe { JxlEncoderSetExtraChannelDistance(options, 0, 0.0) })?;
 	}
 
+	// Push the pixels.
 	let data: &[u8] = img;
 	// Safety: this is an FFI call…
 	maybe_die(unsafe {
