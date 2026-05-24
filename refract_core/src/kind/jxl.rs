@@ -510,6 +510,14 @@ fn encode(
 	// Specialized methods are required to losslessly recompress JPEG sources.
 	// If that's what we're doing, now's the time!
 	if q == 0.0 && let Some(data) = img.raw_jpeg_data() {
+		// Compress boxes.
+		// Safety: this is an FFI call…
+		maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, JxlEncoderFrameSettingId::JpegCompressBoxes, 1) })?;
+
+		// Brotli Effort.
+		// Safety: this is an FFI call…
+		maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, JxlEncoderFrameSettingId::BrotliEffort, 11) })?;
+
 		// Enable JPEG reconstruction.
 		// Safety: this is an FFI call…
 		maybe_die(unsafe { JxlEncoderStoreJPEGMetadata(enc.0, JxlBool::True) })?;
