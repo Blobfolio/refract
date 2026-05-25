@@ -2311,7 +2311,7 @@ fn cli_log(src: &Path, quality: Option<Quality>) {
 			out.push_str(quality.label());
 			out.push(' ');
 		}
-		out.push_str(&quality.quality_fmt().as_str());
+		out.push_str(quality.quality_fmt().as_str());
 	}
 	else { out.push_str("source"); }
 

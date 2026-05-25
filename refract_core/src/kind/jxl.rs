@@ -5,7 +5,6 @@
 use crate::{
 	ColorKind,
 	Input,
-	NZ_150,
 	Output,
 	RefractError,
 	traits::{
@@ -47,6 +46,7 @@ use jpegxl_sys::{
 		JxlEncoderCloseInput,
 		JxlEncoderCreate,
 		JxlEncoderDestroy,
+		JxlEncoderDistanceFromQuality,
 		JxlEncoderFrameSettingId,
 		JxlEncoderFrameSettings,
 		JxlEncoderFrameSettingsCreate,
@@ -146,9 +146,6 @@ impl Decoder for ImageJxl {
 }
 
 impl Encoder for ImageJxl {
-	/// # Maximum Quality.
-	const MAX_QUALITY: NonZeroU8 = NZ_150;
-
 	#[inline]
 	/// # Encode Lossy.
 	fn encode_lossy(input: &Input, output: &mut Output, quality: NonZeroU8, _flags: u8)
@@ -496,9 +493,11 @@ fn encode(
 	maybe_die(unsafe { JxlEncoderUseContainer(enc.0, JxlBool::False) })?;
 
 	// Set distance and losslessness.
-	let q = match quality.map(NonZeroU8::get) {
-		Some(q) if q < 150 => f32::from(150_u8 - q) / 10.0,
-		_ => 0.0,
+	// Safety: this is an FFI call…
+	let q = unsafe {
+		JxlEncoderDistanceFromQuality(
+			f32::from(quality.unwrap_or(ImageJxl::MAX_QUALITY).get())
+		)
 	};
 	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderSetFrameLossless(options, JxlBool::from(q == 0.0)) })?;
