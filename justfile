@@ -39,7 +39,7 @@ export LDFLAGS   := `llvm-config --ldflags` + " -fuse-ld=lld -flto"
 
 # Build Release!
 @build:
-	cargo build \
+	cargo auditable build \
 		--bin "{{ pkg_id }}" \
 		-p "{{ pkg_id }}" \
 		--release \

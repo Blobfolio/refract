@@ -15,6 +15,7 @@ use std::{
 		NonZeroUsize,
 	},
 	ops::Deref,
+	path::Path,
 };
 
 
@@ -68,6 +69,10 @@ pub struct Input {
 
 	/// # Image Kind.
 	kind: ImageKind,
+
+	#[cfg(feature = "jxl")]
+	/// # Raw JPEG.
+	jpeg: Option<Vec<u8>>,
 }
 
 impl AsRef<[u8]> for Input {
@@ -93,6 +98,25 @@ impl Deref for Input {
 
 	#[inline]
 	fn deref(&self) -> &Self::Target { self.pixels.as_slice() }
+}
+
+impl TryFrom<&Path> for Input {
+	type Error = RefractError;
+
+	fn try_from(src: &Path) -> Result<Self, Self::Error> {
+		let raw = std::fs::read(src).map_err(|_| RefractError::Image)?;
+		let out = Self::try_from(raw.as_slice())?;
+
+		#[cfg(feature = "jxl")]
+		if matches!(out.kind, ImageKind::Jpeg) {
+			return Ok(Self {
+				jpeg: Some(raw),
+				..out
+			});
+		}
+
+		Ok(out)
+	}
 }
 
 impl TryFrom<&[u8]> for Input {
@@ -122,7 +146,24 @@ impl TryFrom<&[u8]> for Input {
 			color,
 			depth: ColorKind::Rgba,
 			kind,
+
+			#[cfg(feature = "jxl")]
+			jpeg: None,
 		})
+	}
+}
+
+/// ## JPEG-Specific.
+impl Input {
+	#[cfg(feature = "jxl")]
+	#[must_use]
+	/// # Raw (JPEG) Data.
+	///
+	/// Return the raw source bytes if the image is a JPEG. (This is used for
+	/// lossless JPEG-XL conversion and nothing else.)
+	pub(crate) const fn raw_jpeg_data(&self) -> Option<&[u8]> {
+		if let Some(out) = self.jpeg.as_ref() { Some(out.as_slice()) }
+		else { None }
 	}
 }
 
@@ -386,6 +427,9 @@ impl Input {
 			color: self.color,
 			depth,
 			kind: self.kind,
+
+			#[cfg(feature = "jxl")]
+			jpeg: self.jpeg,
 		}
 	}
 

@@ -225,11 +225,8 @@ impl ImageKind {
 	/// This returns the maximum encoding quality value for the given format,
 	/// or a default of `100`.
 	pub(crate) const fn max_encoder_quality(self) -> NonZeroU8 {
-		#[cfg(any(feature = "avif", feature = "jxl"))] use crate::traits::Encoder;
-
 		match self {
-			#[cfg(feature = "avif")] Self::Avif => ImageAvif::MAX_QUALITY,
-			#[cfg(feature = "jxl")]  Self::Jxl => ImageJxl::MAX_QUALITY,
+			#[cfg(feature = "avif")] Self::Avif => <ImageAvif as crate::traits::Encoder>::MAX_QUALITY,
 			_ => NZ_100,
 		}
 	}

@@ -5,7 +5,6 @@
 use crate::{
 	ColorKind,
 	Input,
-	NZ_150,
 	Output,
 	RefractError,
 	traits::{
@@ -43,9 +42,11 @@ use jpegxl_sys::{
 		JxlColorEncodingSetToSRGB,
 		JxlEncoder,
 		JxlEncoderAddImageFrame,
+		JxlEncoderAddJPEGFrame,
 		JxlEncoderCloseInput,
 		JxlEncoderCreate,
 		JxlEncoderDestroy,
+		JxlEncoderDistanceFromQuality,
 		JxlEncoderFrameSettingId,
 		JxlEncoderFrameSettings,
 		JxlEncoderFrameSettingsCreate,
@@ -54,11 +55,11 @@ use jpegxl_sys::{
 		JxlEncoderProcessOutput,
 		JxlEncoderSetBasicInfo,
 		JxlEncoderSetColorEncoding,
-		JxlEncoderSetExtraChannelDistance,
 		JxlEncoderSetFrameDistance,
 		JxlEncoderSetFrameLossless,
 		JxlEncoderSetParallelRunner,
 		JxlEncoderStatus,
+		JxlEncoderStoreJPEGMetadata,
 		JxlEncoderUseContainer,
 	},
 	metadata::codestream_header::JxlBasicInfo,
@@ -145,9 +146,6 @@ impl Decoder for ImageJxl {
 }
 
 impl Encoder for ImageJxl {
-	/// # Maximum Quality.
-	const MAX_QUALITY: NonZeroU8 = NZ_150;
-
 	#[inline]
 	/// # Encode Lossy.
 	fn encode_lossy(input: &Input, output: &mut Output, quality: NonZeroU8, _flags: u8)
@@ -314,7 +312,14 @@ impl LibJxlEncoder {
 
 	#[expect(unsafe_code, reason = "Needed for FFI.")]
 	/// # Set Basic Info.
-	fn set_basic_info(&self, width: u32, height: u32, alpha: bool, grey: bool) -> Result<(), RefractError> {
+	fn set_basic_info(
+		&self,
+		width: u32,
+		height: u32,
+		alpha: bool,
+		grey: bool,
+		lossless: bool,
+	) -> Result<(), RefractError> {
 		// Set up JPEG XL's "basic info" struct.
 		// Safety: this is an FFI call…
 		let mut basic_info = unsafe {
@@ -325,7 +330,7 @@ impl LibJxlEncoder {
 
 		basic_info.xsize = width;
 		basic_info.ysize = height;
-		basic_info.uses_original_profile = JxlBool::True;
+		basic_info.uses_original_profile = lossless.into();
 		basic_info.have_container = JxlBool::False;
 
 		basic_info.bits_per_sample = 8;
@@ -488,12 +493,14 @@ fn encode(
 	maybe_die(unsafe { JxlEncoderUseContainer(enc.0, JxlBool::False) })?;
 
 	// Set distance and losslessness.
-	let q = match quality.map(NonZeroU8::get) {
-		Some(q) if q < 150 => f32::from(150_u8 - q) / 10.0,
-		_ => 0.0,
+	// Safety: this is an FFI call…
+	let q = unsafe {
+		JxlEncoderDistanceFromQuality(
+			f32::from(quality.unwrap_or(ImageJxl::MAX_QUALITY).get())
+		)
 	};
 	// Safety: this is an FFI call…
-	maybe_die(unsafe { JxlEncoderSetFrameLossless(options, JxlBool::from(0.0 == q)) })?;
+	maybe_die(unsafe { JxlEncoderSetFrameLossless(options, JxlBool::from(q == 0.0)) })?;
 	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderSetFrameDistance(options, q) })?;
 
@@ -505,9 +512,42 @@ fn encode(
 	// Safety: this is an FFI call…
 	maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, JxlEncoderFrameSettingId::DecodingSpeed, 0) })?;
 
+	// Specialized methods are required to losslessly recompress JPEG sources.
+	// If that's what we're doing, now's the time!
+	if q == 0.0 && let Some(data) = img.raw_jpeg_data() {
+		// Compress boxes.
+		// Safety: this is an FFI call…
+		maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, JxlEncoderFrameSettingId::JpegCompressBoxes, 1) })?;
+
+		// Brotli Effort.
+		// Safety: this is an FFI call…
+		maybe_die(unsafe { JxlEncoderFrameSettingsSetOption(options, JxlEncoderFrameSettingId::BrotliEffort, 11) })?;
+
+		// Enable JPEG reconstruction.
+		// Safety: this is an FFI call…
+		maybe_die(unsafe { JxlEncoderStoreJPEGMetadata(enc.0, JxlBool::True) })?;
+
+		// Push the pixels.
+		// Safety: this is an FFI call…
+		maybe_die(unsafe {
+			JxlEncoderAddJPEGFrame(options, data.as_ptr().cast(), size_of_val(data))
+		})?;
+
+		// Finalize the encoder.
+		// Safety: this is an FFI call…
+		unsafe { JxlEncoderCloseInput(enc.0); }
+		return enc.write(candidate);
+	}
+
 	// Set up JPEG XL's "basic info" struct.
 	let color = img.color();
-	enc.set_basic_info(img.width_u32(), img.height_u32(), color.has_alpha(), color.is_greyscale())?;
+	enc.set_basic_info(
+		img.width_u32(),
+		img.height_u32(),
+		color.has_alpha(),
+		color.is_greyscale(),
+		q == 0.0,
+	)?;
 
 	// Set up a "frame".
 	let pixel_format = JxlPixelFormat {
@@ -517,12 +557,7 @@ fn encode(
 		align: 0,
 	};
 
-	// JXL really fucks up alpha at lower qualities.
-	if color.has_alpha() {
-		// Safety: this is an FFI call…
-		maybe_die(unsafe { JxlEncoderSetExtraChannelDistance(options, 0, 0.0) })?;
-	}
-
+	// Push the pixels.
 	let data: &[u8] = img;
 	// Safety: this is an FFI call…
 	maybe_die(unsafe {

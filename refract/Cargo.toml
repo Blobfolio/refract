@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "1.4.3"
+version = "1.5.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2024"
@@ -108,7 +108,7 @@ dactyl = "0.13.*"
 dowser = "0.18.*"
 fyi_ansi = "2.6.*"
 iced_runtime = "0.14.0" # Iced doesn't re-export Allocation, etc.
-open = "=5.3.4"
+open = "=5.3.5"
 rfd = "=0.17.2"
 unicode-width = "0.2.*"
 write_atomic = "0.7.*"
@@ -127,5 +127,5 @@ default-features = false
 features = [ "rt", "rt-multi-thread", "time" ]
 
 [dependencies.utc2k]
-version = "0.19.*"
+version = "0.20.*"
 features = [ "local" ]

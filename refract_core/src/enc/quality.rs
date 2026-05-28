@@ -5,12 +5,8 @@
 use crate::ImageKind;
 use dactyl::NiceU8;
 use std::{
-	borrow::Cow,
 	fmt,
-	num::{
-		NonZeroU8,
-		NonZeroUsize,
-	},
+	num::NonZeroU8,
 };
 
 
@@ -97,15 +93,13 @@ impl Quality {
 	///
 	/// This returns the quality value in the native format of the encoder. See
 	/// [`QualityValue`] for more information.
-	pub fn quality(self) -> QualityValue {
+	pub const fn quality(self) -> QualityValue {
 		match self {
 			Self::Lossless(_) => QualityValue::Lossless,
 			Self::Lossy(k, q) => match k {
 				// Avif is backwards.
 				ImageKind::Avif => QualityValue::Int(63 - q.get()),
-				// JPEG XL is backwards and fractional.
-				ImageKind::Jxl => QualityValue::Float(f32::from(150_u8 - q.get()) / 10.0),
-				// Webp is the only sane one. Haha.
+				// JXL and Webp are sane. Haha.
 				_ => QualityValue::Int(q.get()),
 			},
 		}
@@ -122,9 +116,7 @@ impl Quality {
 			Self::Lossy(k, q) => match k {
 				// Avif is backwards.
 				ImageKind::Avif => QualityValueFmt::Int(NiceU8::from(63 - q.get())),
-				// JPEG XL is backwards and fractional.
-				ImageKind::Jxl => QualityValueFmt::Float(NiceU8::from(150_u8 - q.get())),
-				// Webp is the only sane one. Haha.
+				// JXL and Webp are sane. Haha.
 				_ => QualityValueFmt::Int(NiceU8::from(q)),
 			},
 		}
@@ -153,11 +145,6 @@ impl Quality {
 ///
 /// It implements the `Display` trait, providing nice access for printing, etc.
 pub enum QualityValue {
-	/// # Float.
-	///
-	/// This is used by JPEG XL.
-	Float(f32),
-
 	/// # Integer.
 	///
 	/// This is used by AVIF and Webp, and also serves as a default for kinds
@@ -173,7 +160,6 @@ pub enum QualityValue {
 impl fmt::Display for QualityValue {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			Self::Float(q) => write!(f, "{q:.1}"),
 			Self::Int(q) => write!(f, "{q}"),
 			Self::Lossless => f.write_str("lossless"),
 		}
@@ -193,20 +179,13 @@ pub enum QualityValueFmt {
 
 	/// # Integer.
 	///
-	/// This is used by AVIF and Webp, and also serves as a default for kinds
-	/// that don't actually support encoding.
+	/// This is used by all of the encoders in lossy mode.
 	Int(NiceU8),
 
 	/// # Lossless.
 	///
 	/// This is used by all three formats but has no specific value.
 	Lossless,
-
-	/// # Float.
-	///
-	/// This is used by JPEG XL. There is an implied precision of one; for
-	/// print a period will have to be sneaked in ahead of the last digit.
-	Float(NiceU8),
 }
 
 impl QualityValueFmt {
@@ -221,9 +200,6 @@ impl QualityValueFmt {
 			Self::None => 0,
 			Self::Int(n) => n.len(),
 			Self::Lossless => 8,
-			Self::Float(n) =>
-				if n.len() == 1 { 3 } // Add a zero and dot for print.
-				else { n.len() + 1 }, // Add a dot for print.
 		}
 	}
 
@@ -234,32 +210,11 @@ impl QualityValueFmt {
 	///
 	/// This requires allocation for `Self::Float` variants, but everything
 	/// else can enjoy a cheap borrow.
-	pub fn as_str(&self) -> Cow<'_, str> {
+	pub const fn as_str(&self) -> &str {
 		match self {
-			Self::None => Cow::Borrowed(""),
-			Self::Int(n) => Cow::Borrowed(n.as_str()),
-			Self::Lossless => Cow::Borrowed("lossless"),
-
-			// The floats require some touchup.
-			Self::Float(n) => {
-				// The length will never be zero, but let's prove it to the
-				// compiler.
-				let n = n.as_str();
-				if
-					let Some(len) = NonZeroUsize::new(n.len()) &&
-					let Some((mut a, b)) = n.split_at_checked(len.get() - 1)
-				{
-					// Make sure we have an integer in the first part.
-					if a.is_empty() { a = "0"; }
-
-					let mut out = String::with_capacity(len.get() + 1);
-					out.push_str(a);
-					out.push('.'); // Divide by ten.
-					out.push_str(b);
-					Cow::Owned(out)
-				}
-				else { Cow::Borrowed("") }
-			},
+			Self::None => "",
+			Self::Int(n) => n.as_str(),
+			Self::Lossless => "lossless",
 		}
 	}
 }

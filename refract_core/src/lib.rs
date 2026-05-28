@@ -164,7 +164,3 @@ pub(crate) const NZ_063: NonZeroU8 = NonZeroU8::new(63).unwrap();
 #[cfg(any(feature = "avif", feature = "jxl", feature = "webp"))]
 /// # 100 is Non-Zero.
 pub(crate) const NZ_100: NonZeroU8 = NonZeroU8::new(100).unwrap();
-
-#[cfg(feature = "jxl")]
-/// # 150 is Non-Zero.
-pub(crate) const NZ_150: NonZeroU8 = NonZeroU8::new(150).unwrap();

@@ -885,9 +885,9 @@ impl App {
 			.push(rich_text!(
 				span::<'_, (), _>(" *").color(Skin::PURPLE),
 				span(" Compression ratio is ").color(Skin::GREY),
-				span("src").color(Skin::PURPLE),
-				span(":").color(Skin::GREY),
 				span("dst").color(Skin::PINK),
+				span(":").color(Skin::GREY),
+				span("src").color(Skin::PURPLE),
 				span(".").color(Skin::GREY),
 			))
 			.push(rich_text!(
@@ -1490,7 +1490,7 @@ impl<'a> From<&'a [ImageResults]> for ActivityTable<'a> {
 						kind: *kind,
 						quality: quality.quality_fmt(),
 						len: Some(NiceU64::from(len)),
-						ratio: NiceFloat::div_usize(job.src_len.get(), len.get())
+						ratio: NiceFloat::div_usize(len.get(), job.src_len.get())
 							.ok()
 							.map(NiceFloat::from),
 						time: Some(&res.time),
@@ -1650,8 +1650,7 @@ impl CurrentImage {
 	fn load(src: PathBuf, flags: u16) -> Task<Message> {
 		// Eliminate all synchronous fallibility.
 		if
-			let Ok(input) = std::fs::read(&src) &&
-			let Ok(input) = Input::try_from(input.as_slice()).map(Input::into_rgba) &&
+			let Ok(input) = Input::try_from(src.as_path()).map(Input::into_rgba) &&
 			let Some(src_len) = NonZeroUsize::new(input.size()) &&
 			let Ok(w) = u32::try_from(input.width()) &&
 			let Ok(h) = u32::try_from(input.height())
@@ -2312,7 +2311,7 @@ fn cli_log(src: &Path, quality: Option<Quality>) {
 			out.push_str(quality.label());
 			out.push(' ');
 		}
-		out.push_str(&quality.quality_fmt().as_str());
+		out.push_str(quality.quality_fmt().as_str());
 	}
 	else { out.push_str("source"); }
 
