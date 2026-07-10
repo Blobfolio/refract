@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "1.5.0"
+version = "1.6.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2024"
@@ -11,7 +11,7 @@ publish = false
 
 [package.metadata.deb]
 maintainer = "Josh Stoik <josh@blobfolio.com>"
-copyright = "2025, Blobfolio, LLC <hello@blobfolio.com>"
+copyright = "2026, Blobfolio, LLC <hello@blobfolio.com>"
 license-file = ["../LICENSE", "0"]
 revision = "1"
 depends = "$auto, xdg-desktop-portal-gnome | xdg-desktop-portal-gtk | xdg-desktop-portal-kde | zenity"
@@ -108,7 +108,7 @@ dactyl = "0.13.*"
 dowser = "0.18.*"
 fyi_ansi = "2.6.*"
 iced_runtime = "0.14.0" # Iced doesn't re-export Allocation, etc.
-open = "=5.3.5"
+open = "=5.3.6"
 rfd = "=0.17.2"
 unicode-width = "0.2.*"
 write_atomic = "0.7.*"

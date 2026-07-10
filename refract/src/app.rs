@@ -1322,7 +1322,7 @@ impl App {
 							.content_fit(ContentFit::None)
 							.width(Shrink)
 							.height(Shrink)
-							.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 }),
+							.opacity(if current.candidate.is_some() || self.automatic() { 1.0_f32 } else { 0.5_f32 }),
 						Direction::Both {
 							vertical: Scrollbar::new(),
 							horizontal: Scrollbar::new(),
@@ -1344,7 +1344,7 @@ impl App {
 						.content_fit(ContentFit::None)
 						.width(Fill)
 						.height(Fill)
-						.opacity(if b { 1.0 } else { 0.0 }),
+						.opacity(if b { 1.0_f32 } else { 0.0_f32 }),
 				)
 					.id("container_checkers_b")
 					.width(Fill)
@@ -1698,7 +1698,7 @@ impl CurrentImage {
 						match res {
 							Some(Ok(img)) => {
 								// Log it.
-								cli_log(&src, None);
+								cli_log(&src, src_len, None);
 
 								Message::NextImageDecoded(Ok(Self {
 									done: ImageResults {
@@ -2046,7 +2046,7 @@ impl ImageResultWrapper {
 	fn into_result(self) -> (ImageKind, ImageResult) {
 		if let Some(best) = self.best && let Some(len) = best.size() {
 			let quality = best.quality();
-			cli_log(&self.dst, Some(quality));
+			cli_log(&self.dst, len, Some(quality));
 			return (self.kind, ImageResult {
 				src: self.dst,
 				len: Some(len),
@@ -2290,32 +2290,32 @@ impl Default for WidgetCache {
 /// # CLI Log.
 ///
 /// Print a quick timestamped message to STDERR in case anybody's watching.
-fn cli_log(src: &Path, quality: Option<Quality>) {
+fn cli_log(src: &Path, len: NonZeroUsize, quality: Option<Quality>) {
 	let Some((dir, name)) = split_path(src) else { return; };
 	let now = Local2k::now().formatted();
-	let mut out = format!(
+	let quality = quality.as_ref().map(|q| q.quality_fmt());
+
+	eprintln!(
 		concat!(
 			csi!(dim), "[",
-			csi!(reset, blue), "{}",
-			ansi!((reset, dim) "] {}/"),
-			"{} ",
-			csi!(dim), "(",
+			csi!(reset, blue), "{time}",
+			ansi!((reset, dim) "] "),
+			"{size:>10}",
+			dim!(" {path}/"),
+			"{file}",
+			ansi!((cyan) "{q1}{q2}"),
 		),
-		now.time(),
-		dir.to_string_lossy(),
-		name.to_string_lossy(),
+		time=now.time(),
+		size=NiceU64::from(len),
+		path=dir.to_string_lossy(),
+		file=name.to_string_lossy(),
+		q1=match quality {
+			Some(QualityValueFmt::Int(_)) => " q=",
+			Some(QualityValueFmt::Lossless) => " ",
+			_ => "",
+		},
+		q2=quality.as_ref().map_or("", |q| q.as_str()),
 	);
-
-	if let Some(quality) = quality {
-		if ! quality.is_lossless() {
-			out.push_str(quality.label());
-			out.push(' ');
-		}
-		out.push_str(quality.quality_fmt().as_str());
-	}
-	else { out.push_str("source"); }
-
-	eprintln!(concat!("{})", csi!(reset)), out);
 }
 
 /// # Cli Log: Sad Conversion.
@@ -2329,7 +2329,7 @@ fn cli_log_sad(src: &Path) {
 		concat!(
 			csi!(dim), "[",
 			csi!(reset, blue), "{}",
-			csi!(reset, dim), "]",
+			csi!(reset, dim), "]           ",
 			csi!(light_red), " {}/",
 			ansi!((!dim) "{}"),
 		),
