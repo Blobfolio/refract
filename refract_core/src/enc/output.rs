@@ -73,7 +73,7 @@ impl Output {
 	/// The [`EncodeIter`] struct minimizes allocations by reusing candidate
 	/// buffers between writes. This resets the state so it can be used again.
 	fn reset(&mut self) {
-		self.data.truncate(0);
+		self.data.clear();
 		self.flags = 0;
 	}
 
@@ -202,7 +202,7 @@ impl Output {
 	pub(crate) fn copy_to(&mut self, dst: &mut Self) {
 		dst.quality = self.quality;
 		dst.flags = self.flags;
-		dst.data.truncate(0);
+		dst.data.clear();
 		dst.data.append(&mut self.data);
 	}
 

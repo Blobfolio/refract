@@ -1322,7 +1322,7 @@ impl App {
 							.content_fit(ContentFit::None)
 							.width(Shrink)
 							.height(Shrink)
-							.opacity(if current.candidate.is_some() || self.automatic() { 1.0 } else { 0.5 }),
+							.opacity(if current.candidate.is_some() || self.automatic() { 1.0_f32 } else { 0.5_f32 }),
 						Direction::Both {
 							vertical: Scrollbar::new(),
 							horizontal: Scrollbar::new(),
@@ -1344,7 +1344,7 @@ impl App {
 						.content_fit(ContentFit::None)
 						.width(Fill)
 						.height(Fill)
-						.opacity(if b { 1.0 } else { 0.0 }),
+						.opacity(if b { 1.0_f32 } else { 0.0_f32 }),
 				)
 					.id("container_checkers_b")
 					.width(Fill)
