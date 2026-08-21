@@ -109,7 +109,7 @@ fn tile_checkers(tile: &[u8; 14_400]) -> image::Handle {
 	// First things first, let's repeat the entire tile once, width-wise,
 	// since the broken-up writes aren't terribly performant.
 	let mut pixels = Vec::<u8>::with_capacity(WIDTH * HEIGHT * 4);
-	for line in tile.chunks_exact(TILE * 4) {
+	for line in tile.as_chunks::<{TILE * 4}>().0 {
 		for _ in 0..WIDTH / TILE { pixels.extend_from_slice(line); }
 	}
 

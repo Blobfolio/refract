@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "1.6.0"
+version = "1.7.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2024"
@@ -10,7 +10,7 @@ readme = "README.md"
 publish = false
 
 [dependencies]
-fyi_ansi = "2.6.*"
+fyi_ansi = "2.7.*"
 
 [dependencies.dactyl]
 version = "0.13.*"
@@ -42,9 +42,10 @@ default-features = false
 features = [ "codec-aom" ]
 optional = true
 
-[dependencies.libwebp-sys2]
-version = "=0.2.0"
-features = [ "static" ]
+[dependencies.libwebp-sys]
+version = "=0.14.4"
+default-features = false
+features = [ "std" ]
 optional = true
 
 [dependencies.rgb] # Match lodepng's dependency listing.
@@ -72,4 +73,4 @@ jxl = [ "dactyl", "jpegxl-sys", "link-cplusplus" ]
 png = [ "lodepng" ]
 
 # Support WebP.
-webp = [ "dactyl", "libwebp-sys2" ]
+webp = [ "dactyl", "libwebp-sys" ]

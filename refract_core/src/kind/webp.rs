@@ -1,7 +1,7 @@
 /*!
 # `Refract`: `WebP` Handling
 
-This uses [`libwebp-sys2`](https://crates.io/crates/libwebp-sys2) bindings to Google's
+This uses [`libwebp-sys`](https://crates.io/crates/libwebp-sys) bindings to Google's
 `libwebp`. Operations should be equivalent to the corresponding `cwebp` output.
 */
 
@@ -17,9 +17,7 @@ use crate::{
 	},
 };
 use libwebp_sys::{
-	WEBP_MAX_DIMENSION,
 	WebPConfig,
-	WebPConfigInit,
 	WebPConfigLosslessPreset,
 	WebPEncode,
 	WebPMemoryWrite,
@@ -29,12 +27,25 @@ use libwebp_sys::{
 	WebPPicture,
 	WebPPictureFree,
 	WebPPictureImportRGBA,
-	WebPPictureInit,
 	WebPValidateConfig,
 };
 use std::{
 	ffi::c_int,
 	num::NonZeroU8,
+};
+
+
+/// # Max Dimensions.
+///
+/// Dimensions are expressed as `i32` everywhere but this constant. Haha.
+const WEBP_MAX_DIMENSION: i32 = libwebp_sys::WEBP_MAX_DIMENSION.cast_signed();
+
+/// # Sanity Checks.
+const _: () = {
+	assert!(
+		libwebp_sys::WEBP_MAX_DIMENSION <= (i32::MAX as u32),
+		"Bug: WEBP_MAX_DIMENSION doesn't fit in i32.",
+	);
 };
 
 
@@ -155,10 +166,9 @@ impl TryFrom<&Input> for LibWebpPicture {
 		}
 
 		// Set up the picture struct.
-		// Safety: libwebp expects zeroed memory.
-		let mut out = Self(unsafe { std::mem::zeroed() });
-		// Safety: this is an FFI call…
-		maybe_die(unsafe { WebPPictureInit(&raw mut out.0) })?;
+		let mut out = WebPPicture::new()
+			.map_err(|()| RefractError::Encode)
+			.map(Self)?;
 
 		out.0.use_argb = 1;
 		out.0.width = width;
@@ -306,10 +316,7 @@ fn encode(
 /// cwebp -lossless -z 9 -q 100
 /// ```
 fn make_config(quality: Option<NonZeroU8>) -> Result<WebPConfig, RefractError> {
-	// Safety: the subsequent call expects zeroed memory.
-	let mut config: WebPConfig = unsafe { std::mem::zeroed() };
-	// Safety: this is an FFI call…
-	maybe_die(unsafe { WebPConfigInit(&raw mut config) })?;
+	let mut config = WebPConfig::new().map_err(|()| RefractError::Encode)?;
 	// Safety: this is an FFI call…
 	maybe_die(unsafe { WebPValidateConfig(&raw const config) })?;
 
