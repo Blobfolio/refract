@@ -106,7 +106,7 @@ impl ColorKind {
 	pub fn from_rgba(src: &[u8]) -> Self {
 		let mut color: bool = false;
 		let mut alpha: bool = false;
-		for px in src.chunks_exact(4) {
+		for px in src.as_chunks::<4>().0 {
 			if ! color && (px[0] != px[1] || px[0] != px[2]) {
 				color = true;
 				if alpha { return Self::Rgba; }

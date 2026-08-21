@@ -50,7 +50,11 @@ impl Nine {
 	///
 	/// This returns true if any of the pixels in the set have an alpha value
 	/// of zero.
-	fn has_invisible(&self) -> bool { self.0.chunks_exact(4).any(|px| px[3] == 0) }
+	fn has_invisible(&self) -> bool {
+		self.0.as_chunks::<4>().0
+		.iter()
+		.any(|px| px[3] == 0)
+	}
 
 	#[inline]
 	/// # Is Semi-Transparent?
@@ -77,7 +81,8 @@ impl Nine {
 	/// If the result turns out to be identical to the original value, `None`
 	/// is returned.
 	fn averaged(&self) -> Option<[u8; 4]> {
-		let (r, g, b) = self.0.chunks_exact(4)
+		let (r, g, b) = self.0.as_chunks::<4>().0
+			.iter()
 			.fold((0_u16, 0_u16, 0_u16), |mut acc, px| {
 				acc.0 += u16::from(px[0]);
 				acc.1 += u16::from(px[1]);
@@ -126,7 +131,8 @@ impl Nine {
 	/// If no weighting is possible, or if the result winds up identical to the
 	/// original, `None` is returned.
 	fn weighted(&self) -> Option<[u8; 4]> {
-		let (r, g, b, weight) = self.0.chunks_exact(4)
+		let (r, g, b, weight) = self.0.as_chunks::<4>().0
+			.iter()
 			.fold((0_u32, 0_u32, 0_u32, 0_u32), |mut acc, px| {
 				if px[3] > 0 {
 					let weight = 256 - u32::from(px[3]);
@@ -166,7 +172,8 @@ impl Nine {
 pub(super) fn clean_alpha(img: &mut [u8], width: usize, height: usize) {
 	if let Some(avg) = neutral_pixel(img, width, height) {
 		// Set all invisible pixels to said neutral color.
-		img.chunks_exact_mut(4)
+		img.as_chunks_mut::<4>().0
+			.iter_mut()
 			.filter(|px| px[3] == 0)
 			.for_each(|px| { px.copy_from_slice(&avg); });
 
@@ -284,7 +291,7 @@ where Cb: FnMut(Nine) {
 
 		// Start each row with 0, 0, 1 columns. We know there's always going to
 		// be a +1 because we refuse images with widths < 3.
-		for (chunk, k) in nine.0.chunks_exact_mut(12).zip([top, middle, bottom]) {
+		for (chunk, k) in nine.0.as_chunks_mut::<12>().0.iter_mut().zip([top, middle, bottom]) {
 			chunk[..4].copy_from_slice(&img[k..k + 4]);
 			chunk[4..].copy_from_slice(&img[k..k + 8]);
 		}
@@ -295,14 +302,14 @@ where Cb: FnMut(Nine) {
 		// Loop the columns.
 		for x in 1..width {
 			// Shift the old middle and right positions down for each row.
-			for chunk in nine.0.chunks_exact_mut(12) {
+			for chunk in nine.0.as_chunks_mut::<12>().0 {
 				chunk.copy_within(4.., 0);
 			}
 
 			// Copy in the new right positions, if any.
 			if x + 1 < width {
 				let right = (x + 1) * 4;
-				for (chunk, k) in nine.0.chunks_exact_mut(12).zip([top, middle, bottom]) {
+				for (chunk, k) in nine.0.as_chunks_mut::<12>().0.iter_mut().zip([top, middle, bottom]) {
 					chunk[8..].copy_from_slice(&img[k + right..k + right + 4]);
 				}
 			}

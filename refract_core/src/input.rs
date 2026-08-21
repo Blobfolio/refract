@@ -342,7 +342,8 @@ impl Input {
 		match self.depth {
 			ColorKind::Rgba => Cow::Borrowed(&self.pixels),
 			ColorKind::Rgb => Cow::Owned(
-				self.pixels.chunks_exact(3)
+				self.pixels.as_chunks::<3>().0
+					.iter()
 					.fold(Vec::with_capacity(size), |mut acc, px| {
 						acc.extend_from_slice(px); // Push RGB.
 						acc.push(255);             // Push Alpha.
@@ -350,7 +351,8 @@ impl Input {
 					})
 			),
 			ColorKind::GreyAlpha => Cow::Owned(
-				self.pixels.chunks_exact(2)
+				self.pixels.as_chunks::<2>().0
+					.iter()
 					.fold(Vec::with_capacity(size), |mut acc, px| {
 						acc.extend_from_slice(&[px[0], px[0], px[0], px[1]]);
 						acc
@@ -390,11 +392,12 @@ impl Input {
 
 		let (buf, depth): (Vec<u8>, ColorKind) = match self.color {
 			ColorKind::Grey => (
-				self.pixels.chunks_exact(4).map(|px| px[0]).collect(),
+				self.pixels.as_chunks::<4>().0.iter().map(|px| px[0]).collect(),
 				ColorKind::Grey,
 			),
 			ColorKind::GreyAlpha => (
-				self.pixels.chunks_exact(4)
+				self.pixels.as_chunks::<4>().0
+					.iter()
 					.fold(Vec::with_capacity(self.width() * self.height() * 2), |mut acc, px| {
 						acc.push(px[0]); // Keep one color.
 						acc.push(px[3]); // Keep alpha.
@@ -403,7 +406,8 @@ impl Input {
 				ColorKind::GreyAlpha,
 			),
 			ColorKind::Rgb => (
-				self.pixels.chunks_exact(4)
+				self.pixels.as_chunks::<4>().0
+					.iter()
 					.fold(Vec::with_capacity(self.width() * self.height() * 3), |mut acc, px| {
 						acc.extend_from_slice(&px[..3]); // Keep RGB.
 						acc
