@@ -1,6 +1,6 @@
 [package]
 name = "refract_core"
-version = "1.7.0"
+version = "1.7.1"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2024"
@@ -13,7 +13,7 @@ publish = false
 fyi_ansi = "2.7.*"
 
 [dependencies.dactyl]
-version = "0.13.*"
+version = "0.14.*"
 optional = true
 
 [dependencies.jpeg-decoder]

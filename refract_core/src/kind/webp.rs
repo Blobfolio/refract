@@ -285,7 +285,7 @@ fn encode(
 	// Copy output.
 	// Safety: we need to box the data to access it.
 	let data = unsafe { Box::from_raw(writer.0) };
-	// Safety: candidate makes a copy of the data so it's short lifetime is no
+	// Safety: candidate makes a copy of the data so its short lifetime is no
 	// problem.
 	candidate.set_slice(unsafe {
 		std::slice::from_raw_parts_mut(data.mem, data.size)

@@ -79,8 +79,7 @@ impl Iterator for QualityRange {
 		let diff = self.top.get() - self.bottom.get();
 		if diff == 0 { (0, None) }
 		else {
-			let log2 = u8::BITS - diff.leading_zeros();
-			(log2 as usize, None)
+			(diff.bit_width() as usize, None)
 		}
 	}
 }
