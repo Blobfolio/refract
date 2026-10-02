@@ -105,7 +105,7 @@ features = [ "png" ]
 [dependencies]
 argyle = "0.16.*"
 dactyl = "0.14.*"
-dowser = "0.18.*"
+dowser = "0.19.*"
 fyi_ansi = "2.7.*"
 iced_runtime = "0.14.0" # Iced doesn't re-export Allocation, etc.
 open = "5.4.*"
