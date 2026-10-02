@@ -103,7 +103,7 @@ default-features = false
 features = [ "png" ]
 
 [dependencies]
-argyle = "0.15.*"
+argyle = "0.16.*"
 dactyl = "0.14.*"
 dowser = "0.18.*"
 fyi_ansi = "2.7.*"
