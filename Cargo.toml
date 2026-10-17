@@ -5,6 +5,49 @@ members = [
     "refract_core",
 ]
 
+[workspace.dependencies]
+argyle = "0.16.*"
+dactyl = "0.14.*"
+dowser = "0.19.*"
+fyi_ansi = "2.7.*"
+iced = "=0.14.0"
+iced_runtime = "0.14.0"
+jpeg-decoder = "=0.3.2"
+link-cplusplus = "=1.0.12"
+open = "5.4.*"
+rfd = "=0.17.2"
+unicode-width = "0.2.*"
+utc2k = "0.21.*"
+write_atomic = "0.9.*"
+
+[workspace.dependencies.jpegxl-sys]
+version = "=0.13.0"
+default-features = false
+
+[workspace.dependencies.libavif-sys]
+version = "=0.17.0"
+default-features = false
+
+[workspace.dependencies.libwebp-sys]
+version = "=0.14.4"
+default-features = false
+
+[workspace.dependencies.lodepng]
+version = "=3.12.2"
+default-features = false
+
+[workspace.dependencies.refract_core]
+path = "refract_core"
+default-features = false
+
+[workspace.dependencies.rgb]
+version = "0.8.47"
+default-features = false
+
+[workspace.dependencies.tokio]
+version = "1.52.0"
+default-features = false
+
 [profile.release]
 lto = true
 codegen-units = 1
