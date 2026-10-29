@@ -961,7 +961,7 @@ impl App {
 					.label("Lossy YCbCr")
 					.on_toggle_maybe(self.has_flag(FMT_AVIF | MODE_LOSSY).then_some(|_| Message::ToggleFlag(MODE_LOSSY_YCBCR)))
 					.size(Skin::CHK_SIZE),
-				"Repeat AVIF A/B tests in YCbCr colorspace to look for additional savings."
+				"Repeat AVIF A/B tests with limited color range to look for additional savings."
 			),
 		)
 			.spacing(Skin::GAP25)
