@@ -9,7 +9,7 @@ members = [
 argyle = "0.16.*"
 dactyl = "0.14.*"
 dowser = "0.19.*"
-fyi_ansi = "2.7.*"
+fyi_ansi = "2.8.*"
 iced = "=0.14.0"
 iced_runtime = "0.14.0"
 jpeg-decoder = "=0.3.2"
