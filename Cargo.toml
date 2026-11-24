@@ -21,7 +21,7 @@ utc2k = "0.21.*"
 write_atomic = "0.9.*"
 
 [workspace.dependencies.jpegxl-sys]
-version = "=0.13.0"
+version = "=0.14.0"
 default-features = false
 
 [workspace.dependencies.libavif-sys]
