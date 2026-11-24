@@ -149,6 +149,27 @@ Cargo should pop an error if anything's missing. If that happens, just find/inst
 
 If you wind up needing something not on this list, please [open an issue](https://github.com/Blobfolio/refract/issues) so it can be given a mention. ;)
 
+### Offline/Vendored Builds
+
+If your build environment lacks networking support, pre-download the `Source code (tar.gz)` and `vendored-sources.tar.zst` assets attached to the [release](https://github.com/Blobfolio/refract/releases/latest), then:
+
+```bash
+# Extract the source code.
+tar -xf refract-VERSION.tar.gz
+
+# Move into the source root.
+cd refract-VERSION
+
+# Extract the vendored sources (into the source root).
+tar -xf ../vendored-sources.tar.zst
+
+# Build! See `cargo build --help` for more options.
+cargo build \
+    --release \
+    --locked \
+    --offline
+```
+
 ### Runtime Dependencies
 
 On Linux, the file dialogues require one of `xdg-desktop-portal-[gnome, gtk, kde]` or `zenity`, user's choice.

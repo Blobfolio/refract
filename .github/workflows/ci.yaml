@@ -15,6 +15,8 @@ env:
 
 jobs:
   all:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
     name: All
 
     strategy:
@@ -48,9 +50,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y cmake g++ gcc git make nasm ninja-build
 
-    - name: Build
+    - name: Build (Debug)
       run: |
         cargo build --target ${{ matrix.target }}
+
+    - name: Build (Release)
+      run: |
         cargo build --release --target ${{ matrix.target }}
 
     - name: Clippy (Workspace)
@@ -85,3 +90,10 @@ jobs:
       run: |
         cargo test --release --target ${{ matrix.target }}
         cargo test --release --all-features --target ${{ matrix.target }}
+
+    - name: Build (Vendored)
+      run: |
+        cargo clean
+        mkdir .cargo
+        cargo vendor --locked > .cargo/config.toml
+        cargo build --locked --offline --target ${{ matrix.target }}

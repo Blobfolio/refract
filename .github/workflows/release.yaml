@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-attach:
+    runs-on: ubuntu-latest
+
+    env:
+      RUSTFLAGS: "-D warnings"
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-unknown-linux-gnu
+
+    - name: Info
+      run: |
+        rustup --version
+        cargo --version
+
+    - name: Vendored Sources
+      run: |
+        mkdir .cargo
+        cargo vendor --locked > .cargo/config.toml
+        tar -I 'zstd --ultra -22 --long' -cvf vendored-sources.tar.zst vendor .cargo
+
+    - name: Attach
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release upload "${{ github.event.release.tag_name }}" vendored-sources.tar.zst
