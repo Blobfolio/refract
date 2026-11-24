@@ -1,6 +1,6 @@
 [package]
 name = "refract"
-version = "1.7.1"
+version = "1.8.0"
 license = "WTFPL"
 authors = ["Josh Stoik <josh@blobfolio.com>"]
 edition = "2024"
@@ -97,35 +97,20 @@ path = true
 label = "<PATH(s)…>"
 description = "Image and/or directory paths to re-encode. Directories will be crawled recursively."
 
-[build-dependencies.refract_core]
-path = "../refract_core"
-default-features = false
-features = [ "png" ]
+[build-dependencies]
+refract_core= { workspace = true, features = ["png"] }
 
 [dependencies]
-argyle = "0.16.*"
-dactyl = "0.14.*"
-dowser = "0.19.*"
-fyi_ansi = "2.7.*"
-iced_runtime = "0.14.0" # Iced doesn't re-export Allocation, etc.
-open = "5.4.*"
-rfd = "=0.17.2"
-unicode-width = "0.2.*"
-write_atomic = "0.9.*"
-
-[dependencies.iced]
-version = "=0.14.0"
-features = [ "image-without-codecs", "tokio" ]
-
-[dependencies.refract_core]
-path = "../refract_core"
-features = [ "images" ]
-
-[dependencies.tokio]
-version = "1.52.0"
-default-features = false
-features = [ "rt", "rt-multi-thread", "time" ]
-
-[dependencies.utc2k]
-version = "0.21.*"
-features = [ "local" ]
+argyle =        { workspace = true }
+dactyl =        { workspace = true }
+dowser =        { workspace = true }
+fyi_ansi =      { workspace = true }
+iced =          { workspace = true, features = ["image-without-codecs", "tokio"] }
+iced_runtime =  { workspace = true }
+open =          { workspace = true }
+refract_core =  { workspace = true, features = ["images"] }
+rfd =           { workspace = true }
+tokio =         { workspace = true, features = ["rt", "rt-multi-thread", "time"] }
+unicode-width = { workspace = true }
+utc2k =         { workspace = true, features = ["local"] }
+write_atomic =  { workspace = true }
